@@ -1,0 +1,324 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - ComboLogger{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="fas fa-tachometer-alt crypto-icon"></i>
+        Dashboard
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="refreshDashboard()">
+                <i class="fas fa-sync-alt"></i>
+                Refresh
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Stats Cards -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-primary shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                            Total Instances
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800" id="total-instances">
+                            <i class="fas fa-spinner fa-spin"></i>
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-cogs fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-success shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                            Active Instances
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800" id="active-instances">
+                            <i class="fas fa-spinner fa-spin"></i>
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-play fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-warning shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                            With Errors
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800" id="error-instances">
+                            <i class="fas fa-spinner fa-spin"></i>
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-exclamation-triangle fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-info shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                            System Health
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800" id="system-health">
+                            <i class="fas fa-spinner fa-spin"></i>
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-heartbeat fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Instances Overview -->
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">
+            <i class="fas fa-list"></i>
+            Bot Instances Overview
+        </h6>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered" id="instances-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Exchange</th>
+                        <th>Strategies</th>
+                        <th>Status</th>
+                        <th>Last Poll</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td colspan="6" class="text-center">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            Loading instances...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Activity -->
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">
+            <i class="fas fa-clock"></i>
+            Recent Activity
+        </h6>
+    </div>
+    <div class="card-body">
+        <div id="recent-activity">
+            <div class="text-center">
+                <i class="fas fa-spinner fa-spin"></i>
+                Loading activity...
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let instances = [];
+
+function refreshDashboard() {
+    loadInstances();
+    loadHealth();
+}
+
+function loadHealth() {
+    fetch('/api/health', {
+        headers: {
+            'Authorization': 'Basic ' + btoa('admin:changeme123')
+        }
+    })
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('system-health').innerHTML = 
+                `<span class="text-success"><i class="fas fa-check"></i> ${data.status}</span>`;
+        })
+        .catch(error => {
+            document.getElementById('system-health').innerHTML = 
+                `<span class="text-danger"><i class="fas fa-times"></i> Error</span>`;
+        });
+}
+
+function loadInstances() {
+    fetch('/api/instances', {
+        headers: {
+            'Authorization': 'Basic ' + btoa('admin:changeme123')
+        }
+    })
+        .then(response => response.json())
+        .then(data => {
+            instances = data;
+            updateStats();
+            updateInstancesTable();
+        })
+        .catch(error => {
+            console.error('Error loading instances:', error);
+        });
+}
+
+function updateStats() {
+    const total = instances.length;
+    const active = instances.filter(i => i.is_active).length;
+    const withErrors = instances.filter(i => i.last_error).length;
+    
+    document.getElementById('total-instances').textContent = total;
+    document.getElementById('active-instances').textContent = active;
+    document.getElementById('error-instances').textContent = withErrors;
+}
+
+function updateInstancesTable() {
+    const tbody = document.querySelector('#instances-table tbody');
+    
+    if (instances.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" class="text-center text-muted">
+                    <i class="fas fa-robot"></i>
+                    No bot instances configured yet.
+                    <a href="/instances/new" class="btn btn-sm btn-primary ms-2">
+                        <i class="fas fa-plus"></i> Create First Instance
+                    </a>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    tbody.innerHTML = instances.map(instance => `
+        <tr>
+            <td>
+                <strong>${instance.name}</strong>
+                <br>
+                <small class="text-muted">ID: ${instance.id}</small>
+            </td>
+            <td>
+                <span class="badge bg-info">${instance.exchange}</span>
+            </td>
+            <td>
+                ${instance.strategies.length > 0 ? 
+                    instance.strategies.map(s => `<span class="badge bg-secondary me-1">${s}</span>`).join('') :
+                    '<span class="text-muted">All strategies</span>'
+                }
+            </td>
+            <td>
+                ${instance.is_active ? 
+                    '<span class="badge bg-success">Active</span>' : 
+                    '<span class="badge bg-secondary">Stopped</span>'
+                }
+                ${instance.last_error ? 
+                    '<br><span class="badge bg-danger">Error</span>' : ''
+                }
+            </td>
+            <td>
+                ${instance.last_poll ? 
+                    new Date(instance.last_poll).toLocaleString() : 
+                    '<span class="text-muted">Never</span>'
+                }
+            </td>
+            <td>
+                <div class="btn-group btn-group-sm">
+                    <a href="/instances/${instance.id}" class="btn btn-outline-primary">
+                        <i class="fas fa-eye"></i>
+                    </a>
+                    ${instance.is_active ? 
+                        `<button class="btn btn-outline-warning" onclick="stopInstance(${instance.id})">
+                            <i class="fas fa-stop"></i>
+                        </button>` :
+                        `<button class="btn btn-outline-success" onclick="startInstance(${instance.id})">
+                            <i class="fas fa-play"></i>
+                        </button>`
+                    }
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function startInstance(instanceId) {
+    fetch(`/api/instances/${instanceId}/start`, {
+        method: 'POST',
+        headers: {
+            'Authorization': 'Basic ' + btoa('admin:changeme123')
+        }
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (data.message) {
+                alert(data.message);
+                refreshDashboard();
+            }
+        })
+        .catch(error => {
+            alert('Error starting instance: ' + error);
+        });
+}
+
+function stopInstance(instanceId) {
+    fetch(`/api/instances/${instanceId}/stop`, {
+        method: 'POST',
+        headers: {
+            'Authorization': 'Basic ' + btoa('admin:changeme123')
+        }
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (data.message) {
+                alert(data.message);
+                refreshDashboard();
+            }
+        })
+        .catch(error => {
+            alert('Error stopping instance: ' + error);
+        });
+}
+
+// Load data on page load
+document.addEventListener('DOMContentLoaded', function() {
+    refreshDashboard();
+    
+    // Auto-refresh every 30 seconds
+    setInterval(refreshDashboard, 30000);
+});
+</script>
+{% endblock %}
