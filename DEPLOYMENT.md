@@ -1,4 +1,4 @@
-# TGL Medusa Loggers - Deployment Guide
+# TGL MEDUSA - Deployment Guide
 
 ## 🚀 Recommended Hosting Platforms
 
@@ -58,7 +58,7 @@ ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=30
 
 # Application
-APP_NAME=TGL Medusa Loggers
+APP_NAME=TGL MEDUSA
 DEBUG=false
 ENVIRONMENT=production
 

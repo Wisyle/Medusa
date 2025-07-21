@@ -6,7 +6,7 @@ except ImportError:
     from pydantic import BaseSettings
 
 class Settings(BaseSettings):
-    database_url: str = "sqlite:///./tgl_medusa.db"
+    database_url: str = "sqlite:///./medusa.db"
     
     secret_key: str = "your-secret-key-here-change-in-production"
     jwt_secret: str = "your-jwt-secret-here-change-in-production"
@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     default_telegram_chat_id: Optional[str] = None
     default_telegram_topic_id: Optional[str] = None
     
-    app_name: str = "TGL Medusa Loggers"
+    app_name: str = "TGL MEDUSA"
     app_description: str = "Advanced Cryptocurrency Bot Monitoring System"
     debug: bool = True
     host: str = "0.0.0.0"

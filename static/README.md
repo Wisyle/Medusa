@@ -1,1 +1,1 @@
-/* TGL Medusa Loggers static files */
+/* TGL MEDUSA static files */

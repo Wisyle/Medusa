@@ -1,17 +1,17 @@
-# TGL Medusa Loggers - Docker Compose for Local Development
+# TGL MEDUSA - Docker Compose for Local Development
 version: '3.8'
 
 services:
-  web:
+  medusa-web:
     build: .
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgresql://tgl_user:tgl_password@db:5432/tgl_medusa_loggers
+      - DATABASE_URL=postgresql://medusa_user:medusa_password@db:5432/medusa_loggers
       - SECRET_KEY=dev-secret-key-change-in-production
       - ALGORITHM=HS256
       - ACCESS_TOKEN_EXPIRE_MINUTES=30
-      - APP_NAME=TGL Medusa Loggers
+      - APP_NAME=TGL MEDUSA
       - DEBUG=true
       - ENVIRONMENT=development
     depends_on:
@@ -23,43 +23,27 @@ services:
   db:
     image: postgres:15
     environment:
-      - POSTGRES_DB=tgl_medusa_loggers
-      - POSTGRES_USER=tgl_user
-      - POSTGRES_PASSWORD=tgl_password
+      - POSTGRES_DB=medusa_loggers
+      - POSTGRES_USER=medusa_user
+      - POSTGRES_PASSWORD=medusa_password
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
-  worker:
+  medusa-worker:
     build: .
     environment:
-      - DATABASE_URL=postgresql://tgl_user:tgl_password@db:5432/tgl_medusa_loggers
+      - DATABASE_URL=postgresql://medusa_user:medusa_password@db:5432/medusa_loggers
       - SECRET_KEY=dev-secret-key-change-in-production
-      - APP_NAME=TGL Medusa Loggers
+      - APP_NAME=TGL MEDUSA
       - DEBUG=true
       - ENVIRONMENT=development
     depends_on:
       - db
     volumes:
       - .:/app
-    command: python -c "
-      import asyncio
-      import time
-      from main import monitor_instances
-      
-      async def worker_main():
-          print('TGL Medusa Loggers Worker Starting...')
-          while True:
-              try:
-                  await monitor_instances()
-                  await asyncio.sleep(60)
-              except Exception as e:
-                  print(f'Worker error: {e}')
-                  await asyncio.sleep(30)
-      
-      asyncio.run(worker_main())
-      "
+    command: python worker.py
 
 volumes:
   postgres_data:

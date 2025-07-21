@@ -16,7 +16,7 @@ def get_db_session():
 
 async def monitor_instances():
     """Monitor and restart failed instances - standalone version"""
-    print('TGL Medusa Loggers Worker Starting...')
+    print('TGL MEDUSA Worker Starting...')
     
     while True:
         try:

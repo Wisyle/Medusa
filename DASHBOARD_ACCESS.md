@@ -1,4 +1,4 @@
-# TGL Medusa Loggers - Dashboard Access Guide
+# TGL MEDUSA - Dashboard Access Guide
 
 ## 🌐 **Dashboard URL Access**
 

@@ -3,22 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}TGL Medusa Loggers - Advanced Crypto Bot Monitor{% endblock %}</title>
+    <title>{% block title %}TGL MEDUSA - Crypto Bot Monitor{% endblock %}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         :root {
             --primary-black: #000000;
             --secondary-black: #1a1a1a;
-            --light-gray: #f8f9fa;
-            --medium-gray: #6c757d;
+            --light-gray: #2a2a2a;
+            --medium-gray: #404040;
             --white: #ffffff;
             --accent-gold: #ffd700;
         }
         
         body {
-            background-color: var(--white);
-            color: var(--primary-black);
+            background-color: var(--primary-black);
+            color: var(--white);
         }
         
         .sidebar {
@@ -38,18 +38,20 @@
             transform: translateX(5px);
         }
         .main-content {
-            background-color: var(--white);
+            background-color: var(--primary-black);
             min-height: 100vh;
         }
         .card {
             border: 1px solid var(--medium-gray);
             border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-            background-color: var(--white);
+            box-shadow: 0 4px 20px rgba(255,255,255,0.1);
+            background-color: var(--secondary-black);
+            color: var(--white);
         }
         .card-header {
             background-color: var(--light-gray);
             border-bottom: 1px solid var(--medium-gray);
+            color: var(--white);
         }
         .status-badge {
             font-size: 0.8em;
@@ -90,15 +92,21 @@
             border-left: 4px solid #17a2b8 !important;
         }
         .table {
-            color: var(--primary-black);
+            color: var(--white);
         }
         .table th {
             border-top: none;
             background-color: var(--light-gray);
-            color: var(--primary-black);
+            color: var(--white);
         }
         .form-control {
             border: 1px solid var(--medium-gray);
+            background-color: var(--secondary-black);
+            color: var(--white);
+        }
+        .form-control:focus {
+            background-color: var(--secondary-black);
+            color: var(--white);
         }
         .form-control:focus {
             border-color: var(--accent-gold);
@@ -115,9 +123,9 @@
                     <div class="text-center mb-4">
                         <h4 class="text-white">
                             <i class="fas fa-robot crypto-icon"></i>
-                            TGL Medusa Loggers
+                            TGL MEDUSA
                         </h4>
-                        <small class="text-white-50">Advanced Crypto Bot Monitor</small>
+                        <small class="text-white-50">Crypto Bot Monitor</small>
                     </div>
                     
                     <ul class="nav flex-column">
