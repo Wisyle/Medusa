@@ -29,11 +29,15 @@ services:
       - key: BYPASS_CLOUDFRONT
         value: 'true'
       - key: BYBIT_PROXY_ENDPOINTS
-        value: api.bytick.com,api.bybit.com
+        value: api.bytick.com,api.bybit.com,api-testnet.bybit.com
       - key: PROXY_COUNTRIES
         value: singapore,hongkong,japan,uae
       - key: SPOOF_CLOUDFRONT_HEADERS
         value: 'true'
+      - key: SINGAPORE_IP_POOL
+        value: '103.28.248.1,103.28.249.1,119.81.28.1,119.81.29.1'
+      - key: CLOUDFRONT_BYPASS_MODE
+        value: 'aggressive'
     healthCheckPath: /api/health
 
   - type: worker
@@ -62,11 +66,15 @@ services:
       - key: BYPASS_CLOUDFRONT
         value: 'true'
       - key: BYBIT_PROXY_ENDPOINTS
-        value: api.bytick.com,api.bybit.com
+        value: api.bytick.com,api.bybit.com,api-testnet.bybit.com
       - key: PROXY_COUNTRIES
         value: singapore,hongkong,japan,uae
       - key: SPOOF_CLOUDFRONT_HEADERS
         value: 'true'
+      - key: SINGAPORE_IP_POOL
+        value: '103.28.248.1,103.28.249.1,119.81.28.1,119.81.29.1'
+      - key: CLOUDFRONT_BYPASS_MODE
+        value: 'aggressive'
 
 databases:
   - name: medusa-db
