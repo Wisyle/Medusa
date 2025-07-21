@@ -38,6 +38,45 @@ class ExchangePoller:
                 'enableRateLimit': True,
                 'urls': {
                     'api': {
+                        'public': 'https://api-testnet.bybit.com',
+                        'private': 'https://api-testnet.bybit.com',
+                    }
+                },
+                'headers': {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                    'Accept': 'application/json, text/plain, */*',
+                    'Accept-Language': 'en-SG,zh-SG;q=0.9,en;q=0.8',
+                    'Accept-Encoding': 'gzip, deflate, br',
+                    'Origin': 'https://testnet.bybit.com',
+                    'Referer': 'https://testnet.bybit.com/',
+                    'Sec-Fetch-Site': 'same-site',
+                    'Sec-Fetch-Mode': 'cors',
+                    'Sec-Fetch-Dest': 'empty',
+                    'X-Forwarded-For': '18.141.147.1',     # Singapore AWS IP
+                    'X-Real-IP': '18.141.147.1',
+                    'CF-Connecting-IP': '18.141.147.1',    # CloudFront bypass header
+                    'X-Originating-IP': '18.141.147.1',
+                    'X-Client-IP': '18.141.147.1',
+                    'X-Country-Code': 'SG',                # Singapore country code
+                    'CloudFront-Viewer-Country': 'SG',
+                    'CloudFront-Is-Desktop-Viewer': 'true',
+                    'CloudFront-Is-Mobile-Viewer': 'false',
+                    'CloudFront-Is-Tablet-Viewer': 'false',
+                    'Connection': 'keep-alive',
+                    'Cache-Control': 'no-cache',
+                    'Pragma': 'no-cache',
+                    'Upgrade-Insecure-Requests': '1'
+                },
+                'timeout': 60000,
+                'rateLimit': 800
+            },
+            {
+                'apiKey': self.instance.api_key,
+                'secret': self.instance.api_secret,
+                'sandbox': False,
+                'enableRateLimit': True,
+                'urls': {
+                    'api': {
                         'public': 'https://api.bytick.com',
                         'private': 'https://api.bytick.com',
                     }
@@ -51,6 +90,7 @@ class ExchangePoller:
                     'Referer': 'https://www.bybit.com/',
                     'Sec-Fetch-Site': 'same-site',
                     'Sec-Fetch-Mode': 'cors',
+                    'Sec-Fetch-Dest': 'empty',
                     'X-Forwarded-For': '103.28.248.1',     # Singapore IP
                     'X-Real-IP': '103.28.248.1',
                     'CF-Connecting-IP': '103.28.248.1',    # CloudFront bypass header
@@ -58,12 +98,16 @@ class ExchangePoller:
                     'X-Client-IP': '103.28.248.1',
                     'X-Country-Code': 'SG',                # Singapore country code
                     'CloudFront-Viewer-Country': 'SG',
+                    'CloudFront-Is-Desktop-Viewer': 'true',
+                    'CloudFront-Is-Mobile-Viewer': 'false',
+                    'CloudFront-Is-Tablet-Viewer': 'false',
                     'Connection': 'keep-alive',
                     'Cache-Control': 'no-cache',
-                    'Pragma': 'no-cache'
+                    'Pragma': 'no-cache',
+                    'Upgrade-Insecure-Requests': '1'
                 },
-                'timeout': 45000,
-                'rateLimit': 1200
+                'timeout': 60000,
+                'rateLimit': 800
             },
             {
                 'apiKey': self.instance.api_key,
@@ -85,6 +129,7 @@ class ExchangePoller:
                     'Referer': 'https://www.bybit.com/',
                     'Sec-Fetch-Site': 'same-site',
                     'Sec-Fetch-Mode': 'cors',
+                    'Sec-Fetch-Dest': 'empty',
                     'X-Forwarded-For': '5.62.60.1',        # UAE Dubai IP
                     'X-Real-IP': '5.62.60.1',
                     'CF-Connecting-IP': '5.62.60.1',
@@ -92,11 +137,15 @@ class ExchangePoller:
                     'X-Client-IP': '5.62.60.1',
                     'X-Country-Code': 'AE',                # UAE country code
                     'CloudFront-Viewer-Country': 'AE',
+                    'CloudFront-Is-Desktop-Viewer': 'true',
+                    'CloudFront-Is-Mobile-Viewer': 'false',
+                    'CloudFront-Is-Tablet-Viewer': 'false',
                     'Connection': 'keep-alive',
-                    'Cache-Control': 'no-cache'
+                    'Cache-Control': 'no-cache',
+                    'Upgrade-Insecure-Requests': '1'
                 },
-                'timeout': 45000,
-                'rateLimit': 1200
+                'timeout': 60000,
+                'rateLimit': 800
             },
             {
                 'apiKey': self.instance.api_key,
@@ -119,11 +168,15 @@ class ExchangePoller:
                     'CF-Connecting-IP': '103.10.197.1',
                     'X-Country-Code': 'HK',
                     'CloudFront-Viewer-Country': 'HK',
+                    'CloudFront-Is-Desktop-Viewer': 'true',
+                    'CloudFront-Is-Mobile-Viewer': 'false',
+                    'CloudFront-Is-Tablet-Viewer': 'false',
                     'Via': '1.1 103.10.197.1:8080',
-                    'Connection': 'keep-alive'
+                    'Connection': 'keep-alive',
+                    'Upgrade-Insecure-Requests': '1'
                 },
-                'timeout': 45000,
-                'rateLimit': 1200
+                'timeout': 60000,
+                'rateLimit': 800
             },
             {
                 'apiKey': self.instance.api_key,
@@ -139,8 +192,8 @@ class ExchangePoller:
                     'CloudFront-Viewer-Country': 'JP',
                     'Connection': 'keep-alive'
                 },
-                'timeout': 45000,
-                'rateLimit': 1200
+                'timeout': 60000,
+                'rateLimit': 800
             },
             {
                 'apiKey': self.instance.api_key,
@@ -148,8 +201,12 @@ class ExchangePoller:
                 'sandbox': False,
                 'enableRateLimit': True,
                 'headers': {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                    'Accept': 'application/json'
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                    'Accept': 'application/json',
+                    'Accept-Language': 'en-US,en;q=0.9',
+                    'Accept-Encoding': 'gzip, deflate, br',
+                    'Connection': 'keep-alive',
+                    'Upgrade-Insecure-Requests': '1'
                 },
                 'timeout': 30000,
                 'rateLimit': 1200
