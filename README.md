@@ -1,4 +1,4 @@
-# TGL Medusa Loggers - Cryptocurrency Bot Monitoring System
+# TGL MEDUSA - Cryptocurrency Bot Monitoring System
 
 A production-ready Python application for monitoring Bitsgap trading bots across multiple cryptocurrency exchanges with real-time notifications and web-based administration.
 

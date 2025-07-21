@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: tgl-medusa-loggers-web
+    name: medusa-web
     env: python
     buildCommand: |
       pip install -r requirements.txt
@@ -9,7 +9,7 @@ services:
     envVars:
       - key: DATABASE_URL
         fromDatabase:
-          name: tgl-medusa-db
+          name: medusa-db
           property: connectionString
       - key: SECRET_KEY
         generateValue: true
@@ -18,7 +18,7 @@ services:
       - key: ACCESS_TOKEN_EXPIRE_MINUTES
         value: 30
       - key: APP_NAME
-        value: TGL Medusa Loggers
+        value: TGL MEDUSA
       - key: DEBUG
         value: false
       - key: ENVIRONMENT
@@ -26,28 +26,28 @@ services:
     healthCheckPath: /api/health
 
   - type: worker
-    name: tgl-medusa-loggers-worker
+    name: medusa-worker
     env: python
     buildCommand: pip install -r requirements.txt
     startCommand: python worker.py
     envVars:
       - key: DATABASE_URL
         fromDatabase:
-          name: tgl-medusa-db
+          name: medusa-db
           property: connectionString
       - key: SECRET_KEY
         generateValue: true
       - key: ALGORITHM
         value: HS256
       - key: APP_NAME
-        value: TGL Medusa Loggers
+        value: TGL MEDUSA
       - key: DEBUG
         value: false
       - key: ENVIRONMENT
         value: production
 
 databases:
-  - name: tgl-medusa-db
-    databaseName: tgl_medusa_loggers
-    user: tgl_admin
+  - name: medusa-db
+    databaseName: medusa_loggers
+    user: medusa_admin
     region: oregon

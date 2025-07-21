@@ -1,4 +1,4 @@
-# TGL Medusa Loggers - Production Dockerfile
+# TGL MEDUSA - Production Dockerfile
 FROM python:3.11-slim
 
 # Set working directory

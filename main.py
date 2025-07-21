@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Depends, HTTPException, Request, Form
 from fastapi.staticfiles import StaticFiles
+import os
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
@@ -18,11 +19,12 @@ from auth import (
     UserCreate, UserLogin, UserResponse, Token
 )
 
-app = FastAPI(title="TGL Medusa Loggers - Advanced Crypto Bot Monitor", version="2.0.0")
+app = FastAPI(title="TGL MEDUSA - Crypto Bot Monitor", version="2.0.0")
 
 templates = Jinja2Templates(directory="templates")
 
-app.mount("/static", StaticFiles(directory="static"), name="static")
+if os.path.exists("static"):
+    app.mount("/static", StaticFiles(directory="static"), name="static")
 
 active_processes = {}
 

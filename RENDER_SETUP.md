@@ -1,4 +1,4 @@
-# TGL Medusa Loggers - Render.com Setup Guide
+# TGL MEDUSA - Render.com Setup Guide
 
 ## 🚀 Quick Deployment Steps
 
@@ -25,7 +25,7 @@
 - ✅ `SECRET_KEY` - Auto-generated secure key
 - ✅ `ALGORITHM` - Set to HS256
 - ✅ `ACCESS_TOKEN_EXPIRE_MINUTES` - Set to 30
-- ✅ `APP_NAME` - Set to "TGL Medusa Loggers"
+- ✅ `APP_NAME` - Set to "TGL MEDUSA"
 - ✅ `DEBUG` - Set to false
 - ✅ `ENVIRONMENT` - Set to production
 
@@ -184,4 +184,4 @@ scaling:
 4. **Monitor performance** - Check logs and health endpoints
 5. **Setup custom domain** (optional) - Configure DNS and SSL
 
-**Ready to deploy? Follow the steps above and your TGL Medusa Loggers will be live! 🚀**
+**Ready to deploy? Follow the steps above and your TGL MEDUSA will be live! 🚀**

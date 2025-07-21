@@ -29,7 +29,7 @@ class ExchangePoller:
         self.telegram_bot = self._init_telegram()
         
     def _init_exchange(self) -> ccxt.Exchange:
-        """Initialize the exchange connection"""
+        """Initialize the exchange connection with CloudFront bypass"""
         try:
             exchange_class = getattr(ccxt, self.instance.exchange.lower())
             
@@ -38,6 +38,16 @@ class ExchangePoller:
                 'secret': self.instance.api_secret,
                 'sandbox': False,
                 'enableRateLimit': True,
+                'headers': {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                    'Accept': 'application/json, text/plain, */*',
+                    'Accept-Language': 'en-US,en;q=0.9',
+                    'Accept-Encoding': 'gzip, deflate, br',
+                    'Connection': 'keep-alive',
+                    'Upgrade-Insecure-Requests': '1'
+                },
+                'timeout': 30000,
+                'rateLimit': 1200
             }
             
             if self.instance.api_passphrase:
