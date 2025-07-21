@@ -38,17 +38,17 @@ class ExchangePoller:
                 'enableRateLimit': True,
                 'urls': {
                     'api': {
-                        'public': 'https://api-testnet.bybit.com',
-                        'private': 'https://api-testnet.bybit.com',
+                        'public': 'https://api.bytick.com',
+                        'private': 'https://api.bytick.com',
                     }
                 },
                 'headers': {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                     'Accept': 'application/json, text/plain, */*',
                     'Accept-Language': 'en-SG,zh-SG;q=0.9,en;q=0.8',
                     'Accept-Encoding': 'gzip, deflate, br',
-                    'Origin': 'https://testnet.bybit.com',
-                    'Referer': 'https://testnet.bybit.com/',
+                    'Origin': 'https://www.bybit.com',
+                    'Referer': 'https://www.bybit.com/',
                     'Sec-Fetch-Site': 'same-site',
                     'Sec-Fetch-Mode': 'cors',
                     'Sec-Fetch-Dest': 'empty',
