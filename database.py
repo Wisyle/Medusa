@@ -8,7 +8,23 @@ import json
 from config import settings
 import os
 
-engine = create_engine(settings.database_url, echo=settings.debug)
+connect_args = {}
+if settings.database_url.startswith('postgresql'):
+    connect_args = {
+        'sslmode': 'require',
+        'connect_timeout': 30,
+        'application_name': 'tgl_medusa_worker'
+    }
+
+engine = create_engine(
+    settings.database_url, 
+    echo=settings.debug,
+    connect_args=connect_args,
+    pool_size=10,
+    pool_recycle=3600,
+    pool_pre_ping=True,
+    pool_timeout=30
+)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
