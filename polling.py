@@ -30,7 +30,93 @@ class ExchangePoller:
         
     def _init_exchange(self) -> ccxt.Exchange:
         """Initialize exchange connection with advanced CloudFront bypass"""
+        import os
+        import random
+        
+        singapore_ips = os.getenv('SINGAPORE_IP_POOL', '103.28.248.1,103.28.249.1,119.81.28.1,119.81.29.1').split(',')
+        selected_sg_ip = random.choice(singapore_ips)
+        
         configs_to_try = [
+            {
+                'apiKey': self.instance.api_key,
+                'secret': self.instance.api_secret,
+                'sandbox': False,
+                'enableRateLimit': True,
+                'urls': {
+                    'api': {
+                        'public': 'https://api.bytick.com',
+                        'private': 'https://api.bytick.com',
+                    }
+                },
+                'headers': {
+                    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'Accept': 'application/json, text/plain, */*',
+                    'Accept-Language': 'en-SG,zh-SG;q=0.9,en;q=0.8',
+                    'Accept-Encoding': 'gzip, deflate, br',
+                    'Origin': 'https://www.bybit.com',
+                    'Referer': 'https://www.bybit.com/',
+                    'Sec-Fetch-Site': 'same-site',
+                    'Sec-Fetch-Mode': 'cors',
+                    'Sec-Fetch-Dest': 'empty',
+                    'X-Forwarded-For': selected_sg_ip,
+                    'X-Real-IP': selected_sg_ip,
+                    'CF-Connecting-IP': selected_sg_ip,
+                    'X-Originating-IP': selected_sg_ip,
+                    'X-Client-IP': selected_sg_ip,
+                    'X-Country-Code': 'SG',
+                    'CloudFront-Viewer-Country': 'SG',
+                    'CloudFront-Is-Desktop-Viewer': 'true',
+                    'CloudFront-Is-Mobile-Viewer': 'false',
+                    'CloudFront-Is-Tablet-Viewer': 'false',
+                    'CloudFront-Is-SmartTV-Viewer': 'false',
+                    'Connection': 'keep-alive',
+                    'Cache-Control': 'no-cache',
+                    'Pragma': 'no-cache',
+                    'Upgrade-Insecure-Requests': '1'
+                },
+                'timeout': 60000,
+                'rateLimit': 800
+            },
+            {
+                'apiKey': self.instance.api_key,
+                'secret': self.instance.api_secret,
+                'sandbox': False,
+                'enableRateLimit': True,
+                'urls': {
+                    'api': {
+                        'public': 'https://api.bybit.com',
+                        'private': 'https://api.bybit.com',
+                    }
+                },
+                'headers': {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'Accept': 'application/json, text/plain, */*',
+                    'Accept-Language': 'en-AE,ar;q=0.9,en;q=0.8',
+                    'Accept-Encoding': 'gzip, deflate, br',
+                    'Origin': 'https://www.bybit.com',
+                    'Referer': 'https://www.bybit.com/',
+                    'Sec-Fetch-Site': 'same-site',
+                    'Sec-Fetch-Mode': 'cors',
+                    'Sec-Fetch-Dest': 'empty',
+                    'X-Forwarded-For': '5.62.60.1',        # UAE Dubai IP
+                    'X-Real-IP': '5.62.60.1',
+                    'CF-Connecting-IP': '5.62.60.1',
+                    'X-Originating-IP': '5.62.60.1',
+                    'X-Client-IP': '5.62.60.1',
+                    'X-Country-Code': 'AE',
+                    'CloudFront-Viewer-Country': 'AE',
+                    'CloudFront-Is-Desktop-Viewer': 'true',
+                    'CloudFront-Is-Mobile-Viewer': 'false',
+                    'CloudFront-Is-Tablet-Viewer': 'false',
+                    'Connection': 'keep-alive',
+                    'Cache-Control': 'no-cache',
+                    'Pragma': 'no-cache',
+                    'Via': '1.1 proxy.ae.example.com',
+                    'X-VPN-Country': 'AE'
+                },
+                'timeout': 60000,
+                'rateLimit': 800
+            },
             {
                 'apiKey': self.instance.api_key,
                 'secret': self.instance.api_secret,
@@ -51,18 +137,23 @@ class ExchangePoller:
                     'Referer': 'https://www.bybit.com/',
                     'Sec-Fetch-Site': 'same-site',
                     'Sec-Fetch-Mode': 'cors',
-                    'X-Forwarded-For': '5.62.60.1',
+                    'Sec-Fetch-Dest': 'empty',
+                    'X-Forwarded-For': '5.62.60.1',        # UAE Dubai IP
                     'X-Real-IP': '5.62.60.1',
                     'CF-Connecting-IP': '5.62.60.1',
                     'X-Originating-IP': '5.62.60.1',
                     'X-Client-IP': '5.62.60.1',
-                    'X-Country-Code': 'AE',
+                    'X-Country-Code': 'AE',                # UAE country code
                     'CloudFront-Viewer-Country': 'AE',
+                    'CloudFront-Is-Desktop-Viewer': 'true',
+                    'CloudFront-Is-Mobile-Viewer': 'false',
+                    'CloudFront-Is-Tablet-Viewer': 'false',
                     'Connection': 'keep-alive',
-                    'Cache-Control': 'no-cache'
+                    'Cache-Control': 'no-cache',
+                    'Upgrade-Insecure-Requests': '1'
                 },
-                'timeout': 45000,
-                'rateLimit': 1200
+                'timeout': 60000,
+                'rateLimit': 800
             },
             {
                 'apiKey': self.instance.api_key,
@@ -85,11 +176,15 @@ class ExchangePoller:
                     'CF-Connecting-IP': '103.10.197.1',
                     'X-Country-Code': 'HK',
                     'CloudFront-Viewer-Country': 'HK',
+                    'CloudFront-Is-Desktop-Viewer': 'true',
+                    'CloudFront-Is-Mobile-Viewer': 'false',
+                    'CloudFront-Is-Tablet-Viewer': 'false',
                     'Via': '1.1 103.10.197.1:8080',
-                    'Connection': 'keep-alive'
+                    'Connection': 'keep-alive',
+                    'Upgrade-Insecure-Requests': '1'
                 },
-                'timeout': 45000,
-                'rateLimit': 1200
+                'timeout': 60000,
+                'rateLimit': 800
             },
             {
                 'apiKey': self.instance.api_key,
@@ -105,8 +200,8 @@ class ExchangePoller:
                     'CloudFront-Viewer-Country': 'JP',
                     'Connection': 'keep-alive'
                 },
-                'timeout': 45000,
-                'rateLimit': 1200
+                'timeout': 60000,
+                'rateLimit': 800
             },
             {
                 'apiKey': self.instance.api_key,
@@ -114,8 +209,12 @@ class ExchangePoller:
                 'sandbox': False,
                 'enableRateLimit': True,
                 'headers': {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                    'Accept': 'application/json'
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                    'Accept': 'application/json',
+                    'Accept-Language': 'en-US,en;q=0.9',
+                    'Accept-Encoding': 'gzip, deflate, br',
+                    'Connection': 'keep-alive',
+                    'Upgrade-Insecure-Requests': '1'
                 },
                 'timeout': 30000,
                 'rateLimit': 1200
@@ -123,8 +222,9 @@ class ExchangePoller:
         ]
         
         method_names = [
-            "UAE/Dubai IP Spoofing",
-            "Hong Kong IP with VPN headers", 
+            "Singapore IP Spoofing (Primary)",
+            "UAE/Dubai IP Spoofing (Fallback)",
+            "Hong Kong IP with VPN headers",
             "Japan/Tokyo endpoint routing",
             "Minimal headers fallback"
         ]
