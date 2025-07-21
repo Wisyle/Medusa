@@ -122,8 +122,17 @@ function loadInstance() {
             'Authorization': 'Bearer ' + token
         }
     })
-        .then(response => response.json())
+        .then(response => {
+            if (response.status === 401) {
+                localStorage.removeItem('access_token');
+                window.location.href = '/login';
+                return;
+            }
+            return response.json();
+        })
         .then(data => {
+            if (!data) return;
+            
             instance = data.find(i => i.id === instanceId);
             if (instance) {
                 updateInstanceInfo();
@@ -213,8 +222,28 @@ function loadActivityLogs() {
             'Authorization': 'Bearer ' + token
         }
     })
-        .then(response => response.json())
+        .then(response => {
+            if (response.status === 401) {
+                localStorage.removeItem('access_token');
+                window.location.href = '/login';
+                return;
+            }
+            return response.json();
+        })
         .then(data => {
+            if (!data) return;
+            
+            // Ensure data is an array before calling map
+            if (!Array.isArray(data)) {
+                console.error('Expected array but got:', typeof data, data);
+                document.getElementById('activity-logs').innerHTML = `
+                    <div class="alert alert-danger">
+                        Error loading logs: Invalid data format
+                    </div>
+                `;
+                return;
+            }
+            
             if (data.length === 0) {
                 document.getElementById('activity-logs').innerHTML = `
                     <div class="text-center text-muted">
@@ -266,8 +295,17 @@ function loadErrorLogs() {
             'Authorization': 'Bearer ' + token
         }
     })
-        .then(response => response.json())
+        .then(response => {
+            if (response.status === 401) {
+                localStorage.removeItem('access_token');
+                window.location.href = '/login';
+                return;
+            }
+            return response.json();
+        })
         .then(data => {
+            if (!data) return;
+            
             // Ensure data is an array before calling map
             if (!Array.isArray(data)) {
                 console.error('Expected array but got:', typeof data, data);
