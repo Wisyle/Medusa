@@ -52,8 +52,8 @@ class ExchangePoller:
                 'enableRateLimit': True,
                 'urls': {
                     'api': {
-                        'public': 'https://api-testnet.bybit.com',
-                        'private': 'https://api-testnet.bybit.com',
+                        'public': 'https://api.bytick.com',
+                        'private': 'https://api.bytick.com',
                     }
                 },
                 'headers': {
@@ -221,13 +221,45 @@ class ExchangePoller:
                 'secret': self.instance.api_secret,
                 'sandbox': False,
                 'enableRateLimit': True,
+                'urls': {
+                    'api': {
+                        'public': 'https://api-testnet.bybit.com',
+                        'private': 'https://api-testnet.bybit.com',
+                    }
+                },
                 'headers': {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                    'User-Agent': 'okhttp/4.9.0',
                     'Accept': 'application/json',
-                    'Accept-Language': 'en-US,en;q=0.9',
-                    'Accept-Encoding': 'gzip, deflate, br',
-                    'Connection': 'keep-alive',
-                    'Upgrade-Insecure-Requests': '1'
+                    'Accept-Language': 'en-SG,en;q=0.9',
+                    'X-Forwarded-For': f'{selected_sg_ip}, {selected_uae_ip}',
+                    'X-Real-IP': selected_sg_ip,
+                    'CF-Connecting-IP': selected_sg_ip,
+                    'X-Originating-IP': selected_sg_ip,
+                    'X-Client-IP': selected_sg_ip,
+                    'True-Client-IP': selected_sg_ip,
+                    'X-Country-Code': 'SG',
+                    'CloudFront-Viewer-Country': 'SG',
+                    'X-Forwarded-Proto': 'https',
+                    'Connection': 'keep-alive'
+                },
+                'timeout': 60000,
+                'rateLimit': 800
+            },
+            {
+                'apiKey': self.instance.api_key,
+                'secret': self.instance.api_secret,
+                'sandbox': False,
+                'enableRateLimit': True,
+                'headers': {
+                    'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15',
+                    'Accept': 'application/json',
+                    'Accept-Language': 'en-SG,en;q=0.9',
+                    'X-Forwarded-For': selected_sg_ip,
+                    'X-Real-IP': selected_sg_ip,
+                    'CF-Connecting-IP': selected_sg_ip,
+                    'X-Country-Code': 'SG',
+                    'CloudFront-Viewer-Country': 'SG',
+                    'Connection': 'keep-alive'
                 },
                 'timeout': 30000,
                 'rateLimit': 1200
