@@ -248,7 +248,7 @@ async def register_page(request: Request):
     return templates.TemplateResponse("register.html", {"request": request})
 
 @app.get("/setup-2fa", response_class=HTMLResponse)
-async def setup_2fa_page(request: Request, current_user: User = Depends(get_current_active_user)):
+async def setup_2fa_page(request: Request):
     """2FA setup page"""
     return templates.TemplateResponse("setup_2fa.html", {"request": request})
 

@@ -65,6 +65,11 @@
 <script>
 const token = localStorage.getItem('access_token');
 
+// Check if user is authenticated
+if (!token) {
+    window.location.href = '/login';
+}
+
 document.getElementById('generateQR').addEventListener('click', async function() {
     try {
         const response = await fetch('/auth/setup-2fa', {
