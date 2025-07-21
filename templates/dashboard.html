@@ -165,17 +165,33 @@ function refreshDashboard() {
 
 function loadHealth() {
     const token = localStorage.getItem('access_token');
+    if (!token) {
+        document.getElementById('system-health').innerHTML = 
+            `<span class="text-danger"><i class="fas fa-times"></i> No Auth</span>`;
+        return;
+    }
+    
     fetch('/api/health', {
         headers: {
             'Authorization': 'Bearer ' + token
         }
     })
-        .then(response => response.json())
+        .then(response => {
+            if (response.status === 401) {
+                localStorage.removeItem('access_token');
+                window.location.href = '/login';
+                return;
+            }
+            return response.json();
+        })
         .then(data => {
-            document.getElementById('system-health').innerHTML = 
-                `<span class="text-success"><i class="fas fa-check"></i> ${data.status}</span>`;
+            if (data) {
+                document.getElementById('system-health').innerHTML = 
+                    `<span class="text-success"><i class="fas fa-check"></i> ${data.status}</span>`;
+            }
         })
         .catch(error => {
+            console.error('Health check error:', error);
             document.getElementById('system-health').innerHTML = 
                 `<span class="text-danger"><i class="fas fa-times"></i> Error</span>`;
         });
@@ -183,19 +199,44 @@ function loadHealth() {
 
 function loadInstances() {
     const token = localStorage.getItem('access_token');
+    if (!token) {
+        console.error('No access token available');
+        return;
+    }
+    
     fetch('/api/instances', {
         headers: {
             'Authorization': 'Bearer ' + token
         }
     })
-        .then(response => response.json())
+        .then(response => {
+            if (response.status === 401) {
+                console.log('Unauthorized, redirecting to login');
+                localStorage.removeItem('access_token');
+                window.location.href = '/login';
+                return;
+            }
+            return response.json();
+        })
         .then(data => {
-            instances = data;
-            updateStats();
-            updateInstancesTable();
+            if (data) {
+                instances = data;
+                updateStats();
+                updateInstancesTable();
+            }
         })
         .catch(error => {
             console.error('Error loading instances:', error);
+            // Show error in UI
+            const tbody = document.querySelector('#instances-table tbody');
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" class="text-center text-danger">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Error loading instances: ${error.message}
+                    </td>
+                </tr>
+            `;
         });
 }
 
@@ -322,11 +363,30 @@ document.addEventListener('DOMContentLoaded', function() {
     // Check if user is authenticated
     const token = localStorage.getItem('access_token');
     if (!token) {
+        console.log('No access token found, redirecting to login');
         window.location.href = '/login';
         return;
     }
     
-    refreshDashboard();
+    // Verify token is still valid
+    fetch('/api/health', {
+        headers: {
+            'Authorization': 'Bearer ' + token
+        }
+    })
+    .then(response => {
+        if (response.status === 401) {
+            console.log('Token expired, redirecting to login');
+            localStorage.removeItem('access_token');
+            window.location.href = '/login';
+            return;
+        }
+        refreshDashboard();
+    })
+    .catch(error => {
+        console.error('Error verifying token:', error);
+        refreshDashboard(); // Try anyway
+    });
     
     // Auto-refresh every 30 seconds
     setInterval(refreshDashboard, 30000);

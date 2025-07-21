@@ -2,6 +2,7 @@ services:
   - type: web
     name: medusa-web
     env: python
+    region: singapore
     buildCommand: |
       pip install -r requirements.txt
       python migration.py
@@ -23,11 +24,22 @@ services:
         value: false
       - key: ENVIRONMENT
         value: production
+      - key: RENDER_REGION
+        value: singapore
+      - key: BYPASS_CLOUDFRONT
+        value: 'true'
+      - key: BYBIT_PROXY_ENDPOINTS
+        value: api.bytick.com,api.bybit.com
+      - key: PROXY_COUNTRIES
+        value: singapore,hongkong,japan,uae
+      - key: SPOOF_CLOUDFRONT_HEADERS
+        value: 'true'
     healthCheckPath: /api/health
 
   - type: worker
     name: medusa-worker
     env: python
+    region: singapore
     buildCommand: pip install -r requirements.txt
     startCommand: python worker.py
     envVars:
@@ -45,9 +57,19 @@ services:
         value: false
       - key: ENVIRONMENT
         value: production
+      - key: RENDER_REGION
+        value: singapore
+      - key: BYPASS_CLOUDFRONT
+        value: 'true'
+      - key: BYBIT_PROXY_ENDPOINTS
+        value: api.bytick.com,api.bybit.com
+      - key: PROXY_COUNTRIES
+        value: singapore,hongkong,japan,uae
+      - key: SPOOF_CLOUDFRONT_HEADERS
+        value: 'true'
 
 databases:
   - name: medusa-db
     databaseName: medusa_loggers
     user: medusa_admin
-    region: oregon
+    region: singapore

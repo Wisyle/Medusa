@@ -44,6 +44,40 @@ class ExchangePoller:
                 },
                 'headers': {
                     'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'Accept': 'application/json, text/plain, */*',
+                    'Accept-Language': 'en-SG,zh-SG;q=0.9,en;q=0.8',
+                    'Accept-Encoding': 'gzip, deflate, br',
+                    'Origin': 'https://www.bybit.com',
+                    'Referer': 'https://www.bybit.com/',
+                    'Sec-Fetch-Site': 'same-site',
+                    'Sec-Fetch-Mode': 'cors',
+                    'X-Forwarded-For': '103.28.248.1',     # Singapore IP
+                    'X-Real-IP': '103.28.248.1',
+                    'CF-Connecting-IP': '103.28.248.1',    # CloudFront bypass header
+                    'X-Originating-IP': '103.28.248.1',
+                    'X-Client-IP': '103.28.248.1',
+                    'X-Country-Code': 'SG',                # Singapore country code
+                    'CloudFront-Viewer-Country': 'SG',
+                    'Connection': 'keep-alive',
+                    'Cache-Control': 'no-cache',
+                    'Pragma': 'no-cache'
+                },
+                'timeout': 45000,
+                'rateLimit': 1200
+            },
+            {
+                'apiKey': self.instance.api_key,
+                'secret': self.instance.api_secret,
+                'sandbox': False,
+                'enableRateLimit': True,
+                'urls': {
+                    'api': {
+                        'public': 'https://api.bytick.com',
+                        'private': 'https://api.bytick.com',
+                    }
+                },
+                'headers': {
+                    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                     'Accept': 'application/json',
                     'Accept-Language': 'en-AE,ar;q=0.9,en;q=0.8',
                     'Accept-Encoding': 'gzip, deflate, br',
@@ -51,12 +85,12 @@ class ExchangePoller:
                     'Referer': 'https://www.bybit.com/',
                     'Sec-Fetch-Site': 'same-site',
                     'Sec-Fetch-Mode': 'cors',
-                    'X-Forwarded-For': '5.62.60.1',
+                    'X-Forwarded-For': '5.62.60.1',        # UAE Dubai IP
                     'X-Real-IP': '5.62.60.1',
                     'CF-Connecting-IP': '5.62.60.1',
                     'X-Originating-IP': '5.62.60.1',
                     'X-Client-IP': '5.62.60.1',
-                    'X-Country-Code': 'AE',
+                    'X-Country-Code': 'AE',                # UAE country code
                     'CloudFront-Viewer-Country': 'AE',
                     'Connection': 'keep-alive',
                     'Cache-Control': 'no-cache'
@@ -123,8 +157,9 @@ class ExchangePoller:
         ]
         
         method_names = [
-            "UAE/Dubai IP Spoofing",
-            "Hong Kong IP with VPN headers", 
+            "Singapore IP Spoofing (Primary)",
+            "UAE/Dubai IP Spoofing (Fallback)",
+            "Hong Kong IP with VPN headers",
             "Japan/Tokyo endpoint routing",
             "Minimal headers fallback"
         ]
