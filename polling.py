@@ -33,8 +33,16 @@ class ExchangePoller:
         import os
         import random
         
-        singapore_ips = os.getenv('SINGAPORE_IP_POOL', '103.28.248.1,103.28.249.1,119.81.28.1,119.81.29.1').split(',')
+        singapore_ips = os.getenv('SINGAPORE_IP_POOL', '103.28.248.1,103.28.249.1,119.81.28.1,119.81.29.1,18.141.147.1,18.141.148.1,52.220.0.1,52.221.0.1').split(',')
         selected_sg_ip = random.choice(singapore_ips)
+        
+        uae_ips = ['5.62.60.1', '5.62.61.1', '185.3.124.1', '185.3.125.1']
+        hk_ips = ['103.10.197.1', '103.10.198.1', '202.45.84.1', '202.45.85.1']
+        jp_ips = ['133.106.0.1', '133.106.1.1', '210.173.160.1', '210.173.161.1']
+        
+        selected_uae_ip = random.choice(uae_ips)
+        selected_hk_ip = random.choice(hk_ips)
+        selected_jp_ip = random.choice(jp_ips)
         
         configs_to_try = [
             {
@@ -63,6 +71,8 @@ class ExchangePoller:
                     'CF-Connecting-IP': selected_sg_ip,
                     'X-Originating-IP': selected_sg_ip,
                     'X-Client-IP': selected_sg_ip,
+                    'True-Client-IP': selected_sg_ip,
+                    'X-Cluster-Client-IP': selected_sg_ip,
                     'X-Country-Code': 'SG',
                     'CloudFront-Viewer-Country': 'SG',
                     'CloudFront-Is-Desktop-Viewer': 'true',
@@ -124,8 +134,8 @@ class ExchangePoller:
                 'enableRateLimit': True,
                 'urls': {
                     'api': {
-                        'public': 'https://api.bytick.com',
-                        'private': 'https://api.bytick.com',
+                        'public': 'https://api-testnet.bybit.com',
+                        'private': 'https://api-testnet.bybit.com',
                     }
                 },
                 'headers': {
@@ -171,9 +181,10 @@ class ExchangePoller:
                     'Accept': 'application/json',
                     'Accept-Language': 'en-HK,zh;q=0.9,en;q=0.8',
                     'Accept-Encoding': 'gzip, deflate, br',
-                    'X-Forwarded-For': '103.10.197.1',
-                    'X-Real-IP': '103.10.197.1',
-                    'CF-Connecting-IP': '103.10.197.1',
+                    'X-Forwarded-For': selected_hk_ip,
+                    'X-Real-IP': selected_hk_ip,
+                    'CF-Connecting-IP': selected_hk_ip,
+                    'True-Client-IP': selected_hk_ip,
                     'X-Country-Code': 'HK',
                     'CloudFront-Viewer-Country': 'HK',
                     'CloudFront-Is-Desktop-Viewer': 'true',
@@ -194,8 +205,10 @@ class ExchangePoller:
                 'headers': {
                     'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
                     'Accept': 'application/json',
-                    'X-Forwarded-For': '133.106.0.1',
-                    'X-Real-IP': '133.106.0.1',
+                    'X-Forwarded-For': selected_jp_ip,
+                    'X-Real-IP': selected_jp_ip,
+                    'CF-Connecting-IP': selected_jp_ip,
+                    'True-Client-IP': selected_jp_ip,
                     'X-Country-Code': 'JP',
                     'CloudFront-Viewer-Country': 'JP',
                     'Connection': 'keep-alive'
@@ -208,13 +221,45 @@ class ExchangePoller:
                 'secret': self.instance.api_secret,
                 'sandbox': False,
                 'enableRateLimit': True,
+                'urls': {
+                    'api': {
+                        'public': 'https://api-testnet.bybit.com',
+                        'private': 'https://api-testnet.bybit.com',
+                    }
+                },
                 'headers': {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                    'User-Agent': 'okhttp/4.9.0',
                     'Accept': 'application/json',
-                    'Accept-Language': 'en-US,en;q=0.9',
-                    'Accept-Encoding': 'gzip, deflate, br',
-                    'Connection': 'keep-alive',
-                    'Upgrade-Insecure-Requests': '1'
+                    'Accept-Language': 'en-SG,en;q=0.9',
+                    'X-Forwarded-For': f'{selected_sg_ip}, {selected_uae_ip}',
+                    'X-Real-IP': selected_sg_ip,
+                    'CF-Connecting-IP': selected_sg_ip,
+                    'X-Originating-IP': selected_sg_ip,
+                    'X-Client-IP': selected_sg_ip,
+                    'True-Client-IP': selected_sg_ip,
+                    'X-Country-Code': 'SG',
+                    'CloudFront-Viewer-Country': 'SG',
+                    'X-Forwarded-Proto': 'https',
+                    'Connection': 'keep-alive'
+                },
+                'timeout': 60000,
+                'rateLimit': 800
+            },
+            {
+                'apiKey': self.instance.api_key,
+                'secret': self.instance.api_secret,
+                'sandbox': False,
+                'enableRateLimit': True,
+                'headers': {
+                    'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15',
+                    'Accept': 'application/json',
+                    'Accept-Language': 'en-SG,en;q=0.9',
+                    'X-Forwarded-For': selected_sg_ip,
+                    'X-Real-IP': selected_sg_ip,
+                    'CF-Connecting-IP': selected_sg_ip,
+                    'X-Country-Code': 'SG',
+                    'CloudFront-Viewer-Country': 'SG',
+                    'Connection': 'keep-alive'
                 },
                 'timeout': 30000,
                 'rateLimit': 1200
