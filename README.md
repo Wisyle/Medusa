@@ -1,6 +1,6 @@
 # TGL MEDUSA - Cryptocurrency Bot Monitoring System
 
-A production-ready Python application for monitoring Bitsgap trading bots across multiple cryptocurrency exchanges with real-time notifications and web-based administration.
+A production-ready Python application for monitoring Tar Global trading bots across multiple cryptocurrency exchanges with real-time notifications and web-based administration.
 
 ## Features
 
