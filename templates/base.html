@@ -3,38 +3,106 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}ComboLogger - Crypto Bot Monitor{% endblock %}</title>
+    <title>{% block title %}TGL Medusa Loggers - Advanced Crypto Bot Monitor{% endblock %}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
+        :root {
+            --primary-black: #000000;
+            --secondary-black: #1a1a1a;
+            --light-gray: #f8f9fa;
+            --medium-gray: #6c757d;
+            --white: #ffffff;
+            --accent-gold: #ffd700;
+        }
+        
+        body {
+            background-color: var(--white);
+            color: var(--primary-black);
+        }
+        
         .sidebar {
             min-height: 100vh;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, var(--primary-black) 0%, var(--secondary-black) 100%);
+            border-right: 2px solid var(--accent-gold);
         }
         .sidebar .nav-link {
-            color: rgba(255,255,255,0.8);
+            color: rgba(255,255,255,0.9);
             border-radius: 8px;
             margin: 2px 0;
+            transition: all 0.3s ease;
         }
         .sidebar .nav-link:hover, .sidebar .nav-link.active {
-            color: white;
-            background-color: rgba(255,255,255,0.1);
+            color: var(--primary-black);
+            background-color: var(--accent-gold);
+            transform: translateX(5px);
         }
         .main-content {
-            background-color: #f8f9fa;
+            background-color: var(--white);
             min-height: 100vh;
         }
         .card {
-            border: none;
+            border: 1px solid var(--medium-gray);
             border-radius: 12px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            background-color: var(--white);
+        }
+        .card-header {
+            background-color: var(--light-gray);
+            border-bottom: 1px solid var(--medium-gray);
         }
         .status-badge {
             font-size: 0.8em;
             padding: 4px 8px;
         }
         .crypto-icon {
-            color: #f7931a;
+            color: var(--accent-gold);
+        }
+        .btn-primary {
+            background-color: var(--primary-black);
+            border-color: var(--primary-black);
+        }
+        .btn-primary:hover {
+            background-color: var(--secondary-black);
+            border-color: var(--secondary-black);
+        }
+        .btn-outline-primary {
+            color: var(--primary-black);
+            border-color: var(--primary-black);
+        }
+        .btn-outline-primary:hover {
+            background-color: var(--primary-black);
+            border-color: var(--primary-black);
+        }
+        .text-primary {
+            color: var(--primary-black) !important;
+        }
+        .border-left-primary {
+            border-left: 4px solid var(--accent-gold) !important;
+        }
+        .border-left-success {
+            border-left: 4px solid #28a745 !important;
+        }
+        .border-left-warning {
+            border-left: 4px solid #ffc107 !important;
+        }
+        .border-left-info {
+            border-left: 4px solid #17a2b8 !important;
+        }
+        .table {
+            color: var(--primary-black);
+        }
+        .table th {
+            border-top: none;
+            background-color: var(--light-gray);
+            color: var(--primary-black);
+        }
+        .form-control {
+            border: 1px solid var(--medium-gray);
+        }
+        .form-control:focus {
+            border-color: var(--accent-gold);
+            box-shadow: 0 0 0 0.2rem rgba(255, 215, 0, 0.25);
         }
     </style>
 </head>
@@ -47,9 +115,9 @@
                     <div class="text-center mb-4">
                         <h4 class="text-white">
                             <i class="fas fa-robot crypto-icon"></i>
-                            ComboLogger
+                            TGL Medusa Loggers
                         </h4>
-                        <small class="text-white-50">Crypto Bot Monitor</small>
+                        <small class="text-white-50">Advanced Crypto Bot Monitor</small>
                     </div>
                     
                     <ul class="nav flex-column">

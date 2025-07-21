@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}Login - TGL Medusa Loggers{% endblock %}
+
+{% block content %}
+<div class="container-fluid h-100">
+    <div class="row h-100 justify-content-center align-items-center">
+        <div class="col-md-6 col-lg-4">
+            <div class="card shadow">
+                <div class="card-header text-center">
+                    <h4 class="mb-0">
+                        <i class="fas fa-robot crypto-icon"></i>
+                        TGL Medusa Loggers
+                    </h4>
+                    <small class="text-muted">Advanced Crypto Bot Monitor</small>
+                </div>
+                <div class="card-body">
+                    <form id="loginForm">
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="email" name="email" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Password</label>
+                            <input type="password" class="form-control" id="password" name="password" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="totp_code" class="form-label">Google Authenticator Code (if enabled)</label>
+                            <input type="text" class="form-control" id="totp_code" name="totp_code" 
+                                   placeholder="6-digit code" maxlength="6">
+                        </div>
+                        
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-sign-in-alt"></i>
+                                Login
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <div class="text-center mt-3">
+                        <small>
+                            Don't have an account? 
+                            <a href="/register" class="text-decoration-none">Register here</a>
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('loginForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const loginData = {
+        email: formData.get('email'),
+        password: formData.get('password'),
+        totp_code: formData.get('totp_code') || null
+    };
+    
+    try {
+        const response = await fetch('/auth/login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(loginData)
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            localStorage.setItem('access_token', data.access_token);
+            window.location.href = '/';
+        } else {
+            const error = await response.json();
+            alert('Login failed: ' + error.detail);
+        }
+    } catch (error) {
+        alert('Login error: ' + error.message);
+    }
+});
+</script>
+{% endblock %}

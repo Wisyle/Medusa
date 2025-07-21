@@ -1,0 +1,70 @@
+services:
+  - type: web
+    name: tgl-medusa-loggers-web
+    env: python
+    buildCommand: |
+      pip install -r requirements.txt
+      python migration.py
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT --workers 1
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: tgl-medusa-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ALGORITHM
+        value: HS256
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: 30
+      - key: APP_NAME
+        value: TGL Medusa Loggers
+      - key: DEBUG
+        value: false
+      - key: ENVIRONMENT
+        value: production
+    healthCheckPath: /api/health
+
+  - type: worker
+    name: tgl-medusa-loggers-worker
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python -c "
+      import asyncio
+      import time
+      from main import monitor_instances
+      
+      async def worker_main():
+          print('TGL Medusa Loggers Worker Starting...')
+          while True:
+              try:
+                  await monitor_instances()
+                  await asyncio.sleep(60)  # Check every minute
+              except Exception as e:
+                  print(f'Worker error: {e}')
+                  await asyncio.sleep(30)  # Wait before retry
+      
+      if __name__ == '__main__':
+          asyncio.run(worker_main())
+      "
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: tgl-medusa-db
+          property: connectionString
+      - key: SECRET_KEY
+        sync: false
+      - key: ALGORITHM
+        value: HS256
+      - key: APP_NAME
+        value: TGL Medusa Loggers
+      - key: DEBUG
+        value: false
+      - key: ENVIRONMENT
+        value: production
+
+databases:
+  - name: tgl-medusa-db
+    databaseName: tgl_medusa_loggers
+    user: tgl_admin
+    region: oregon

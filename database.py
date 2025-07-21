@@ -27,6 +27,7 @@ class BotInstance(Base):
     webhook_url = Column(String(500), nullable=True)
     telegram_bot_token = Column(String(255), nullable=True)
     telegram_chat_id = Column(String(100), nullable=True)
+    telegram_topic_id = Column(String(100), nullable=True)
     
     is_active = Column(Boolean, default=False)
     last_poll = Column(DateTime, nullable=True)
@@ -66,6 +67,20 @@ class ErrorLog(Base):
     error_message = Column(Text, nullable=False)
     traceback = Column(Text, nullable=True)
     timestamp = Column(DateTime, default=datetime.utcnow)
+
+class User(Base):
+    __tablename__ = "users"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String(255), unique=True, index=True, nullable=False)
+    hashed_password = Column(String(255), nullable=False)
+    full_name = Column(String(255), nullable=True)
+    is_active = Column(Boolean, default=True)
+    is_superuser = Column(Boolean, default=False)
+    totp_secret = Column(String(255), nullable=True)
+    totp_enabled = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 def get_db():
     db = SessionLocal()

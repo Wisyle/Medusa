@@ -1,5 +1,4 @@
 from fastapi import FastAPI, Depends, HTTPException, Request, Form
-from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -8,16 +7,18 @@ from typing import List, Optional
 import asyncio
 import multiprocessing
 from datetime import datetime, timedelta
-import secrets
 import uvicorn
 
-from database import get_db, init_db, BotInstance, ActivityLog, ErrorLog
+from database import get_db, init_db, BotInstance, ActivityLog, ErrorLog, User
 from polling import run_poller
 from config import settings
+from auth import (
+    authenticate_user, create_access_token, get_current_active_user,
+    create_user, generate_totp_secret, generate_totp_qr_code,
+    UserCreate, UserLogin, UserResponse, Token
+)
 
-app = FastAPI(title="ComboLogger - Crypto Bot Monitor", version="1.0.0")
-
-security = HTTPBasic()
+app = FastAPI(title="TGL Medusa Loggers - Advanced Crypto Bot Monitor", version="2.0.0")
 
 templates = Jinja2Templates(directory="templates")
 
@@ -25,14 +26,51 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 active_processes = {}
 
-def verify_credentials(credentials: HTTPBasicCredentials = Depends(security)):
-    """Verify admin credentials"""
-    correct_username = secrets.compare_digest(credentials.username, settings.admin_username)
-    correct_password = secrets.compare_digest(credentials.password, settings.admin_password)
-    
-    if not (correct_username and correct_password):
+@app.post("/auth/login", response_model=Token)
+async def login(user_login: UserLogin, db: Session = Depends(get_db)):
+    """Login with email, password, and optional TOTP"""
+    user = authenticate_user(db, user_login.email, user_login.password, user_login.totp_code)
+    if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
-    return credentials
+    
+    access_token = create_access_token(data={"sub": user.email})
+    return {"access_token": access_token, "token_type": "bearer"}
+
+@app.post("/auth/register", response_model=UserResponse)
+async def register(user_create: UserCreate, db: Session = Depends(get_db)):
+    """Register new user"""
+    return create_user(db, user_create)
+
+@app.post("/auth/setup-2fa")
+async def setup_2fa(current_user: User = Depends(get_current_active_user), db: Session = Depends(get_db)):
+    """Setup Google Authenticator 2FA"""
+    if current_user.totp_enabled:
+        raise HTTPException(status_code=400, detail="2FA already enabled")
+    
+    secret = generate_totp_secret()
+    qr_code = generate_totp_qr_code(current_user.email, secret)
+    
+    current_user.totp_secret = secret
+    db.commit()
+    
+    return {"qr_code": qr_code, "secret": secret}
+
+@app.post("/auth/enable-2fa")
+async def enable_2fa(totp_code: str = Form(...), current_user: User = Depends(get_current_active_user), db: Session = Depends(get_db)):
+    """Enable 2FA after verifying TOTP code"""
+    import pyotp
+    
+    if not current_user.totp_secret:
+        raise HTTPException(status_code=400, detail="2FA not set up")
+    
+    totp = pyotp.TOTP(current_user.totp_secret)
+    if not totp.verify(totp_code):
+        raise HTTPException(status_code=400, detail="Invalid TOTP code")
+    
+    current_user.totp_enabled = True
+    db.commit()
+    
+    return {"message": "2FA enabled successfully"}
 
 @app.get("/api/health")
 async def health_check():
@@ -44,7 +82,7 @@ async def health_check():
     }
 
 @app.get("/api/instances")
-async def get_instances(db: Session = Depends(get_db), credentials: HTTPBasicCredentials = Depends(verify_credentials)):
+async def get_instances(db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
     """Get all bot instances"""
     instances = db.query(BotInstance).all()
     return [
@@ -73,8 +111,9 @@ async def create_instance(
     webhook_url: str = Form(""),
     telegram_bot_token: str = Form(""),
     telegram_chat_id: str = Form(""),
+    telegram_topic_id: str = Form(""),
     db: Session = Depends(get_db),
-    credentials: HTTPBasicCredentials = Depends(verify_credentials)
+    current_user: User = Depends(get_current_active_user)
 ):
     """Create new bot instance"""
     
@@ -90,7 +129,8 @@ async def create_instance(
         polling_interval=polling_interval,
         webhook_url=webhook_url if webhook_url else None,
         telegram_bot_token=telegram_bot_token if telegram_bot_token else None,
-        telegram_chat_id=telegram_chat_id if telegram_chat_id else None
+        telegram_chat_id=telegram_chat_id if telegram_chat_id else None,
+        telegram_topic_id=telegram_topic_id if telegram_topic_id else None
     )
     
     db.add(instance)
@@ -100,7 +140,7 @@ async def create_instance(
     return {"id": instance.id, "message": "Instance created successfully"}
 
 @app.post("/api/instances/{instance_id}/start")
-async def start_instance(instance_id: int, db: Session = Depends(get_db), credentials: HTTPBasicCredentials = Depends(verify_credentials)):
+async def start_instance(instance_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
     """Start bot instance"""
     instance = db.query(BotInstance).filter(BotInstance.id == instance_id).first()
     if not instance:
@@ -120,7 +160,7 @@ async def start_instance(instance_id: int, db: Session = Depends(get_db), creden
     return {"message": "Instance started successfully"}
 
 @app.post("/api/instances/{instance_id}/stop")
-async def stop_instance(instance_id: int, db: Session = Depends(get_db), credentials: HTTPBasicCredentials = Depends(verify_credentials)):
+async def stop_instance(instance_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
     """Stop bot instance"""
     instance = db.query(BotInstance).filter(BotInstance.id == instance_id).first()
     if not instance:
@@ -140,14 +180,14 @@ async def stop_instance(instance_id: int, db: Session = Depends(get_db), credent
     return {"message": "Instance stopped successfully"}
 
 @app.delete("/api/instances/{instance_id}")
-async def delete_instance(instance_id: int, db: Session = Depends(get_db), credentials: HTTPBasicCredentials = Depends(verify_credentials)):
+async def delete_instance(instance_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
     """Delete bot instance"""
     instance = db.query(BotInstance).filter(BotInstance.id == instance_id).first()
     if not instance:
         raise HTTPException(status_code=404, detail="Instance not found")
     
     if instance_id in active_processes:
-        await stop_instance(instance_id, db, credentials)
+        await stop_instance(instance_id, db, current_user)
     
     db.delete(instance)
     db.commit()
@@ -160,7 +200,7 @@ async def get_instance_logs(
     log_type: str = "activity",
     limit: int = 100,
     db: Session = Depends(get_db),
-    credentials: HTTPBasicCredentials = Depends(verify_credentials)
+    current_user: User = Depends(get_current_active_user)
 ):
     """Get logs for instance"""
     if log_type == "activity":
@@ -197,29 +237,46 @@ async def get_instance_logs(
     else:
         raise HTTPException(status_code=400, detail="Invalid log type")
 
+@app.get("/login", response_class=HTMLResponse)
+async def login_page(request: Request):
+    """Login page"""
+    return templates.TemplateResponse("login.html", {"request": request})
+
+@app.get("/register", response_class=HTMLResponse)
+async def register_page(request: Request):
+    """Registration page"""
+    return templates.TemplateResponse("register.html", {"request": request})
+
+@app.get("/setup-2fa", response_class=HTMLResponse)
+async def setup_2fa_page(request: Request):
+    """2FA setup page"""
+    return templates.TemplateResponse("setup_2fa.html", {"request": request})
+
 @app.get("/", response_class=HTMLResponse)
-async def dashboard(request: Request, credentials: HTTPBasicCredentials = Depends(verify_credentials)):
+async def dashboard(request: Request):
     """Main dashboard"""
     return templates.TemplateResponse("dashboard.html", {"request": request})
 
 @app.get("/instances", response_class=HTMLResponse)
-async def instances_page(request: Request, credentials: HTTPBasicCredentials = Depends(verify_credentials)):
+async def instances_page(request: Request):
     """Instances management page"""
     return templates.TemplateResponse("instances.html", {"request": request})
 
 @app.get("/instances/new", response_class=HTMLResponse)
-async def new_instance_page(request: Request, credentials: HTTPBasicCredentials = Depends(verify_credentials)):
+async def new_instance_page(request: Request):
     """New instance form"""
     return templates.TemplateResponse("new_instance.html", {"request": request})
 
 @app.get("/instances/{instance_id}", response_class=HTMLResponse)
-async def instance_detail(request: Request, instance_id: int, credentials: HTTPBasicCredentials = Depends(verify_credentials)):
+async def instance_detail(request: Request, instance_id: int):
     """Instance detail page"""
     return templates.TemplateResponse("instance_detail.html", {"request": request, "instance_id": instance_id})
 
 @app.on_event("startup")
 async def startup_event():
     """Initialize database and start monitoring"""
+    from migration import migrate_database
+    migrate_database()
     init_db()
     
     asyncio.create_task(monitor_instances())

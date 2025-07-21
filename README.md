@@ -1,4 +1,4 @@
-# ComboLogger - Cryptocurrency Bot Monitoring System
+# TGL Medusa Loggers - Cryptocurrency Bot Monitoring System
 
 A production-ready Python application for monitoring Bitsgap trading bots across multiple cryptocurrency exchanges with real-time notifications and web-based administration.
 
@@ -50,7 +50,7 @@ A production-ready Python application for monitoring Bitsgap trading bots across
 
 ```env
 # Database Configuration
-DATABASE_URL=sqlite:///./combologger.db
+DATABASE_URL=sqlite:///./tgl_medusa.db
 
 # Admin Panel Authentication
 ADMIN_USERNAME=admin
@@ -223,15 +223,15 @@ python main.py
 ### Production Deployment
 ```bash
 # Using systemd service
-sudo cp combologger.service /etc/systemd/system/
-sudo systemctl enable combologger
-sudo systemctl start combologger
+sudo cp tgl_medusa.service /etc/systemd/system/
+sudo systemctl enable tgl_medusa
+sudo systemctl start tgl_medusa
 ```
 
 ### Docker Deployment
 ```bash
-docker build -t combologger .
-docker run -d -p 8000:8000 --env-file .env combologger
+docker build -t tgl-medusa-loggers .
+docker run -d -p 8000:8000 --env-file .env tgl-medusa-loggers
 ```
 
 ## Troubleshooting
