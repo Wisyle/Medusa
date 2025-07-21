@@ -3,6 +3,7 @@ import os
 import sys
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from datetime import datetime
 
 from database import BotInstance, get_database_url
 from polling import run_poller
@@ -41,14 +42,14 @@ async def monitor_instances():
         await asyncio.sleep(60)  # Check every minute
 
 async def worker_main():
-    """Background worker for monitoring bot instances"""
+    """Main worker function"""
     try:
         await monitor_instances()
     except KeyboardInterrupt:
         print("Worker stopped by user")
     except Exception as e:
-        print(f'Worker error: {e}')
-        await asyncio.sleep(30)  # Wait before retry
+        print(f"Worker error: {e}")
+        sys.exit(1)
 
 if __name__ == '__main__':
     asyncio.run(worker_main())

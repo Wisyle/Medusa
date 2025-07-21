@@ -6,6 +6,7 @@ from typing import Optional, Dict, Any
 import json
 
 from config import settings
+import os
 
 engine = create_engine(settings.database_url, echo=settings.debug)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -81,6 +82,10 @@ class User(Base):
     totp_enabled = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+def get_database_url():
+    """Get database URL from environment or config"""
+    return os.getenv("DATABASE_URL", settings.database_url)
 
 def get_db():
     db = SessionLocal()
