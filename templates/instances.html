@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Bot Instances - ComboLogger{% endblock %}
+{% block title %}Bot Instances - TGL Medusa Loggers{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
@@ -67,7 +67,12 @@ function refreshInstances() {
 }
 
 function loadInstances() {
-    fetch('/api/instances')
+    const token = localStorage.getItem('access_token');
+    fetch('/api/instances', {
+        headers: {
+            'Authorization': 'Bearer ' + token
+        }
+    })
         .then(response => response.json())
         .then(data => {
             instances = data;
@@ -164,7 +169,13 @@ function updateInstancesTable() {
 function startInstance(instanceId) {
     if (!confirm('Are you sure you want to start this instance?')) return;
     
-    fetch(`/api/instances/${instanceId}/start`, {method: 'POST'})
+    const token = localStorage.getItem('access_token');
+    fetch(`/api/instances/${instanceId}/start`, {
+        method: 'POST',
+        headers: {
+            'Authorization': 'Bearer ' + token
+        }
+    })
         .then(response => response.json())
         .then(data => {
             if (data.message) {
@@ -180,7 +191,13 @@ function startInstance(instanceId) {
 function stopInstance(instanceId) {
     if (!confirm('Are you sure you want to stop this instance?')) return;
     
-    fetch(`/api/instances/${instanceId}/stop`, {method: 'POST'})
+    const token = localStorage.getItem('access_token');
+    fetch(`/api/instances/${instanceId}/stop`, {
+        method: 'POST',
+        headers: {
+            'Authorization': 'Bearer ' + token
+        }
+    })
         .then(response => response.json())
         .then(data => {
             if (data.message) {
@@ -196,7 +213,13 @@ function stopInstance(instanceId) {
 function deleteInstance(instanceId) {
     if (!confirm('Are you sure you want to delete this instance? This action cannot be undone.')) return;
     
-    fetch(`/api/instances/${instanceId}`, {method: 'DELETE'})
+    const token = localStorage.getItem('access_token');
+    fetch(`/api/instances/${instanceId}`, {
+        method: 'DELETE',
+        headers: {
+            'Authorization': 'Bearer ' + token
+        }
+    })
         .then(response => response.json())
         .then(data => {
             if (data.message) {

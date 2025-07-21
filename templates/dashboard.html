@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard - ComboLogger{% endblock %}
+{% block title %}Dashboard - TGL Medusa Loggers{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
@@ -164,9 +164,10 @@ function refreshDashboard() {
 }
 
 function loadHealth() {
+    const token = localStorage.getItem('access_token');
     fetch('/api/health', {
         headers: {
-            'Authorization': 'Basic ' + btoa('admin:changeme123')
+            'Authorization': 'Bearer ' + token
         }
     })
         .then(response => response.json())
@@ -181,9 +182,10 @@ function loadHealth() {
 }
 
 function loadInstances() {
+    const token = localStorage.getItem('access_token');
     fetch('/api/instances', {
         headers: {
-            'Authorization': 'Basic ' + btoa('admin:changeme123')
+            'Authorization': 'Bearer ' + token
         }
     })
         .then(response => response.json())
@@ -276,10 +278,11 @@ function updateInstancesTable() {
 }
 
 function startInstance(instanceId) {
+    const token = localStorage.getItem('access_token');
     fetch(`/api/instances/${instanceId}/start`, {
         method: 'POST',
         headers: {
-            'Authorization': 'Basic ' + btoa('admin:changeme123')
+            'Authorization': 'Bearer ' + token
         }
     })
         .then(response => response.json())
@@ -295,10 +298,11 @@ function startInstance(instanceId) {
 }
 
 function stopInstance(instanceId) {
+    const token = localStorage.getItem('access_token');
     fetch(`/api/instances/${instanceId}/stop`, {
         method: 'POST',
         headers: {
-            'Authorization': 'Basic ' + btoa('admin:changeme123')
+            'Authorization': 'Bearer ' + token
         }
     })
         .then(response => response.json())

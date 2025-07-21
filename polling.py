@@ -242,11 +242,18 @@ class ExchangePoller:
         try:
             message = self._format_telegram_message(payload)
             
-            await self.telegram_bot.send_message(
-                chat_id=chat_id,
-                text=message,
-                parse_mode='Markdown'
-            )
+            topic_id = self.instance.telegram_topic_id or settings.default_telegram_topic_id
+            
+            send_params = {
+                'chat_id': chat_id,
+                'text': message,
+                'parse_mode': 'Markdown'
+            }
+            
+            if topic_id:
+                send_params['message_thread_id'] = int(topic_id)
+            
+            await self.telegram_bot.send_message(**send_params)
             
             self._log_activity("telegram_sent", payload.get('symbol'), "Telegram notification sent")
             

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}New Instance - ComboLogger{% endblock %}
+{% block title %}New Instance - TGL Medusa Loggers{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
@@ -167,6 +167,12 @@
                             <input type="text" class="form-control" id="telegram_chat_id" name="telegram_chat_id" 
                                    placeholder="-1001234567890">
                         </div>
+                        <div class="col-md-6">
+                            <label for="telegram_topic_id" class="form-label">Telegram Topic ID (Optional)</label>
+                            <input type="text" class="form-control" id="telegram_topic_id" name="telegram_topic_id" 
+                                   placeholder="123">
+                            <small class="form-text text-muted">Topic ID for threaded notifications in groups</small>
+                        </div>
                     </div>
 
                     <div class="d-grid gap-2 d-md-flex justify-content-md-end">
@@ -211,7 +217,8 @@
                 <p class="small">
                     1. Create a bot with @BotFather<br>
                     2. Get your chat ID from @userinfobot<br>
-                    3. Add the bot to your group/channel
+                    3. Add the bot to your group/channel<br>
+                    4. (Optional) Get topic ID for threaded notifications
                 </p>
             </div>
         </div>
@@ -235,8 +242,12 @@ document.getElementById('instance-form').addEventListener('submit', function(e) 
     formData.set('strategies', strategies.join(','));
     
     // Submit form
+    const token = localStorage.getItem('access_token');
     fetch('/api/instances', {
         method: 'POST',
+        headers: {
+            'Authorization': 'Bearer ' + token
+        },
         body: formData
     })
     .then(response => response.json())
