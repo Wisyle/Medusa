@@ -141,6 +141,10 @@ async def create_instance(
     
     return {"id": instance.id, "message": "Instance created successfully"}
 
+def _run_poller_sync(instance_id: int):
+    """Synchronous wrapper for running async poller"""
+    asyncio.run(run_poller(instance_id))
+
 @app.post("/api/instances/{instance_id}/start")
 async def start_instance(instance_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
     """Start bot instance"""
@@ -151,7 +155,7 @@ async def start_instance(instance_id: int, db: Session = Depends(get_db), curren
     if instance_id in active_processes:
         raise HTTPException(status_code=400, detail="Instance already running")
     
-    process = multiprocessing.Process(target=asyncio.run, args=(run_poller(instance_id),))
+    process = multiprocessing.Process(target=_run_poller_sync, args=(instance_id,))
     process.start()
     
     active_processes[instance_id] = process
@@ -303,7 +307,7 @@ async def monitor_instances():
             for instance in active_instances:
                 if instance.id not in active_processes:
                     try:
-                        process = multiprocessing.Process(target=asyncio.run, args=(run_poller(instance.id),))
+                        process = multiprocessing.Process(target=_run_poller_sync, args=(instance.id,))
                         process.start()
                         active_processes[instance.id] = process
                     except Exception as e:
@@ -312,7 +316,7 @@ async def monitor_instances():
                 elif not active_processes[instance.id].is_alive():
                     try:
                         del active_processes[instance.id]
-                        process = multiprocessing.Process(target=asyncio.run, args=(run_poller(instance.id),))
+                        process = multiprocessing.Process(target=_run_poller_sync, args=(instance.id,))
                         process.start()
                         active_processes[instance.id] = process
                     except Exception as e:

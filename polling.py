@@ -29,36 +29,140 @@ class ExchangePoller:
         self.telegram_bot = self._init_telegram()
         
     def _init_exchange(self) -> ccxt.Exchange:
-        """Initialize the exchange connection with CloudFront bypass"""
-        try:
-            exchange_class = getattr(ccxt, self.instance.exchange.lower())
-            
-            config = {
+        """Initialize exchange connection with advanced CloudFront bypass"""
+        configs_to_try = [
+            {
+                'apiKey': self.instance.api_key,
+                'secret': self.instance.api_secret,
+                'sandbox': False,
+                'enableRateLimit': True,
+                'urls': {
+                    'api': {
+                        'public': 'https://api.bytick.com',
+                        'private': 'https://api.bytick.com',
+                    }
+                },
+                'headers': {
+                    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'Accept': 'application/json',
+                    'Accept-Language': 'en-AE,ar;q=0.9,en;q=0.8',
+                    'Accept-Encoding': 'gzip, deflate, br',
+                    'Origin': 'https://www.bybit.com',
+                    'Referer': 'https://www.bybit.com/',
+                    'Sec-Fetch-Site': 'same-site',
+                    'Sec-Fetch-Mode': 'cors',
+                    'X-Forwarded-For': '5.62.60.1',
+                    'X-Real-IP': '5.62.60.1',
+                    'CF-Connecting-IP': '5.62.60.1',
+                    'X-Originating-IP': '5.62.60.1',
+                    'X-Client-IP': '5.62.60.1',
+                    'X-Country-Code': 'AE',
+                    'CloudFront-Viewer-Country': 'AE',
+                    'Connection': 'keep-alive',
+                    'Cache-Control': 'no-cache'
+                },
+                'timeout': 45000,
+                'rateLimit': 1200
+            },
+            {
+                'apiKey': self.instance.api_key,
+                'secret': self.instance.api_secret,
+                'sandbox': False,
+                'enableRateLimit': True,
+                'urls': {
+                    'api': {
+                        'public': 'https://api.bybit.com',
+                        'private': 'https://api.bybit.com',
+                    }
+                },
+                'headers': {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'Accept': 'application/json',
+                    'Accept-Language': 'en-HK,zh;q=0.9,en;q=0.8',
+                    'Accept-Encoding': 'gzip, deflate, br',
+                    'X-Forwarded-For': '103.10.197.1',
+                    'X-Real-IP': '103.10.197.1',
+                    'CF-Connecting-IP': '103.10.197.1',
+                    'X-Country-Code': 'HK',
+                    'CloudFront-Viewer-Country': 'HK',
+                    'Via': '1.1 103.10.197.1:8080',
+                    'Connection': 'keep-alive'
+                },
+                'timeout': 45000,
+                'rateLimit': 1200
+            },
+            {
                 'apiKey': self.instance.api_key,
                 'secret': self.instance.api_secret,
                 'sandbox': False,
                 'enableRateLimit': True,
                 'headers': {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-                    'Accept': 'application/json, text/plain, */*',
-                    'Accept-Language': 'en-US,en;q=0.9',
-                    'Accept-Encoding': 'gzip, deflate, br',
-                    'Connection': 'keep-alive',
-                    'Upgrade-Insecure-Requests': '1'
+                    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+                    'Accept': 'application/json',
+                    'X-Forwarded-For': '133.106.0.1',
+                    'X-Real-IP': '133.106.0.1',
+                    'X-Country-Code': 'JP',
+                    'CloudFront-Viewer-Country': 'JP',
+                    'Connection': 'keep-alive'
+                },
+                'timeout': 45000,
+                'rateLimit': 1200
+            },
+            {
+                'apiKey': self.instance.api_key,
+                'secret': self.instance.api_secret,
+                'sandbox': False,
+                'enableRateLimit': True,
+                'headers': {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                    'Accept': 'application/json'
                 },
                 'timeout': 30000,
                 'rateLimit': 1200
             }
-            
+        ]
+        
+        method_names = [
+            "UAE/Dubai IP Spoofing",
+            "Hong Kong IP with VPN headers", 
+            "Japan/Tokyo endpoint routing",
+            "Minimal headers fallback"
+        ]
+        
+        for i, config in enumerate(configs_to_try):
             if self.instance.api_passphrase:
                 config['passphrase'] = self.instance.api_passphrase
-            
-            exchange = exchange_class(config)
-            return exchange
-            
-        except Exception as e:
-            self._log_error("exchange_init", str(e))
-            raise
+                
+            try:
+                exchange_class = getattr(ccxt, self.instance.exchange.lower())
+                test_exchange = exchange_class(config)
+                
+                test_exchange.load_markets()
+                if self.instance.exchange.lower() == 'bybit':
+                    test_exchange.fetch_ticker('BTC/USDT')
+                
+                logger.info(f"✅ [BYBIT SUCCESS] Method {i+1} WORKED: {method_names[i]}")
+                logger.info(f"✅ [BYBIT SUCCESS] Successfully bypassed CloudFront restrictions!")
+                return test_exchange
+                
+            except Exception as e:
+                error_msg = str(e).lower()
+                if 'cloudfront' in error_msg or '403' in error_msg or 'forbidden' in error_msg:
+                    logger.warning(f"⚠️ Method {i+1} failed - CloudFront blocking detected: {method_names[i]}")
+                    if i < len(configs_to_try) - 1:
+                        logger.info(f"🔄 Trying next bypass method...")
+                        continue
+                    else:
+                        logger.error(f"❌ All CloudFront bypass methods failed!")
+                        self._log_error("cloudfront_bypass_failed", f"All {len(configs_to_try)} bypass methods failed: {e}")
+                        raise Exception(f"CloudFront bypass failed after {len(configs_to_try)} attempts: {e}")
+                else:
+                    logger.error(f"Failed to initialize exchange {self.instance.exchange} (Method {i+1}): {e}")
+                    if i < len(configs_to_try) - 1:
+                        continue
+                    else:
+                        self._log_error("exchange_init", str(e))
+                        raise
     
     def _init_telegram(self) -> Optional[Bot]:
         """Initialize Telegram bot"""
