@@ -101,6 +101,34 @@ async def get_instances(db: Session = Depends(get_db), current_user: User = Depe
         for instance in instances
     ]
 
+def validate_instance_data(name: str, exchange: str, api_key: str, api_secret: str):
+    """Validate instance creation data"""
+    errors = []
+    
+    if not name or not name.strip():
+        errors.append("Instance name is required")
+    elif len(name.strip()) > 100:
+        errors.append("Instance name must be 100 characters or less")
+        
+    if not exchange or not exchange.strip():
+        errors.append("Exchange is required")
+    elif exchange.strip().lower() not in ['bybit', 'binance', 'okx', 'kucoin', 'mexc', 'gate', 'coinbase', 'bitfinex']:
+        errors.append("Invalid exchange")
+        
+    if not api_key or not api_key.strip():
+        errors.append("API key is required")
+    elif len(api_key.strip()) > 255:
+        errors.append("API key too long")
+        
+    if not api_secret or not api_secret.strip():
+        errors.append("API secret is required")
+    elif len(api_secret.strip()) > 255:
+        errors.append("API secret too long")
+    elif any(keyword in api_secret.lower() for keyword in ['error', 'ssl', 'failed', 'connection']):
+        errors.append("API secret contains invalid content - please check your input")
+        
+    return errors
+
 @app.post("/api/instances")
 async def create_instance(
     name: str = Form(...),
@@ -118,28 +146,39 @@ async def create_instance(
     current_user: User = Depends(get_current_active_user)
 ):
     """Create new bot instance"""
-    
-    strategy_list = [s.strip() for s in strategies.split(",") if s.strip()] if strategies else []
-    
-    instance = BotInstance(
-        name=name,
-        exchange=exchange,
-        api_key=api_key,
-        api_secret=api_secret,
-        api_passphrase=api_passphrase if api_passphrase else None,
-        strategies=strategy_list,
-        polling_interval=polling_interval,
-        webhook_url=webhook_url if webhook_url else None,
-        telegram_bot_token=telegram_bot_token if telegram_bot_token else None,
-        telegram_chat_id=telegram_chat_id if telegram_chat_id else None,
-        telegram_topic_id=telegram_topic_id if telegram_topic_id else None
-    )
-    
-    db.add(instance)
-    db.commit()
-    db.refresh(instance)
-    
-    return {"id": instance.id, "message": "Instance created successfully"}
+    try:
+        validation_errors = validate_instance_data(name, exchange, api_key, api_secret)
+        if validation_errors:
+            raise HTTPException(status_code=400, detail="; ".join(validation_errors))
+        
+        strategy_list = [s.strip() for s in strategies.split(",") if s.strip()] if strategies else []
+        
+        instance = BotInstance(
+            name=name.strip(),
+            exchange=exchange.strip(),
+            api_key=api_key.strip(),
+            api_secret=api_secret.strip(),
+            api_passphrase=api_passphrase.strip() if api_passphrase else None,
+            strategies=strategy_list,
+            polling_interval=polling_interval,
+            webhook_url=webhook_url.strip() if webhook_url else None,
+            telegram_bot_token=telegram_bot_token.strip() if telegram_bot_token else None,
+            telegram_chat_id=telegram_chat_id.strip() if telegram_chat_id else None,
+            telegram_topic_id=telegram_topic_id.strip() if telegram_topic_id else None
+        )
+        
+        db.add(instance)
+        db.commit()
+        db.refresh(instance)
+        
+        return {"id": instance.id, "message": "Instance created successfully"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        print(f"Database error creating instance: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to create instance: {str(e)}")
 
 def _run_poller_sync(instance_id: int):
     """Synchronous wrapper for running async poller"""
