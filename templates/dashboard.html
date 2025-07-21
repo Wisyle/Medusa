@@ -319,6 +319,13 @@ function stopInstance(instanceId) {
 
 // Load data on page load
 document.addEventListener('DOMContentLoaded', function() {
+    // Check if user is authenticated
+    const token = localStorage.getItem('access_token');
+    if (!token) {
+        window.location.href = '/login';
+        return;
+    }
+    
     refreshDashboard();
     
     // Auto-refresh every 30 seconds

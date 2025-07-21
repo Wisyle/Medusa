@@ -253,24 +253,24 @@ async def setup_2fa_page(request: Request, current_user: User = Depends(get_curr
     return templates.TemplateResponse("setup_2fa.html", {"request": request})
 
 @app.get("/", response_class=HTMLResponse)
-async def dashboard(request: Request, current_user: User = Depends(get_current_active_user)):
+async def dashboard(request: Request):
     """Main dashboard"""
-    return templates.TemplateResponse("dashboard.html", {"request": request, "user": current_user})
+    return templates.TemplateResponse("dashboard.html", {"request": request})
 
 @app.get("/instances", response_class=HTMLResponse)
-async def instances_page(request: Request, current_user: User = Depends(get_current_active_user)):
+async def instances_page(request: Request):
     """Instances management page"""
-    return templates.TemplateResponse("instances.html", {"request": request, "user": current_user})
+    return templates.TemplateResponse("instances.html", {"request": request})
 
 @app.get("/instances/new", response_class=HTMLResponse)
-async def new_instance_page(request: Request, current_user: User = Depends(get_current_active_user)):
+async def new_instance_page(request: Request):
     """New instance form"""
-    return templates.TemplateResponse("new_instance.html", {"request": request, "user": current_user})
+    return templates.TemplateResponse("new_instance.html", {"request": request})
 
 @app.get("/instances/{instance_id}", response_class=HTMLResponse)
-async def instance_detail(request: Request, instance_id: int, current_user: User = Depends(get_current_active_user)):
+async def instance_detail(request: Request, instance_id: int):
     """Instance detail page"""
-    return templates.TemplateResponse("instance_detail.html", {"request": request, "instance_id": instance_id, "user": current_user})
+    return templates.TemplateResponse("instance_detail.html", {"request": request, "instance_id": instance_id})
 
 @app.on_event("startup")
 async def startup_event():
