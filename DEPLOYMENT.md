@@ -108,31 +108,18 @@ git checkout devin/1737478987-crypto-bot-monitoring-system
 git push origin devin/1737478987-crypto-bot-monitoring-system
 ```
 
-#### Step 2: Create render.yaml
-```yaml
-services:
-  - type: web
-    name: tgl-medusa-loggers
-    env: python
-    buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
-    envVars:
-      - key: DATABASE_URL
-        fromDatabase:
-          name: tgl-medusa-db
-          property: connectionString
-      - key: SECRET_KEY
-        generateValue: true
-      - key: ENVIRONMENT
-        value: production
-      - key: DEBUG
-        value: false
+#### Step 2: Use Included render.yaml
+The repository includes a pre-configured `render.yaml` file with:
+- **Web service**: FastAPI application with health checks
+- **Worker service**: Background bot monitoring process  
+- **PostgreSQL database**: Shared across services
+- **Environment variables**: Auto-configured for security
 
-databases:
-  - name: tgl-medusa-db
-    databaseName: tgl_medusa_loggers
-    user: tgl_user
-```
+**Key fixes applied:**
+- ✅ Worker service uses `python worker.py` instead of inline code
+- ✅ SECRET_KEY uses `generateValue: true` for security
+- ✅ Database migration runs during build process
+- ✅ Health check endpoint configured
 
 #### Step 3: Deploy on Render
 1. **Sign up** at [render.com](https://render.com)
@@ -143,11 +130,20 @@ databases:
 6. **Blueprint file**: `render.yaml`
 7. **Deploy**
 
-#### Step 4: Configure Environment Variables
-In Render dashboard:
-1. Go to **Environment** tab
-2. Add required variables (see checklist above)
+#### Step 4: Configure Optional Environment Variables
+Most variables are auto-configured via render.yaml. Optionally add in Render dashboard:
+1. Go to **Environment** tab of your web service
+2. Add optional variables:
+   ```bash
+   DEFAULT_ADMIN_EMAIL=admin@yourdomain.com
+   DEFAULT_ADMIN_PASSWORD=SecurePassword123!
+   DEFAULT_TELEGRAM_BOT_TOKEN=your-bot-token
+   DEFAULT_TELEGRAM_CHAT_ID=your-chat-id
+   DEFAULT_TELEGRAM_TOPIC_ID=your-topic-id
+   ```
 3. **Save Changes**
+
+**Note**: Core variables (DATABASE_URL, SECRET_KEY) are automatically configured.
 
 ### **Option 2: Railway.app Deployment**
 
