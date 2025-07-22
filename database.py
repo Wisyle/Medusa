@@ -45,6 +45,7 @@ class BotInstance(Base):
     telegram_bot_token = Column(String(255), nullable=True)
     telegram_chat_id = Column(String(100), nullable=True)
     telegram_topic_id = Column(String(100), nullable=True)
+    trading_pair = Column(String(20), nullable=True)
     
     is_active = Column(Boolean, default=False)
     last_poll = Column(DateTime, nullable=True)

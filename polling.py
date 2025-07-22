@@ -316,7 +316,7 @@ class ExchangePoller:
             return Bot(token=token)
         return None
     
-    def _log_activity(self, event_type: str, symbol: str = None, message: str = "", data: Dict = None):
+    def _log_activity(self, event_type: str, symbol: Optional[str] = None, message: str = "", data: Optional[Dict] = None):
         """Log activity to database"""
         try:
             log = ActivityLog(
@@ -331,7 +331,7 @@ class ExchangePoller:
         except Exception as e:
             logger.error(f"Failed to log activity: {e}")
     
-    def _log_error(self, error_type: str, error_message: str, traceback_str: str = None):
+    def _log_error(self, error_type: str, error_message: str, traceback_str: Optional[str] = None):
         """Log error to database"""
         try:
             error_log = ErrorLog(
@@ -370,9 +370,12 @@ class ExchangePoller:
         return 'Unknown'
     
     def _should_process_symbol(self, symbol: str) -> bool:
-        """Check if symbol should be processed based on selected strategies"""
+        """Check if symbol should be processed based on configured trading pair and strategies"""
+        if self.instance.trading_pair and symbol != self.instance.trading_pair:
+            return False
+            
         if not self.instance.strategies:
-            return True  # Process all if no specific strategies selected
+            return True
         
         strategy_type = self._detect_strategy_type(symbol, {})
         return strategy_type in self.instance.strategies
@@ -483,8 +486,10 @@ class ExchangePoller:
             
             if response.status_code == 200:
                 self._log_activity("webhook_sent", payload.get('symbol'), "Webhook sent successfully")
+                logger.info(f"Webhook sent successfully for instance {self.instance_id}")
             else:
                 self._log_error("webhook_failed", f"Webhook failed with status {response.status_code}")
+                logger.error(f"Webhook failed for instance {self.instance_id}: status {response.status_code}")
                 
         except Exception as e:
             self._log_error("webhook_error", str(e))
@@ -515,106 +520,117 @@ class ExchangePoller:
             await self.telegram_bot.send_message(**send_params)
             
             self._log_activity("telegram_sent", payload.get('symbol'), "Telegram notification sent")
+            logger.info(f"Telegram notification sent for instance {self.instance_id}")
             
         except Exception as e:
             self._log_error("telegram_error", str(e))
     
     def _format_telegram_message(self, payload: Dict) -> str:
-        """Format beautiful Telegram message with Unicode emojis"""
+        """Format beautiful Telegram message with enhanced Markdown formatting"""
         timestamp = datetime.now().strftime("%Y-%m-%d %I:%M %p")
         event_type = payload.get('event_type')
         symbol = payload.get('symbol', 'N/A')
         bot_type = payload.get('bot_type', 'Unknown')
         
         if event_type == "order_filled":
-            return f"""TARCXXX, [{timestamp}]
-📈 Order Filled - {timestamp}
+            return f"""🎯 **Order Filled** - {timestamp}
 
-🤖 Bot: {self.instance.name}
-💱 Pair: {symbol}
-🛡️ Event: Order Filled
+**🤖 Bot:** `{self.instance.name}`
+**💱 Pair:** `{symbol}`
+**📊 Exchange:** `{self.instance.exchange}`
 
-Side: {payload.get('side', 'N/A').capitalize()}
-Quantity: {payload.get('quantity', 0):.4f} @ ${payload.get('entry_price', 0):.2f}
-Status: Filled
-Unrealized PnL: ${payload.get('unrealized_pnl', 0):.2f}
-Bot Type: {bot_type}
+**📈 Details:**
+• **Side:** {payload.get('side', 'N/A').upper()}
+• **Amount:** `{payload.get('quantity', 0):.6f}`
+• **Price:** `${payload.get('entry_price', 0):.4f}`
+• **Status:** ✅ FILLED
+• **PnL:** `${payload.get('unrealized_pnl', 0):.2f}`
 
-✅ Transaction complete."""
+✅ **Transaction Complete**"""
 
         elif event_type == "position_update":
-            return f"""TARCXXX, [{timestamp}]
-🔄 Position Change Detected - {timestamp}
+            return f"""🔄 **Position Update** - {timestamp}
 
-🤖 Bot: {self.instance.name}
-💱 Pair: {symbol}
-🛡️ Event: Position Update
+**🤖 Bot:** `{self.instance.name}`
+**💱 Pair:** `{symbol}`
+**📊 Exchange:** `{self.instance.exchange}`
 
-New Size: {payload.get('quantity', 0):.4f}
-Entry Price: ${payload.get('entry_price', 0):.2f}
-Unrealized PnL: ${payload.get('unrealized_pnl', 0):.2f}
-Side: {payload.get('side', 'N/A').capitalize()}
-Bot Type: {bot_type}
+**📈 Details:**
+• **Side:** {payload.get('side', 'N/A').upper()}
+• **Size:** `{payload.get('quantity', 0):.6f}`
+• **Entry:** `${payload.get('entry_price', 0):.4f}`
+• **PnL:** `${payload.get('unrealized_pnl', 0):.2f}`
+• **Strategy:** {bot_type}
 
-📊 Monitoring continues."""
+📊 **Monitoring Continues**"""
 
         elif event_type == "order_cancelled":
-            return f"""TARCXXX, [{timestamp}]
-❌ Order Cancelled - {timestamp}
+            return f"""❌ **Order Cancelled** - {timestamp}
 
-🤖 Bot: {self.instance.name}
-💱 Pair: {symbol}
-🛡️ Event: Order Cancelled
+**🤖 Bot:** `{self.instance.name}`
+**💱 Pair:** `{symbol}`
+**📊 Exchange:** `{self.instance.exchange}`
 
-Order ID: {payload.get('order_id', 'N/A')}
-Side: {payload.get('side', 'N/A').capitalize()}
-Quantity: {payload.get('quantity', 0):.4f}
-Status: Cancelled
-Bot Type: {bot_type}
+**📈 Details:**
+• **Order ID:** `{payload.get('order_id', 'N/A')}`
+• **Side:** {payload.get('side', 'N/A').upper()}
+• **Amount:** `{payload.get('quantity', 0):.6f}`
+• **Status:** ❌ CANCELLED
+• **Strategy:** {bot_type}
 
-⚠️ Action logged."""
+⚠️ **Action Logged**"""
 
         elif event_type == "new_order":
-            return f"""TARCXXX, [{timestamp}]
-🆕 New Open Order - {timestamp}
+            return f"""🆕 **New Order** - {timestamp}
 
-🤖 Bot: {self.instance.name}
-💱 Pair: {symbol}
-🛡️ Event: New Order Opened
+**🤖 Bot:** `{self.instance.name}`
+**💱 Pair:** `{symbol}`
+**📊 Exchange:** `{self.instance.exchange}`
 
-Order ID: {payload.get('order_id', 'N/A')}
-Side: {payload.get('side', 'N/A').capitalize()}
-Quantity: {payload.get('quantity', 0):.4f} @ ${payload.get('entry_price', 0):.2f}
-Status: Open
-Bot Type: {bot_type}
+**📈 Details:**
+• **Order ID:** `{payload.get('order_id', 'N/A')}`
+• **Side:** {payload.get('side', 'N/A').upper()}
+• **Amount:** `{payload.get('quantity', 0):.6f}`
+• **Price:** `${payload.get('entry_price', 0):.4f}`
+• **Status:** ⏳ PENDING
+• **Strategy:** {bot_type}
 
-⏳ Awaiting fill."""
+⏳ **Awaiting Fill**"""
 
         else:
-            return f"""TARCXXX, [{timestamp}]
-📊 Bot Update - {timestamp}
+            return f"""📊 **Bot Update** - {timestamp}
 
-🤖 Bot: {self.instance.name}
-💱 Pair: {symbol}
-🛡️ Event: {event_type}
-Bot Type: {bot_type}
+**🤖 Bot:** `{self.instance.name}`
+**💱 Pair:** `{symbol}`
+**📊 Exchange:** `{self.instance.exchange}`
+**🛡️ Event:** {event_type}
+**Strategy:** {bot_type}
 
-📱 Monitoring active."""
+📱 **Monitoring Active**"""
     
     async def poll_once(self):
         """Perform one polling cycle"""
+        cycle_id = f"poll_{int(time.time())}"
         try:
-            logger.info(f"Starting poll for instance {self.instance_id}")
+            logger.info(f"[{cycle_id}] Starting poll cycle for instance {self.instance_id} - {self.instance.name}")
+            self._log_activity("poll_start", None, f"Starting poll cycle {cycle_id}")
+            
+            if self.instance.trading_pair:
+                logger.info(f"[{cycle_id}] Filtering for trading pair: {self.instance.trading_pair}")
             
             positions = await self.fetch_positions()
             orders = await self.fetch_open_orders()
             trades = await self.fetch_recent_trades()
             
+            logger.info(f"[{cycle_id}] API responses - Positions: {len(positions)}, Orders: {len(orders)}, Trades: {len(trades)}")
+            
+            processed_positions = 0
             for position in positions:
                 symbol = position['symbol']
                 if not self._should_process_symbol(symbol):
                     continue
                 
+                processed_positions += 1
                 previous_position = self._get_previous_state(symbol, 'position')
                 current_hash = self._get_data_hash(position)
                 previous_hash = self._get_data_hash(previous_position) if previous_position else None
@@ -623,20 +639,26 @@ Bot Type: {bot_type}
                     payload = self._create_event_payload('position_update', symbol, position)
                     await self._send_webhook(payload)
                     await self._send_telegram_notification(payload)
+                    self._log_activity("position_update", symbol, "Position updated", payload)
                     self._save_state(symbol, 'position', position)
+                    logger.info(f"[{cycle_id}] Position change detected for {symbol}")
             
+            processed_orders = 0
             for order in orders:
                 symbol = order['symbol']
                 if not self._should_process_symbol(symbol):
                     continue
                 
+                processed_orders += 1
                 previous_order = self._get_previous_state(symbol, f"order_{order['id']}")
                 
                 if not previous_order:
                     payload = self._create_event_payload('new_order', symbol, order)
                     await self._send_webhook(payload)
                     await self._send_telegram_notification(payload)
+                    self._log_activity("new_order", symbol, "New order detected", payload)
                     self._save_state(symbol, f"order_{order['id']}", order)
+                    logger.info(f"[{cycle_id}] New order detected for {symbol}: {order['id']}")
                 
                 elif order['status'] != previous_order.get('status'):
                     if order['status'] == 'closed':
@@ -649,22 +671,26 @@ Bot Type: {bot_type}
                     payload = self._create_event_payload(event_type, symbol, order)
                     await self._send_webhook(payload)
                     await self._send_telegram_notification(payload)
+                    self._log_activity(event_type, symbol, f"Order status changed to {order['status']}", payload)
                     self._save_state(symbol, f"order_{order['id']}", order)
+                    logger.info(f"[{cycle_id}] Order status change for {symbol}: {order['id']} -> {order['status']}")
             
             self.instance.last_poll = datetime.utcnow()
             self.instance.last_error = None
             self.db.commit()
             
-            logger.info(f"Poll completed for instance {self.instance_id}")
+            logger.info(f"[{cycle_id}] Poll completed for instance {self.instance_id} - Processed {processed_positions} positions, {processed_orders} orders")
+            self._log_activity("poll_complete", None, f"Poll cycle {cycle_id} completed - {processed_positions} positions, {processed_orders} orders processed")
             
         except Exception as e:
             error_msg = str(e)
-            logger.error(f"Poll failed for instance {self.instance_id}: {error_msg}")
+            logger.error(f"[{cycle_id}] Poll failed for instance {self.instance_id}: {error_msg}")
             
             self.instance.last_error = error_msg
             self.db.commit()
             
             self._log_error("poll_failed", error_msg)
+            self._log_activity("poll_error", None, f"Poll cycle {cycle_id} failed: {error_msg}")
     
     def close(self):
         """Clean up resources"""
