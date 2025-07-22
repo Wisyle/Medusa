@@ -325,6 +325,47 @@ async def instance_detail(request: Request, instance_id: int):
     """Instance detail page"""
     return templates.TemplateResponse("instance_detail.html", {"request": request, "instance_id": instance_id})
 
+@app.get("/system-logs", response_class=HTMLResponse)
+async def system_logs_page(request: Request):
+    """System logs dashboard"""
+    return templates.TemplateResponse("system_logs.html", {"request": request})
+
+@app.get("/api/system-logs")
+async def get_system_logs(
+    service: str = "all",
+    limit: int = 100,
+    current_user: User = Depends(get_current_active_user)
+):
+    """Get system logs from all services"""
+    db = next(get_db())
+    
+    logs = []
+    
+    activity_logs = db.query(ActivityLog).order_by(ActivityLog.timestamp.desc()).limit(limit).all()
+    for log in activity_logs:
+        logs.append({
+            "timestamp": log.timestamp.isoformat(),
+            "service": "polling",
+            "level": "INFO",
+            "message": f"[Instance {log.instance_id}] {log.event_type}: {log.message}",
+            "instance_id": log.instance_id
+        })
+    
+    error_logs = db.query(ErrorLog).order_by(ErrorLog.timestamp.desc()).limit(limit).all()
+    for log in error_logs:
+        logs.append({
+            "timestamp": log.timestamp.isoformat(),
+            "service": "polling",
+            "level": "ERROR",
+            "message": f"[Instance {log.instance_id}] {log.error_type}: {log.error_message}",
+            "instance_id": log.instance_id
+        })
+    
+    logs.sort(key=lambda x: x["timestamp"], reverse=True)
+    
+    db.close()
+    return {"logs": logs[:limit]}
+
 @app.get("/api/signals/{instance_id}")
 async def get_instance_signals(
     instance_id: int,

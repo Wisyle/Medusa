@@ -448,13 +448,23 @@ class ExchangePoller:
         }
         
         if event_type in ["order_filled", "order_cancelled", "new_order"]:
-            payload.update({
-                "order_id": data.get('id'),
-                "side": data.get('side'),
-                "entry_price": data.get('price'),
-                "quantity": data.get('amount'),
-                "status": data.get('status')
-            })
+            if event_type == "order_filled" and 'order' in data:
+                payload.update({
+                    "order_id": data.get('order'),
+                    "side": data.get('side'),
+                    "entry_price": data.get('price'),
+                    "quantity": data.get('amount'),
+                    "status": "filled",
+                    "trade_id": data.get('id')
+                })
+            else:
+                payload.update({
+                    "order_id": data.get('id'),
+                    "side": data.get('side'),
+                    "entry_price": data.get('price'),
+                    "quantity": data.get('amount'),
+                    "status": data.get('status')
+                })
         
         elif event_type == "position_update":
             payload.update({
@@ -675,12 +685,29 @@ class ExchangePoller:
                     self._save_state(symbol, f"order_{order['id']}", order)
                     logger.info(f"[{cycle_id}] Order status change for {symbol}: {order['id']} -> {order['status']}")
             
+            processed_trades = 0
+            for trade in trades:
+                symbol = trade['symbol']
+                if not self._should_process_symbol(symbol):
+                    continue
+                
+                processed_trades += 1
+                previous_trade = self._get_previous_state(symbol, f"trade_{trade['id']}")
+                
+                if not previous_trade:
+                    payload = self._create_event_payload('order_filled', symbol, trade)
+                    await self._send_webhook(payload)
+                    await self._send_telegram_notification(payload)
+                    self._log_activity("order_filled", symbol, f"Trade executed: {trade['id']}", payload)
+                    self._save_state(symbol, f"trade_{trade['id']}", trade)
+                    logger.info(f"[{cycle_id}] Trade executed for {symbol}: {trade['id']}")
+            
             self.instance.last_poll = datetime.utcnow()
             self.instance.last_error = None
             self.db.commit()
             
-            logger.info(f"[{cycle_id}] Poll completed for instance {self.instance_id} - Processed {processed_positions} positions, {processed_orders} orders")
-            self._log_activity("poll_complete", None, f"Poll cycle {cycle_id} completed - {processed_positions} positions, {processed_orders} orders processed")
+            logger.info(f"[{cycle_id}] Poll completed for instance {self.instance_id} - Processed {processed_positions} positions, {processed_orders} orders, {processed_trades} trades")
+            self._log_activity("poll_complete", None, f"Poll cycle {cycle_id} completed - {processed_positions} positions, {processed_orders} orders, {processed_trades} trades processed")
             
         except Exception as e:
             error_msg = str(e)
