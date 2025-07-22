@@ -21,6 +21,10 @@ def migrate_database():
             print("Adding telegram_topic_id column to bot_instances table")
             cursor.execute("ALTER TABLE bot_instances ADD COLUMN telegram_topic_id VARCHAR(100)")
         
+        if 'trading_pair' not in columns:
+            print("Adding trading_pair column to bot_instances table")
+            cursor.execute("ALTER TABLE bot_instances ADD COLUMN trading_pair VARCHAR(20)")
+        
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='users'")
         if not cursor.fetchone():
             print("Creating users table")

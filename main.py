@@ -101,7 +101,7 @@ async def get_instances(db: Session = Depends(get_db), current_user: User = Depe
         for instance in instances
     ]
 
-def validate_instance_data(name: str, exchange: str, api_key: str, api_secret: str):
+def validate_instance_data(name: str, exchange: str, api_key: str, api_secret: str, trading_pair: Optional[str] = None):
     """Validate instance creation data"""
     errors = []
     
@@ -126,6 +126,12 @@ def validate_instance_data(name: str, exchange: str, api_key: str, api_secret: s
         errors.append("API secret too long")
     elif any(keyword in api_secret.lower() for keyword in ['error', 'ssl', 'failed', 'connection']):
         errors.append("API secret contains invalid content - please check your input")
+    
+    if trading_pair and not trading_pair.strip():
+        errors.append("Trading pair cannot be empty if provided")
+    
+    if trading_pair and '/' not in trading_pair:
+        errors.append("Trading pair must be in format BASE/QUOTE (e.g., BTC/USDT)")
         
     return errors
 
@@ -142,12 +148,13 @@ async def create_instance(
     telegram_bot_token: str = Form(""),
     telegram_chat_id: str = Form(""),
     telegram_topic_id: str = Form(""),
+    trading_pair: str = Form(""),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Create new bot instance"""
     try:
-        validation_errors = validate_instance_data(name, exchange, api_key, api_secret)
+        validation_errors = validate_instance_data(name, exchange, api_key, api_secret, trading_pair)
         if validation_errors:
             raise HTTPException(status_code=400, detail="; ".join(validation_errors))
         
@@ -164,7 +171,8 @@ async def create_instance(
             webhook_url=webhook_url.strip() if webhook_url else None,
             telegram_bot_token=telegram_bot_token.strip() if telegram_bot_token else None,
             telegram_chat_id=telegram_chat_id.strip() if telegram_chat_id else None,
-            telegram_topic_id=telegram_topic_id.strip() if telegram_topic_id else None
+            telegram_topic_id=telegram_topic_id.strip() if telegram_topic_id else None,
+            trading_pair=trading_pair.strip() if trading_pair else None
         )
         
         db.add(instance)
@@ -316,6 +324,57 @@ async def new_instance_page(request: Request):
 async def instance_detail(request: Request, instance_id: int):
     """Instance detail page"""
     return templates.TemplateResponse("instance_detail.html", {"request": request, "instance_id": instance_id})
+
+@app.get("/api/signals/{instance_id}")
+async def get_instance_signals(
+    instance_id: int,
+    limit: int = 50,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Get critical action signals for external systems"""
+    critical_events = ["order_filled", "order_cancelled", "new_order", "position_update", "position_closed"]
+    
+    logs = db.query(ActivityLog).filter(
+        ActivityLog.instance_id == instance_id,
+        ActivityLog.event_type.in_(critical_events)
+    ).order_by(ActivityLog.timestamp.desc()).limit(limit).all()
+    
+    signals = []
+    for log in logs:
+        signal = {
+            "instance_id": instance_id,
+            "exchange": None,
+            "pair": log.symbol,
+            "event": log.event_type,
+            "timestamp": log.timestamp.isoformat()
+        }
+        
+        instance = db.query(BotInstance).filter(BotInstance.id == instance_id).first()
+        if instance:
+            signal["exchange"] = instance.exchange
+        
+        if log.data and isinstance(log.data, dict):
+            if log.event_type in ["order_filled", "order_cancelled", "new_order"]:
+                signal["order"] = {
+                    "id": log.data.get("order_id"),
+                    "side": log.data.get("side"),
+                    "price": log.data.get("entry_price"),
+                    "amount": log.data.get("quantity"),
+                    "status": log.data.get("status"),
+                    "pnl": log.data.get("unrealized_pnl")
+                }
+            elif log.event_type == "position_update":
+                signal["position"] = {
+                    "side": log.data.get("side"),
+                    "entry_price": log.data.get("entry_price"),
+                    "quantity": log.data.get("quantity"),
+                    "unrealized_pnl": log.data.get("unrealized_pnl")
+                }
+        
+        signals.append(signal)
+    
+    return {"signals": signals}
 
 @app.on_event("startup")
 async def startup_event():
