@@ -56,6 +56,17 @@ def migrate_postgresql():
                 conn.commit()
             
             result = conn.execute(text("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name = 'bot_instances' AND column_name = 'market_type'
+            """))
+            
+            if not result.fetchone():
+                print("Adding market_type column to bot_instances table (PostgreSQL)")
+                conn.execute(text("ALTER TABLE bot_instances ADD COLUMN market_type VARCHAR(20) DEFAULT 'unified'"))
+                conn.commit()
+            
+            result = conn.execute(text("""
                 SELECT table_name 
                 FROM information_schema.tables 
                 WHERE table_name = 'users'
@@ -107,6 +118,10 @@ def migrate_sqlite():
         if 'trading_pair' not in columns:
             print("Adding trading_pair column to bot_instances table (SQLite)")
             cursor.execute("ALTER TABLE bot_instances ADD COLUMN trading_pair VARCHAR(20)")
+        
+        if 'market_type' not in columns:
+            print("Adding market_type column to bot_instances table (SQLite)")
+            cursor.execute("ALTER TABLE bot_instances ADD COLUMN market_type VARCHAR(20) DEFAULT 'unified'")
         
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='users'")
         if not cursor.fetchone():

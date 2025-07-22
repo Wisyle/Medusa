@@ -34,6 +34,7 @@ class BotInstance(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100), nullable=False)
     exchange = Column(String(50), nullable=False)
+    market_type = Column(String(20), default='unified')  # 'spot', 'futures', 'unified'
     api_key = Column(String(255), nullable=False)
     api_secret = Column(String(255), nullable=False)
     api_passphrase = Column(String(255), nullable=True)  # For some exchanges

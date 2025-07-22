@@ -50,6 +50,15 @@
                                 <option value="bitfinex">Bitfinex</option>
                             </select>
                         </div>
+                        <div class="col-md-6">
+                            <label for="market_type" class="form-label">Market Type</label>
+                            <select class="form-select" id="market_type" name="market_type">
+                                <option value="unified">Unified (Spot + Futures)</option>
+                                <option value="spot">Spot Trading</option>
+                                <option value="futures">Futures Trading</option>
+                            </select>
+                            <small class="form-text text-muted">Bybit unified allows both spot and futures trading</small>
+                        </div>
                     </div>
                     
                     <!-- Trading Pair Configuration -->

@@ -283,12 +283,23 @@ class ExchangePoller:
                 exchange_class = getattr(ccxt, self.instance.exchange.lower())
                 test_exchange = exchange_class(config)
                 
+                # Set market type for unified trading (Bybit feature)
+                market_type = getattr(self.instance, 'market_type', 'unified')
+                if self.instance.exchange.lower() == 'bybit' and hasattr(test_exchange, 'options'):
+                    if market_type == 'unified':
+                        test_exchange.options['defaultType'] = 'unified'
+                    elif market_type == 'spot':
+                        test_exchange.options['defaultType'] = 'spot'
+                    elif market_type == 'futures':
+                        test_exchange.options['defaultType'] = 'future'
+                
                 test_exchange.load_markets()
                 if self.instance.exchange.lower() == 'bybit':
                     test_exchange.fetch_ticker('BTC/USDT')
                 
                 logger.info(f"✅ [BYBIT SUCCESS] Method {i+1} WORKED: {method_names[i]}")
                 logger.info(f"✅ [BYBIT SUCCESS] Successfully bypassed CloudFront restrictions!")
+                logger.info(f"✅ [BYBIT SUCCESS] Market type set to: {market_type}")
                 return test_exchange
                 
             except Exception as e:
@@ -452,15 +463,25 @@ class ExchangePoller:
         
         return 'Unknown'
     
+    def _normalize_symbol(self, symbol: str) -> str:
+        """Normalize symbol format for comparison (remove slashes, convert to uppercase)"""
+        return symbol.replace('/', '').replace('-', '').upper()
+
     def _should_process_symbol(self, symbol: str) -> bool:
         """Check if symbol should be processed based on configured trading pair and strategies"""
         logger.debug(f"[DEBUG] Checking symbol: {symbol}")
         logger.debug(f"[DEBUG] Configured trading_pair: {self.instance.trading_pair}")
         logger.debug(f"[DEBUG] Configured strategies: {self.instance.strategies}")
         
-        if self.instance.trading_pair and symbol != self.instance.trading_pair:
-            logger.debug(f"[DEBUG] ❌ {symbol} filtered out - doesn't match trading pair {self.instance.trading_pair}")
-            return False
+        if self.instance.trading_pair:
+            normalized_symbol = self._normalize_symbol(symbol)
+            normalized_trading_pair = self._normalize_symbol(self.instance.trading_pair)
+            logger.debug(f"[DEBUG] Normalized symbol: {normalized_symbol}")
+            logger.debug(f"[DEBUG] Normalized trading_pair: {normalized_trading_pair}")
+            
+            if normalized_symbol != normalized_trading_pair:
+                logger.debug(f"[DEBUG] ❌ {symbol} filtered out - doesn't match trading pair {self.instance.trading_pair}")
+                return False
             
         if not self.instance.strategies:
             logger.debug(f"[DEBUG] ✅ {symbol} will be processed - no strategy filter")

@@ -139,6 +139,7 @@ def validate_instance_data(name: str, exchange: str, api_key: str, api_secret: s
 async def create_instance(
     name: str = Form(...),
     exchange: str = Form(...),
+    market_type: str = Form("unified"),
     api_key: str = Form(...),
     api_secret: str = Form(...),
     api_passphrase: str = Form(""),
@@ -163,6 +164,7 @@ async def create_instance(
         instance = BotInstance(
             name=name.strip(),
             exchange=exchange.strip(),
+            market_type=market_type.strip(),
             api_key=api_key.strip(),
             api_secret=api_secret.strip(),
             api_passphrase=api_passphrase.strip() if api_passphrase else None,
