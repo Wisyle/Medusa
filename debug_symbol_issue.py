@@ -4,17 +4,31 @@ Quick test script to debug symbol matching issues
 """
 
 def normalize_symbol(symbol: str) -> str:
-    """Normalize symbol format for comparison (remove slashes, convert to uppercase)"""
-    return symbol.replace('/', '').replace('-', '').upper()
+    """Normalize symbol format for comparison (remove slashes, colons, convert to uppercase)"""
+    # Remove common separators and suffixes used in different exchanges
+    normalized = symbol.replace('/', '').replace('-', '').replace(':', '').upper()
+    
+    # Handle Bybit futures format: XRP/USDT:USDT -> XRPUSDT
+    # Remove duplicate USDT if it appears due to :USDT suffix
+    if normalized.endswith('USDTUSDT'):
+        normalized = normalized[:-4]  # Remove the extra USDT
+    elif normalized.endswith('BUSDBUSD'):
+        normalized = normalized[:-4]  # Remove the extra BUSD
+    elif normalized.endswith('BTCBTC'):
+        normalized = normalized[:-3]  # Remove the extra BTC
+    elif normalized.endswith('ETHETH'):
+        normalized = normalized[:-3]  # Remove the extra ETH
+        
+    return normalized
 
 def test_current_issue():
-    """Test the current XRP/USDT vs XRPUSDT issue"""
+    """Test the current XRP/USDT:USDT vs XRPUSDT issue"""
     
-    configured_pair = "XRP/USDT"
-    api_symbols = ["XRPUSDT", "XRP/USDT", "xrpusdt", "XRP-USDT"]
+    configured_pair = "XRPUSDT"
+    api_symbols = ["XRP/USDT:USDT", "XRPUSDT", "XRP/USDT", "xrp/usdt:usdt"]
     
-    print("🔍 Testing Current Issue: XRP/USDT Configuration")
-    print("=" * 60)
+    print("🔍 Testing Current Issue: XRPUSDT Configuration vs API Symbols")
+    print("=" * 70)
     print(f"Configured trading pair: '{configured_pair}'")
     print(f"Normalized configured: '{normalize_symbol(configured_pair)}'")
     print()
@@ -30,6 +44,24 @@ def test_current_issue():
         print(f"  Normalized: '{normalized_api}'")
         print(f"  Result: {status}")
         print()
+
+def test_other_symbols():
+    """Test other symbols that appeared in the logs"""
+    print("🔍 Testing Other Symbols from Logs")
+    print("=" * 70)
+    
+    test_cases = [
+        ("TON/USDT:USDT", "TONUSDT"),
+        ("DOGE/USDT:USDT", "DOGEUSDT"), 
+        ("BTC/USDT:USDT", "BTCUSDT"),
+    ]
+    
+    for api_symbol, expected in test_cases:
+        normalized = normalize_symbol(api_symbol)
+        match = normalized == expected
+        status = "✅ CORRECT" if match else "❌ INCORRECT"
+        
+        print(f"'{api_symbol}' -> '{normalized}' (expected: '{expected}') {status}")
 
 def test_validation_formats():
     """Test the new validation logic"""
@@ -73,5 +105,7 @@ def test_validation_formats():
 
 if __name__ == "__main__":
     test_current_issue()
+    print()
+    test_other_symbols()
     print()
     test_validation_formats()

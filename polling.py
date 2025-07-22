@@ -464,8 +464,22 @@ class ExchangePoller:
         return 'Unknown'
     
     def _normalize_symbol(self, symbol: str) -> str:
-        """Normalize symbol format for comparison (remove slashes, convert to uppercase)"""
-        return symbol.replace('/', '').replace('-', '').upper()
+        """Normalize symbol format for comparison (remove slashes, colons, convert to uppercase)"""
+        # Remove common separators and suffixes used in different exchanges
+        normalized = symbol.replace('/', '').replace('-', '').replace(':', '').upper()
+        
+        # Handle Bybit futures format: XRP/USDT:USDT -> XRPUSDT
+        # Remove duplicate USDT if it appears due to :USDT suffix
+        if normalized.endswith('USDTUSDT'):
+            normalized = normalized[:-4]  # Remove the extra USDT
+        elif normalized.endswith('BUSDBUSD'):
+            normalized = normalized[:-4]  # Remove the extra BUSD
+        elif normalized.endswith('BTCBTC'):
+            normalized = normalized[:-3]  # Remove the extra BTC
+        elif normalized.endswith('ETHETH'):
+            normalized = normalized[:-3]  # Remove the extra ETH
+            
+        return normalized
 
     def _should_process_symbol(self, symbol: str) -> bool:
         """Check if symbol should be processed based on configured trading pair and strategies"""
