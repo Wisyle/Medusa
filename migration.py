@@ -110,6 +110,33 @@ def migrate_postgresql():
                     conn.rollback()
             else:
                 logger.info("✅ users table already exists")
+            
+            # Check and update poll_states table data_type column
+            if check_table_exists_pg(conn, 'poll_states'):
+                if check_column_exists_pg(conn, 'poll_states', 'data_type'):
+                    try:
+                        # Check current column type
+                        result = conn.execute(text("""
+                            SELECT character_maximum_length 
+                            FROM information_schema.columns 
+                            WHERE table_name = 'poll_states' AND column_name = 'data_type'
+                        """))
+                        current_length = result.fetchone()
+                        
+                        if current_length and current_length[0] == 20:
+                            logger.info("➕ Updating poll_states.data_type column from VARCHAR(20) to VARCHAR(100)")
+                            conn.execute(text("ALTER TABLE poll_states ALTER COLUMN data_type TYPE VARCHAR(100)"))
+                            conn.commit()
+                            logger.info("✅ Successfully updated poll_states.data_type column")
+                        else:
+                            logger.info("✅ poll_states.data_type column already has correct size")
+                    except Exception as e:
+                        logger.error(f"❌ Failed to update poll_states.data_type column: {e}")
+                        conn.rollback()
+                else:
+                    logger.info("poll_states.data_type column doesn't exist")
+            else:
+                logger.info("poll_states table doesn't exist yet")
         
         logger.info("🎉 PostgreSQL migration completed successfully")
         
@@ -174,6 +201,20 @@ def migrate_sqlite():
                 logger.error(f"❌ Failed to create users table: {e}")
         else:
             logger.info("✅ users table already exists")
+        
+        # Check poll_states table (SQLite doesn't support ALTER COLUMN TYPE easily)
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='poll_states'")
+        if cursor.fetchone():
+            cursor.execute("PRAGMA table_info(poll_states)")
+            poll_columns = {column[1]: column[2] for column in cursor.fetchall()}
+            if 'data_type' in poll_columns and 'VARCHAR(20)' in poll_columns['data_type']:
+                logger.warning("⚠️ poll_states.data_type column is VARCHAR(20) but needs VARCHAR(100)")
+                logger.warning("⚠️ SQLite doesn't easily support column type changes")
+                logger.warning("⚠️ This may cause errors with long order/trade IDs")
+            else:
+                logger.info("✅ poll_states.data_type column has correct type or doesn't exist yet")
+        else:
+            logger.info("poll_states table doesn't exist yet, will be created with correct schema")
         
         conn.commit()
         logger.info("🎉 SQLite migration completed successfully")

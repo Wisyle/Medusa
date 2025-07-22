@@ -61,7 +61,7 @@ class PollState(Base):
     id = Column(Integer, primary_key=True, index=True)
     instance_id = Column(Integer, nullable=False)
     symbol = Column(String(50), nullable=False)
-    data_type = Column(String(20), nullable=False)  # 'position', 'order', 'trade'
+    data_type = Column(String(100), nullable=False)  # 'position', 'order_<uuid>', 'trade_<uuid>'
     data_hash = Column(String(64), nullable=False)  # Hash of the data for change detection
     data = Column(JSON, nullable=False)
     timestamp = Column(DateTime, default=datetime.utcnow)
