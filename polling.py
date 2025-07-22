@@ -294,7 +294,8 @@ class ExchangePoller:
             except Exception as e:
                 error_msg = str(e).lower()
                 if 'cloudfront' in error_msg or '403' in error_msg or 'forbidden' in error_msg:
-                    logger.warning(f"⚠️ Method {i+1} failed - CloudFront blocking detected: {method_names[i]}")
+                    method_name = method_names[i] if i < len(method_names) else f"Method {i+1}"
+                    logger.warning(f"⚠️ Method {i+1} failed - CloudFront blocking detected: {method_name}")
                     if i < len(configs_to_try) - 1:
                         logger.info(f"🔄 Trying next bypass method...")
                         continue
@@ -387,15 +388,19 @@ class ExchangePoller:
     def _log_activity(self, event_type: str, symbol: Optional[str] = None, message: str = "", data: Optional[Dict] = None):
         """Log activity to database with connection error recovery"""
         def _log_operation():
-            log = ActivityLog(
-                instance_id=self.instance_id,
-                event_type=event_type,
-                symbol=symbol,
-                message=message,
-                data=data
-            )
-            self.db.add(log)
-            self.db.commit()
+            log_db = SessionLocal()
+            try:
+                log = ActivityLog(
+                    instance_id=self.instance_id,
+                    event_type=event_type,
+                    symbol=symbol,
+                    message=message,
+                    data=data
+                )
+                log_db.add(log)
+                log_db.commit()
+            finally:
+                log_db.close()
         
         try:
             self._execute_db_operation(_log_operation, "log_activity")
@@ -405,14 +410,18 @@ class ExchangePoller:
     def _log_error(self, error_type: str, error_message: str, traceback_str: Optional[str] = None):
         """Log error to database with connection error recovery"""
         def _error_operation():
-            error_log = ErrorLog(
-                instance_id=self.instance_id,
-                error_type=error_type,
-                error_message=error_message,
-                traceback=traceback_str
-            )
-            self.db.add(error_log)
-            self.db.commit()
+            log_db = SessionLocal()
+            try:
+                error_log = ErrorLog(
+                    instance_id=self.instance_id,
+                    error_type=error_type,
+                    error_message=error_message,
+                    traceback=traceback_str
+                )
+                log_db.add(error_log)
+                log_db.commit()
+            finally:
+                log_db.close()
         
         try:
             self._execute_db_operation(_error_operation, "log_error")
@@ -587,10 +596,12 @@ class ExchangePoller:
     async def _send_telegram_notification(self, payload: Dict):
         """Send Telegram notification with beautiful formatting"""
         if not self.telegram_bot:
+            logger.debug(f"No Telegram bot configured for instance {self.instance_id}")
             return
         
         chat_id = self.instance.telegram_chat_id or settings.default_telegram_chat_id
         if not chat_id:
+            logger.debug(f"No Telegram chat ID configured for instance {self.instance_id}")
             return
         
         try:
@@ -613,7 +624,9 @@ class ExchangePoller:
             logger.info(f"Telegram notification sent for instance {self.instance_id}")
             
         except Exception as e:
-            self._log_error("telegram_error", str(e))
+            error_msg = f"Failed to send Telegram notification: {e}"
+            logger.error(error_msg)
+            self._log_error("telegram_error", error_msg)
     
     def _format_telegram_message(self, payload: Dict) -> str:
         """Format beautiful Telegram message with enhanced Markdown formatting"""
