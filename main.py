@@ -420,9 +420,12 @@ async def get_instance_signals(
 @app.on_event("startup")
 async def startup_event():
     """Initialize database and start monitoring"""
+    # Create tables first
+    init_db()
+    
+    # Then run migrations for any new columns
     from migration import migrate_database
     migrate_database()
-    init_db()
     
     asyncio.create_task(monitor_instances())
 

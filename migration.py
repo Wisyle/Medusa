@@ -5,12 +5,16 @@ from config import settings
 
 def migrate_database():
     """Add new columns to existing database if they don't exist"""
-    database_url = settings.database_url
-    
-    if database_url.startswith('postgresql'):
-        migrate_postgresql()
-    else:
-        migrate_sqlite()
+    try:
+        database_url = settings.database_url
+        
+        if database_url.startswith('postgresql'):
+            migrate_postgresql()
+        else:
+            migrate_sqlite()
+    except Exception as e:
+        print(f"Migration skipped - database may not be ready yet: {e}")
+        # Don't raise the exception to prevent startup failure
 
 def migrate_postgresql():
     """Handle PostgreSQL migrations"""
@@ -18,6 +22,17 @@ def migrate_postgresql():
         engine = create_engine(settings.database_url)
         
         with engine.connect() as conn:
+            # First check if bot_instances table exists
+            result = conn.execute(text("""
+                SELECT table_name 
+                FROM information_schema.tables 
+                WHERE table_name = 'bot_instances'
+            """))
+            
+            if not result.fetchone():
+                print("bot_instances table doesn't exist yet, skipping column migrations")
+                return
+            
             result = conn.execute(text("""
                 SELECT column_name 
                 FROM information_schema.columns 
@@ -68,7 +83,7 @@ def migrate_postgresql():
         
     except Exception as e:
         print(f"PostgreSQL migration error: {e}")
-        raise
+        # Don't raise the exception to prevent startup failure
 
 def migrate_sqlite():
     """Handle SQLite migrations"""
