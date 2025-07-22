@@ -260,6 +260,64 @@ async def delete_instance(instance_id: int, db: Session = Depends(get_db), curre
     
     return {"message": "Instance deleted successfully"}
 
+@app.put("/api/instances/{instance_id}")
+async def update_instance(
+    instance_id: int,
+    name: str = Form(...),
+    exchange: str = Form(...),
+    api_key: str = Form(...),
+    api_secret: str = Form(...),
+    api_passphrase: str = Form(""),
+    strategies: str = Form(""),
+    polling_interval: int = Form(60),
+    webhook_url: str = Form(""),
+    telegram_bot_token: str = Form(""),
+    telegram_chat_id: str = Form(""),
+    telegram_topic_id: str = Form(""),
+    trading_pair: str = Form(""),
+    market_type: str = Form("unified"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Update bot instance"""
+    instance = db.query(BotInstance).filter(BotInstance.id == instance_id).first()
+    if not instance:
+        raise HTTPException(status_code=404, detail="Instance not found")
+    
+    # Validate the data
+    validation_errors = validate_instance_data(name, exchange, api_key, api_secret, trading_pair)
+    if validation_errors:
+        raise HTTPException(status_code=400, detail=validation_errors)
+    
+    # Check if instance is running and stop it if updating critical fields
+    was_active = instance.is_active
+    if was_active and instance_id in active_processes:
+        await stop_instance(instance_id, db, current_user)
+    
+    # Update the instance
+    instance.name = name
+    instance.exchange = exchange
+    instance.api_key = api_key
+    instance.api_secret = api_secret
+    instance.api_passphrase = api_passphrase if api_passphrase else None
+    instance.strategies = strategies.split(',') if strategies else []
+    instance.polling_interval = polling_interval
+    instance.webhook_url = webhook_url if webhook_url else None
+    instance.telegram_bot_token = telegram_bot_token if telegram_bot_token else None
+    instance.telegram_chat_id = telegram_chat_id if telegram_chat_id else None
+    instance.telegram_topic_id = telegram_topic_id if telegram_topic_id else None
+    instance.trading_pair = trading_pair.strip() if trading_pair else None
+    instance.market_type = market_type
+    instance.updated_at = datetime.utcnow()
+    
+    db.commit()
+    
+    # Restart if it was previously active
+    if was_active:
+        await start_instance(instance_id, db, current_user)
+    
+    return {"message": "Instance updated successfully", "instance_id": instance_id}
+
 @app.get("/api/instances/{instance_id}/logs")
 async def get_instance_logs(
     instance_id: int,
@@ -337,6 +395,11 @@ async def new_instance_page(request: Request):
 async def instance_detail(request: Request, instance_id: int):
     """Instance detail page"""
     return templates.TemplateResponse("instance_detail.html", {"request": request, "instance_id": instance_id})
+
+@app.get("/instances/{instance_id}/edit", response_class=HTMLResponse)
+async def edit_instance_page(request: Request, instance_id: int):
+    """Edit instance form"""
+    return templates.TemplateResponse("edit_instance.html", {"request": request, "instance_id": instance_id})
 
 @app.get("/system-logs", response_class=HTMLResponse)
 async def system_logs_page(request: Request):
