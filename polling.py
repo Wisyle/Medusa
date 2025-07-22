@@ -22,6 +22,7 @@ class ExchangePoller:
         self.instance_id = instance_id
         self.db = SessionLocal()
         self.instance = self.db.query(BotInstance).filter(BotInstance.id == instance_id).first()
+        self.last_telegram_send = 0  # Rate limiting for Telegram
         
         if not self.instance:
             raise ValueError(f"Bot instance {instance_id} not found")
@@ -648,7 +649,7 @@ class ExchangePoller:
             self._log_error("webhook_error", str(e))
     
     async def _send_telegram_notification(self, payload: Dict):
-        """Send Telegram notification with beautiful formatting"""
+        """Send Telegram notification with beautiful formatting and rate limiting"""
         if not self.telegram_bot:
             logger.debug(f"No Telegram bot configured for instance {self.instance_id}")
             return
@@ -659,6 +660,14 @@ class ExchangePoller:
             return
         
         try:
+            # Rate limiting: minimum 5 seconds between messages
+            current_time = time.time()
+            time_since_last = current_time - self.last_telegram_send
+            if time_since_last < 5.0:
+                wait_time = 5.0 - time_since_last
+                logger.info(f"Rate limiting: waiting {wait_time:.1f}s before sending Telegram message")
+                await asyncio.sleep(wait_time)
+            
             message = self._format_telegram_message(payload)
             
             topic_id = self.instance.telegram_topic_id or settings.default_telegram_topic_id
@@ -673,6 +682,7 @@ class ExchangePoller:
                 send_params['message_thread_id'] = int(topic_id)
             
             await self.telegram_bot.send_message(**send_params)
+            self.last_telegram_send = time.time()  # Update last send time
             
             self._log_activity("telegram_sent", payload.get('symbol'), "Telegram notification sent")
             logger.info(f"Telegram notification sent for instance {self.instance_id}")
@@ -689,6 +699,23 @@ class ExchangePoller:
         symbol = payload.get('symbol', 'N/A')
         bot_type = payload.get('bot_type', 'Unknown')
         
+        # Safe formatting functions to handle None values
+        def safe_float(value, decimals=2, default='0'):
+            if value is None:
+                return default
+            try:
+                return f"{float(value):.{decimals}f}"
+            except (ValueError, TypeError):
+                return default
+        
+        def safe_side(value):
+            if value is None:
+                return 'N/A'
+            return str(value).upper()
+        
+        def safe_string(value, default='N/A'):
+            return str(value) if value is not None else default
+        
         if event_type == "order_filled":
             return f"""🎯 **Order Filled** - {timestamp}
 
@@ -697,11 +724,11 @@ class ExchangePoller:
 **📊 Exchange:** `{self.instance.exchange}`
 
 **📈 Details:**
-• **Side:** {payload.get('side', 'N/A').upper()}
-• **Amount:** `{payload.get('quantity', 0):.6f}`
-• **Price:** `${payload.get('entry_price', 0):.4f}`
+• **Side:** {safe_side(payload.get('side'))}
+• **Amount:** `{safe_float(payload.get('quantity'), 6)}`
+• **Price:** `${safe_float(payload.get('entry_price'), 4)}`
 • **Status:** ✅ FILLED
-• **PnL:** `${payload.get('unrealized_pnl', 0):.2f}`
+• **PnL:** `${safe_float(payload.get('unrealized_pnl'), 2)}`
 
 ✅ **Transaction Complete**"""
 
@@ -713,10 +740,10 @@ class ExchangePoller:
 **📊 Exchange:** `{self.instance.exchange}`
 
 **📈 Details:**
-• **Side:** {payload.get('side', 'N/A').upper()}
-• **Size:** `{payload.get('quantity', 0):.6f}`
-• **Entry:** `${payload.get('entry_price', 0):.4f}`
-• **PnL:** `${payload.get('unrealized_pnl', 0):.2f}`
+• **Side:** {safe_side(payload.get('side'))}
+• **Size:** `{safe_float(payload.get('quantity'), 6)}`
+• **Entry:** `${safe_float(payload.get('entry_price'), 4)}`
+• **PnL:** `${safe_float(payload.get('unrealized_pnl'), 2)}`
 • **Strategy:** {bot_type}
 
 📊 **Monitoring Continues**"""
@@ -729,9 +756,9 @@ class ExchangePoller:
 **📊 Exchange:** `{self.instance.exchange}`
 
 **📈 Details:**
-• **Order ID:** `{payload.get('order_id', 'N/A')}`
-• **Side:** {payload.get('side', 'N/A').upper()}
-• **Amount:** `{payload.get('quantity', 0):.6f}`
+• **Order ID:** `{safe_string(payload.get('order_id'))}`
+• **Side:** {safe_side(payload.get('side'))}
+• **Amount:** `{safe_float(payload.get('quantity'), 6)}`
 • **Status:** ❌ CANCELLED
 • **Strategy:** {bot_type}
 
@@ -745,10 +772,10 @@ class ExchangePoller:
 **📊 Exchange:** `{self.instance.exchange}`
 
 **📈 Details:**
-• **Order ID:** `{payload.get('order_id', 'N/A')}`
-• **Side:** {payload.get('side', 'N/A').upper()}
-• **Amount:** `{payload.get('quantity', 0):.6f}`
-• **Price:** `${payload.get('entry_price', 0):.4f}`
+• **Order ID:** `{safe_string(payload.get('order_id'))}`
+• **Side:** {safe_side(payload.get('side'))}
+• **Amount:** `{safe_float(payload.get('quantity'), 6)}`
+• **Price:** `${safe_float(payload.get('entry_price'), 4)}`
 • **Status:** ⏳ PENDING
 • **Strategy:** {bot_type}
 
