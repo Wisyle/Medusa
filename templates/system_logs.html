@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block title %}System Logs{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3 class="card-title">System Logs</h3>
+                    <div>
+                        <button class="btn btn-sm btn-primary" onclick="refreshLogs()">
+                            <i class="fas fa-sync"></i> Refresh
+                        </button>
+                        <button class="btn btn-sm btn-secondary" onclick="toggleAutoRefresh()">
+                            <i class="fas fa-play"></i> Auto Refresh
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div id="logs-container" style="height: 600px; overflow-y: auto; font-family: monospace; background: #1e1e1e; color: #fff; padding: 15px;">
+                        <div id="logs-content">Loading logs...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let autoRefreshInterval = null;
+let isAutoRefresh = false;
+
+async function loadLogs() {
+    try {
+        const token = localStorage.getItem('access_token');
+        const response = await fetch('/api/system-logs?limit=200', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            displayLogs(data.logs);
+        } else {
+            document.getElementById('logs-content').innerHTML = '<div class="text-danger">Failed to load logs</div>';
+        }
+    } catch (error) {
+        document.getElementById('logs-content').innerHTML = '<div class="text-danger">Error loading logs: ' + error.message + '</div>';
+    }
+}
+
+function displayLogs(logs) {
+    const container = document.getElementById('logs-content');
+    container.innerHTML = '';
+    
+    logs.forEach(log => {
+        const logLine = document.createElement('div');
+        logLine.style.marginBottom = '2px';
+        
+        let levelColor = '#fff';
+        if (log.level === 'ERROR') levelColor = '#ff6b6b';
+        else if (log.level === 'WARN') levelColor = '#ffd93d';
+        else if (log.level === 'INFO') levelColor = '#6bcf7f';
+        
+        logLine.innerHTML = `
+            <span style="color: #888;">${new Date(log.timestamp).toLocaleString()}</span>
+            <span style="color: #4dabf7;">[${log.service}]</span>
+            <span style="color: ${levelColor};">[${log.level}]</span>
+            <span>${log.message}</span>
+        `;
+        
+        container.appendChild(logLine);
+    });
+}
+
+function refreshLogs() {
+    loadLogs();
+}
+
+function toggleAutoRefresh() {
+    const button = event.target.closest('button');
+    
+    if (isAutoRefresh) {
+        clearInterval(autoRefreshInterval);
+        button.innerHTML = '<i class="fas fa-play"></i> Auto Refresh';
+        isAutoRefresh = false;
+    } else {
+        autoRefreshInterval = setInterval(loadLogs, 5000);
+        button.innerHTML = '<i class="fas fa-pause"></i> Stop Auto';
+        isAutoRefresh = true;
+    }
+}
+
+document.addEventListener('DOMContentLoaded', loadLogs);
+</script>
+{% endblock %}
