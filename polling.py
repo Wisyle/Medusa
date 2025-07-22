@@ -7,6 +7,7 @@ import asyncio
 from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import OperationalError, DisconnectionError
 from telegram import Bot
 import logging
 
@@ -316,9 +317,76 @@ class ExchangePoller:
             return Bot(token=token)
         return None
     
-    def _log_activity(self, event_type: str, symbol: Optional[str] = None, message: str = "", data: Optional[Dict] = None):
-        """Log activity to database"""
+    def _recreate_db_session(self):
+        """Recreate database session after connection failure"""
         try:
+            if self.db:
+                self.db.close()
+        except Exception:
+            pass
+        
+        self.db = SessionLocal()
+        self.instance = self.db.query(BotInstance).filter(BotInstance.id == self.instance_id).first()
+        if not self.instance:
+            raise ValueError(f"Bot instance {self.instance_id} not found after session recreation")
+    
+    def _execute_db_operation(self, operation_func, operation_name: str, max_retries: int = 3):
+        """Execute database operation with retry logic and session recovery"""
+        for attempt in range(max_retries):
+            try:
+                operation_func()
+                return
+            except (OperationalError, DisconnectionError) as e:
+                error_msg = str(e).lower()
+                if 'ssl syscall error' in error_msg or 'eof detected' in error_msg or 'connection' in error_msg:
+                    logger.warning(f"Database connection error during {operation_name} (attempt {attempt + 1}/{max_retries}): {e}")
+                    
+                    try:
+                        self.db.rollback()
+                    except Exception:
+                        pass
+                    
+                    if attempt < max_retries - 1:
+                        wait_time = (2 ** attempt) * 0.5
+                        logger.info(f"Retrying {operation_name} in {wait_time} seconds...")
+                        time.sleep(wait_time)
+                        
+                        try:
+                            self._recreate_db_session()
+                        except Exception as recreate_error:
+                            logger.error(f"Failed to recreate session: {recreate_error}")
+                            if attempt == max_retries - 1:
+                                raise
+                    else:
+                        logger.error(f"Failed to execute {operation_name} after {max_retries} attempts")
+                        raise
+                else:
+                    raise
+            except Exception as e:
+                if 'rolled back' in str(e).lower():
+                    logger.warning(f"Session rollback error during {operation_name}: {e}")
+                    try:
+                        self.db.rollback()
+                    except Exception:
+                        pass
+                    
+                    if attempt < max_retries - 1:
+                        try:
+                            self._recreate_db_session()
+                        except Exception as recreate_error:
+                            logger.error(f"Failed to recreate session: {recreate_error}")
+                            if attempt == max_retries - 1:
+                                raise
+                    else:
+                        logger.error(f"Failed to execute {operation_name} after {max_retries} attempts")
+                        raise
+                else:
+                    logger.error(f"Failed to execute {operation_name}: {e}")
+                    raise
+
+    def _log_activity(self, event_type: str, symbol: Optional[str] = None, message: str = "", data: Optional[Dict] = None):
+        """Log activity to database with connection error recovery"""
+        def _log_operation():
             log = ActivityLog(
                 instance_id=self.instance_id,
                 event_type=event_type,
@@ -328,12 +396,15 @@ class ExchangePoller:
             )
             self.db.add(log)
             self.db.commit()
+        
+        try:
+            self._execute_db_operation(_log_operation, "log_activity")
         except Exception as e:
-            logger.error(f"Failed to log activity: {e}")
+            logger.error(f"Failed to log activity after all retries: {e}")
     
     def _log_error(self, error_type: str, error_message: str, traceback_str: Optional[str] = None):
-        """Log error to database"""
-        try:
+        """Log error to database with connection error recovery"""
+        def _error_operation():
             error_log = ErrorLog(
                 instance_id=self.instance_id,
                 error_type=error_type,
@@ -342,8 +413,11 @@ class ExchangePoller:
             )
             self.db.add(error_log)
             self.db.commit()
+        
+        try:
+            self._execute_db_operation(_error_operation, "log_error")
         except Exception as e:
-            logger.error(f"Failed to log error: {e}")
+            logger.error(f"Failed to log error after all retries: {e}")
     
     def _get_data_hash(self, data: Any) -> str:
         """Generate hash for change detection"""
@@ -420,19 +494,25 @@ class ExchangePoller:
         return state.data if state else None
     
     def _save_state(self, symbol: str, data_type: str, data: Dict):
-        """Save current state"""
-        data_hash = self._get_data_hash(data)
+        """Save current state with connection error recovery"""
+        def _save_operation():
+            data_hash = self._get_data_hash(data)
+            
+            state = PollState(
+                instance_id=self.instance_id,
+                symbol=symbol,
+                data_type=data_type,
+                data_hash=data_hash,
+                data=data
+            )
+            
+            self.db.add(state)
+            self.db.commit()
         
-        state = PollState(
-            instance_id=self.instance_id,
-            symbol=symbol,
-            data_type=data_type,
-            data_hash=data_hash,
-            data=data
-        )
-        
-        self.db.add(state)
-        self.db.commit()
+        try:
+            self._execute_db_operation(_save_operation, "save_state")
+        except Exception as e:
+            logger.error(f"Failed to save state after all retries: {e}")
     
     def _create_event_payload(self, event_type: str, symbol: str, data: Dict) -> Dict:
         """Create structured event payload"""
@@ -702,9 +782,15 @@ class ExchangePoller:
                     self._save_state(symbol, f"trade_{trade['id']}", trade)
                     logger.info(f"[{cycle_id}] Trade executed for {symbol}: {trade['id']}")
             
-            self.instance.last_poll = datetime.utcnow()
-            self.instance.last_error = None
-            self.db.commit()
+            def _update_instance():
+                self.instance.last_poll = datetime.utcnow()
+                self.instance.last_error = None
+                self.db.commit()
+            
+            try:
+                self._execute_db_operation(_update_instance, "update_instance")
+            except Exception as e:
+                logger.error(f"Failed to update instance after poll completion: {e}")
             
             logger.info(f"[{cycle_id}] Poll completed for instance {self.instance_id} - Processed {processed_positions} positions, {processed_orders} orders, {processed_trades} trades")
             self._log_activity("poll_complete", None, f"Poll cycle {cycle_id} completed - {processed_positions} positions, {processed_orders} orders, {processed_trades} trades processed")
@@ -713,8 +799,14 @@ class ExchangePoller:
             error_msg = str(e)
             logger.error(f"[{cycle_id}] Poll failed for instance {self.instance_id}: {error_msg}")
             
-            self.instance.last_error = error_msg
-            self.db.commit()
+            def _update_error():
+                self.instance.last_error = error_msg
+                self.db.commit()
+            
+            try:
+                self._execute_db_operation(_update_error, "update_error")
+            except Exception as update_error:
+                logger.error(f"Failed to update instance error status: {update_error}")
             
             self._log_error("poll_failed", error_msg)
             self._log_activity("poll_error", None, f"Poll cycle {cycle_id} failed: {error_msg}")
