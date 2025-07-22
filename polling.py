@@ -444,8 +444,15 @@ class ExchangePoller:
         return hashlib.sha256(json.dumps(data, sort_keys=True, default=str).encode()).hexdigest()
     
     def _detect_strategy_type(self, symbol: str, data: Dict) -> str:
-        """Infer strategy type from symbol or data patterns"""
+        """Get strategy type from instance configuration, not from symbol detection"""
         
+        # Use configured strategies if available
+        if self.instance.strategies:
+            # If multiple strategies configured, return the first one
+            # In practice, most instances will have one primary strategy
+            return self.instance.strategies[0]
+        
+        # Fallback: try to infer from symbol name (legacy behavior)
         symbol_lower = symbol.lower()
         
         if 'dca' in symbol_lower:
@@ -498,18 +505,17 @@ class ExchangePoller:
                 return False
             else:
                 logger.info(f"[SYMBOL_CHECK] ✅ {symbol} matches trading pair {self.instance.trading_pair}")
-            
+        
+        # Strategy filtering: if strategies are configured, all matching symbols use those strategies
         if not self.instance.strategies:
             logger.info(f"[SYMBOL_CHECK] ✅ {symbol} will be processed - no strategy filter")
             return True
         
-        strategy_type = self._detect_strategy_type(symbol, {})
-        result = strategy_type in self.instance.strategies
-        if result:
-            logger.info(f"[SYMBOL_CHECK] ✅ {symbol} will be processed - strategy {strategy_type} matches")
-        else:
-            logger.info(f"[SYMBOL_CHECK] ❌ {symbol} filtered out - strategy {strategy_type} not in {self.instance.strategies}")
-        return result
+        # If strategies are configured, the symbol passes (since trading pair already matched)
+        # The configured strategies will be used for this symbol
+        configured_strategies = ', '.join(self.instance.strategies)
+        logger.info(f"[SYMBOL_CHECK] ✅ {symbol} will be processed - using configured strategies: {configured_strategies}")
+        return True
     
     async def fetch_positions(self) -> List[Dict]:
         """Fetch current positions"""
