@@ -469,30 +469,32 @@ class ExchangePoller:
 
     def _should_process_symbol(self, symbol: str) -> bool:
         """Check if symbol should be processed based on configured trading pair and strategies"""
-        logger.debug(f"[DEBUG] Checking symbol: {symbol}")
-        logger.debug(f"[DEBUG] Configured trading_pair: {self.instance.trading_pair}")
-        logger.debug(f"[DEBUG] Configured strategies: {self.instance.strategies}")
+        logger.info(f"[SYMBOL_CHECK] Checking symbol: {symbol}")
+        logger.info(f"[SYMBOL_CHECK] Configured trading_pair: {self.instance.trading_pair}")
+        logger.info(f"[SYMBOL_CHECK] Configured strategies: {self.instance.strategies}")
         
         if self.instance.trading_pair:
             normalized_symbol = self._normalize_symbol(symbol)
             normalized_trading_pair = self._normalize_symbol(self.instance.trading_pair)
-            logger.debug(f"[DEBUG] Normalized symbol: {normalized_symbol}")
-            logger.debug(f"[DEBUG] Normalized trading_pair: {normalized_trading_pair}")
+            logger.info(f"[SYMBOL_CHECK] Normalized symbol: {normalized_symbol}")
+            logger.info(f"[SYMBOL_CHECK] Normalized trading_pair: {normalized_trading_pair}")
             
             if normalized_symbol != normalized_trading_pair:
-                logger.debug(f"[DEBUG] ❌ {symbol} filtered out - doesn't match trading pair {self.instance.trading_pair}")
+                logger.info(f"[SYMBOL_CHECK] ❌ {symbol} filtered out - doesn't match trading pair {self.instance.trading_pair}")
                 return False
+            else:
+                logger.info(f"[SYMBOL_CHECK] ✅ {symbol} matches trading pair {self.instance.trading_pair}")
             
         if not self.instance.strategies:
-            logger.debug(f"[DEBUG] ✅ {symbol} will be processed - no strategy filter")
+            logger.info(f"[SYMBOL_CHECK] ✅ {symbol} will be processed - no strategy filter")
             return True
         
         strategy_type = self._detect_strategy_type(symbol, {})
         result = strategy_type in self.instance.strategies
         if result:
-            logger.debug(f"[DEBUG] ✅ {symbol} will be processed - strategy {strategy_type} matches")
+            logger.info(f"[SYMBOL_CHECK] ✅ {symbol} will be processed - strategy {strategy_type} matches")
         else:
-            logger.debug(f"[DEBUG] ❌ {symbol} filtered out - strategy {strategy_type} not in {self.instance.strategies}")
+            logger.info(f"[SYMBOL_CHECK] ❌ {symbol} filtered out - strategy {strategy_type} not in {self.instance.strategies}")
         return result
     
     async def fetch_positions(self) -> List[Dict]:
@@ -758,6 +760,19 @@ class ExchangePoller:
             trades = await self.fetch_recent_trades()
             
             logger.info(f"[{cycle_id}] API responses - Positions: {len(positions)}, Orders: {len(orders)}, Trades: {len(trades)}")
+            
+            # Log the actual symbols returned from the API
+            if positions:
+                position_symbols = [pos['symbol'] for pos in positions]
+                logger.info(f"[{cycle_id}] Position symbols: {position_symbols}")
+            
+            if orders:
+                order_symbols = [order['symbol'] for order in orders]
+                logger.info(f"[{cycle_id}] Order symbols: {order_symbols}")
+                
+            if trades:
+                trade_symbols = [trade['symbol'] for trade in trades]
+                logger.info(f"[{cycle_id}] Trade symbols: {trade_symbols}")
             
             processed_positions = 0
             for position in positions:

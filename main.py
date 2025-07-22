@@ -130,8 +130,19 @@ def validate_instance_data(name: str, exchange: str, api_key: str, api_secret: s
     if trading_pair and not trading_pair.strip():
         errors.append("Trading pair cannot be empty if provided")
     
-    if trading_pair and '/' not in trading_pair:
-        errors.append("Trading pair must be in format BASE/QUOTE (e.g., BTC/USDT)")
+    # Accept both formats: BTC/USDT and BTCUSDT
+    if trading_pair and trading_pair.strip():
+        pair = trading_pair.strip().upper()
+        # Check if it's in BASE/QUOTE format
+        if '/' in pair:
+            parts = pair.split('/')
+            if len(parts) != 2 or not parts[0] or not parts[1]:
+                errors.append("Trading pair format with slash must be BASE/QUOTE (e.g., BTC/USDT)")
+        # Check if it's in BASEUSDT format (no slash)
+        elif not pair.endswith(('USDT', 'BUSD', 'BTC', 'ETH', 'USD', 'EUR')):
+            errors.append("Trading pair must end with a valid quote currency (USDT, BUSD, BTC, ETH, USD, EUR) or use BASE/QUOTE format")
+        elif len(pair) < 4:
+            errors.append("Trading pair too short - use format like BTC/USDT or BTCUSDT")
         
     return errors
 
