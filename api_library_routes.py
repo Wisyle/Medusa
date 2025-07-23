@@ -20,24 +20,11 @@ def add_api_library_routes(app: FastAPI):
     """Add API Library routes to the FastAPI app"""
     
     @app.get("/api-library", response_class=HTMLResponse)
-    async def api_library_page(request: Request, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
+    async def api_library_page(request: Request):
         """API Library management page"""
-        api_credentials = db.query(ApiCredential).order_by(ApiCredential.name).all()
-        
-        # Get usage information
-        for credential in api_credentials:
-            if credential.current_instance_id:
-                instance = db.query(BotInstance).filter(BotInstance.id == credential.current_instance_id).first()
-                credential.current_instance_name = instance.name if instance else "Unknown"
-            else:
-                credential.current_instance_name = None
-        
         return templates.TemplateResponse("api_library.html", {
-            "request": request,
-            "api_credentials": api_credentials
-        })
-    
-    @app.get("/api/api-credentials")
+            "request": request
+        })    @app.get("/api/api-credentials")
     async def get_api_credentials(db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
         """Get all API credentials (masked for security)"""
         credentials = db.query(ApiCredential).order_by(ApiCredential.name).all()

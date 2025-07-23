@@ -90,7 +90,7 @@
                                     <th>Actions</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody id="credentials-table-body">
                                 {% for credential in api_credentials %}
                                 <tr id="credential-{{ credential.id }}">
                                     <td>
@@ -450,5 +450,110 @@ function deleteCredential(credentialId, credentialName, isInUse) {
         alert('Failed to delete API credential');
     });
 }
+
+// Load credentials on page load
+function loadCredentials() {
+    const token = localStorage.getItem('access_token');
+    if (!token) {
+        window.location.href = '/login';
+        return;
+    }
+
+    fetch('/api/api-credentials', {
+        method: 'GET',
+        headers: {
+            'Authorization': 'Bearer ' + token
+        }
+    })
+    .then(response => response.json())
+    .then(credentials => {
+        const tbody = document.getElementById('credentials-table-body');
+        if (!tbody) return;
+        
+        if (credentials.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="8" class="text-center text-muted">
+                        <i class="fas fa-key"></i>
+                        No API credentials found. <a href="#" onclick="showCreateModal()">Create one now</a>.
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+        
+        tbody.innerHTML = credentials.map(credential => `
+            <tr id="credential-${credential.id}">
+                <td>
+                    <strong>${credential.name}</strong>
+                    ${credential.description ? `<br><small class="text-muted">${credential.description}</small>` : ''}
+                </td>
+                <td>
+                    <span class="badge badge-info">${credential.exchange.toUpperCase()}</span>
+                </td>
+                <td>
+                    <code>${credential.api_key.substring(0, 8)}...${credential.api_key.slice(-4)}</code>
+                    ${credential.api_passphrase ? '<br><small class="text-info"><i class="fas fa-shield-alt"></i> Has Passphrase</small>' : ''}
+                </td>
+                <td>
+                    ${!credential.is_active ? '<span class="badge badge-inactive">Inactive</span>' : 
+                      credential.is_in_use ? '<span class="badge badge-in-use">In Use</span>' : 
+                      '<span class="badge badge-available">Available</span>'}
+                </td>
+                <td>
+                    ${credential.current_instance_name ? 
+                      `<a href="/instances/${credential.current_instance_id}" class="text-info">${credential.current_instance_name}</a>` : 
+                      '<span class="text-muted">-</span>'}
+                </td>
+                <td>
+                    ${credential.tags ? 
+                      credential.tags.split(',').map(tag => `<span class="badge badge-secondary">${tag.trim()}</span>`).join(' ') : 
+                      '<span class="text-muted">-</span>'}
+                </td>
+                <td>
+                    <small class="text-muted">${credential.created_at ? new Date(credential.created_at).toLocaleDateString() : '-'}</small>
+                </td>
+                <td>
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-sm btn-outline-primary" 
+                                onclick="editCredential(${credential.id})"
+                                title="Edit">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        ${credential.is_in_use ? `
+                        <button type="button" class="btn btn-sm btn-outline-warning" 
+                                onclick="unassignCredential(${credential.id})"
+                                title="Unassign from bot">
+                            <i class="fas fa-unlink"></i>
+                        </button>
+                        ` : ''}
+                        <button type="button" class="btn btn-sm btn-outline-danger" 
+                                onclick="deleteCredential(${credential.id})"
+                                title="Delete">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+    })
+    .catch(error => {
+        console.error('Error loading credentials:', error);
+        const tbody = document.getElementById('credentials-table-body');
+        if (tbody) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="8" class="text-center text-danger">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Failed to load API credentials. Please refresh the page.
+                    </td>
+                </tr>
+            `;
+        }
+    });
+}
+
+// Load credentials when page loads
+document.addEventListener('DOMContentLoaded', loadCredentials);
 </script>
 {% endblock %}
