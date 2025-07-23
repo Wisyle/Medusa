@@ -142,6 +142,17 @@ def migrate_postgresql():
                     conn.rollback()
             else:
                 logger.info("✅ strategy_monitors table already exists")
+                
+                # Check if we need to rename include_pnl_summary to include_pnl
+                if check_column_exists_pg(conn, 'strategy_monitors', 'include_pnl_summary'):
+                    try:
+                        logger.info("➕ Renaming include_pnl_summary to include_pnl in strategy_monitors table")
+                        conn.execute(text("ALTER TABLE strategy_monitors RENAME COLUMN include_pnl_summary TO include_pnl"))
+                        conn.commit()
+                        logger.info("✅ Successfully renamed column include_pnl_summary to include_pnl")
+                    except Exception as e:
+                        logger.error(f"❌ Failed to rename column: {e}")
+                        conn.rollback()
             
             # Check and update poll_states table data_type column
             if check_table_exists_pg(conn, 'poll_states'):
@@ -264,6 +275,53 @@ def migrate_sqlite():
                 logger.error(f"❌ Failed to create strategy_monitors table: {e}")
         else:
             logger.info("✅ strategy_monitors table already exists")
+            
+            # Check if we need to rename include_pnl_summary to include_pnl (SQLite limitation workaround)
+            cursor.execute("PRAGMA table_info(strategy_monitors)")
+            columns = [column[1] for column in cursor.fetchall()]
+            
+            if 'include_pnl_summary' in columns and 'include_pnl' not in columns:
+                try:
+                    logger.info("➕ Updating strategy_monitors table to rename include_pnl_summary to include_pnl")
+                    # SQLite doesn't support RENAME COLUMN easily, so we recreate the table
+                    cursor.execute("""
+                        CREATE TABLE strategy_monitors_new (
+                            id INTEGER PRIMARY KEY,
+                            strategy_name VARCHAR(255) UNIQUE NOT NULL,
+                            telegram_bot_token VARCHAR(255),
+                            telegram_chat_id VARCHAR(255),
+                            telegram_topic_id VARCHAR(255),
+                            report_interval INTEGER DEFAULT 3600,
+                            include_positions BOOLEAN DEFAULT 1,
+                            include_orders BOOLEAN DEFAULT 1,
+                            include_trades BOOLEAN DEFAULT 1,
+                            include_pnl BOOLEAN DEFAULT 1,
+                            max_recent_positions INTEGER DEFAULT 20,
+                            is_active BOOLEAN DEFAULT 1,
+                            last_report DATETIME,
+                            last_error TEXT,
+                            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                            updated_at DATETIME
+                        )
+                    """)
+                    
+                    # Copy data from old table
+                    cursor.execute("""
+                        INSERT INTO strategy_monitors_new 
+                        SELECT id, strategy_name, telegram_bot_token, telegram_chat_id, telegram_topic_id,
+                               report_interval, include_positions, include_orders, include_trades, 
+                               include_pnl_summary as include_pnl, max_recent_positions, is_active,
+                               last_report, last_error, created_at, updated_at
+                        FROM strategy_monitors
+                    """)
+                    
+                    # Drop old table and rename new one
+                    cursor.execute("DROP TABLE strategy_monitors")
+                    cursor.execute("ALTER TABLE strategy_monitors_new RENAME TO strategy_monitors")
+                    
+                    logger.info("✅ Successfully updated strategy_monitors table")
+                except Exception as e:
+                    logger.error(f"❌ Failed to update strategy_monitors table: {e}")
         
         # Check poll_states table (SQLite doesn't support ALTER COLUMN TYPE easily)
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='poll_states'")

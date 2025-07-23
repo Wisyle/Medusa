@@ -20,7 +20,7 @@ class StrategyMonitor(Base):
     include_positions = Column(Boolean, default=True)
     include_orders = Column(Boolean, default=True)
     include_trades = Column(Boolean, default=True)
-    include_pnl_summary = Column(Boolean, default=True)
+    include_pnl = Column(Boolean, default=True)
     max_recent_positions = Column(Integer, default=10)
     
     # Status tracking
