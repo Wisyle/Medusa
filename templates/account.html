@@ -263,66 +263,57 @@ function generateQRCode(data) {
     $('#manual-secret').text(data.secret);
     $('#setup2FAModal').modal('show');
     
-    // Try the QRCode library first
-    if (typeof QRCode !== 'undefined') {
-        try {
-            // Create canvas element
-            const canvas = document.createElement('canvas');
-            canvas.width = 200;
-            canvas.height = 200;
-            
-            QRCode.toCanvas(canvas, data.qr_url, {
-                width: 200,
-                height: 200,
-                margin: 1,
-                color: {
-                    dark: '#000000',
-                    light: '#FFFFFF'
-                }
-            }, function (error) {
-                if (error) {
-                    console.error('QRCode generation error:', error);
-                    generateSimpleQRCode(data);
-                } else {
-                    // Success - show the canvas
-                    qrContainer.empty().append(canvas);
-                    // Show verification step after QR is generated
-                    showVerificationStep();
-                }
-            });
-        } catch (error) {
-            console.error('QRCode library error:', error);
-            generateSimpleQRCode(data);
-        }
-    } else {
-        // Library not loaded, use fallback
-        generateSimpleQRCode(data);
-    }
-}
-
-// Simple QR code generation using Google Charts
-function generateSimpleQRCode(data) {
-    const qrContainer = $('#qrcode-container');
+    console.log('QR data:', data.qr_url);
+    console.log('QRCode library available:', typeof QRCode !== 'undefined');
     
-    // Use Google Charts API (most reliable)
+    // Use Google Charts API as primary method (most reliable)
     const qrUrl = `https://chart.googleapis.com/chart?chs=200x200&cht=qr&chl=${encodeURIComponent(data.qr_url)}`;
     
     const img = new Image();
     img.onload = function() {
         qrContainer.empty().append(img);
-        // Show verification step after QR is loaded
         showVerificationStep();
     };
     img.onerror = function() {
-        // If image fails, show manual entry only but still allow verification
-        qrContainer.html('<div class="alert alert-info"><i class="fas fa-info-circle"></i> Please use the manual entry key below to set up 2FA in your authenticator app.</div>');
-        // Show verification step even without QR
-        showVerificationStep();
+        console.error('Google Charts QR failed, trying QRCode.js');
+        // Try QRCode.js as fallback
+        if (typeof QRCode !== 'undefined') {
+            try {
+                const canvas = document.createElement('canvas');
+                canvas.width = 200;
+                canvas.height = 200;
+                
+                QRCode.toCanvas(canvas, data.qr_url, {
+                    width: 200,
+                    height: 200,
+                    margin: 1
+                }, function (error) {
+                    if (error) {
+                        console.error('QRCode.js failed:', error);
+                        showManualEntryOnly();
+                    } else {
+                        qrContainer.empty().append(canvas);
+                        showVerificationStep();
+                    }
+                });
+            } catch (error) {
+                console.error('QRCode.js error:', error);
+                showManualEntryOnly();
+            }
+        } else {
+            showManualEntryOnly();
+        }
     };
     img.src = qrUrl;
     img.alt = 'QR Code';
     img.className = 'img-fluid';
     img.style.maxWidth = '200px';
+}
+
+function showManualEntryOnly() {
+    const qrContainer = $('#qrcode-container');
+    qrContainer.html('<div class="alert alert-info"><i class="fas fa-info-circle"></i> QR code generation failed. Please use the manual entry key below to set up 2FA in your authenticator app.</div>');
+    showVerificationStep();
 }
 
 // Show the verification step
@@ -346,24 +337,32 @@ function showVerificationStep() {
 
 // Load 2FA status
 function load2FAStatus() {
+    console.log('Loading 2FA status...');
     fetch('/api/user/2fa/status', {
         method: 'GET',
         headers: {
             'Authorization': 'Bearer ' + localStorage.getItem('token')
         }
     })
-    .then(response => response.json())
+    .then(response => {
+        console.log('2FA status response:', response.status);
+        return response.json();
+    })
     .then(data => {
+        console.log('2FA status data:', data);
         $('#twofa-status-loading').hide();
         if (data.totp_enabled) {
             $('#twofa-enabled').show();
+            $('#twofa-disabled').hide();
         } else {
             $('#twofa-disabled').show();
+            $('#twofa-enabled').hide();
         }
     })
     .catch(error => {
-        console.error('Error loading 2FA status:', error);
+        console.error('2FA status error:', error);
         $('#twofa-status-loading').hide();
+        $('#twofa-disabled').show();
         showAlert('danger', 'Failed to load 2FA status');
     });
 }
@@ -441,6 +440,7 @@ $(document).ready(function() {
     
     // Enable 2FA
     $('#enable2FABtn').on('click', function() {
+        console.log('Starting 2FA setup...');
         // Reset modal state
         resetModal();
         
@@ -450,8 +450,12 @@ $(document).ready(function() {
                 'Authorization': 'Bearer ' + localStorage.getItem('token')
             }
         })
-        .then(response => response.json())
+        .then(response => {
+            console.log('Setup response status:', response.status);
+            return response.json();
+        })
         .then(data => {
+            console.log('Setup response data:', data);
             if (data.error) {
                 showAlert('danger', data.error);
             } else {
@@ -465,6 +469,7 @@ $(document).ready(function() {
             }
         })
         .catch(error => {
+            console.error('Setup error:', error);
             showAlert('danger', 'Failed to setup 2FA: ' + error.message);
         });
     });
@@ -483,8 +488,11 @@ $(document).ready(function() {
     $('#verify2FAForm').on('submit', function(e) {
         e.preventDefault();
         
+        const totpCode = $('#totp_code').val();
+        console.log('Verifying 2FA with code:', totpCode);
+        
         const formData = new FormData();
-        formData.append('totp_code', $('#totp_code').val());
+        formData.append('totp_code', totpCode);
         
         fetch('/api/user/2fa/verify', {
             method: 'POST',
@@ -493,17 +501,23 @@ $(document).ready(function() {
             },
             body: formData
         })
-        .then(response => response.json())
+        .then(response => {
+            console.log('Verify response status:', response.status);
+            return response.json();
+        })
         .then(data => {
+            console.log('Verify response data:', data);
             if (data.error) {
                 showAlert('danger', data.error);
             } else {
                 showAlert('success', '2FA enabled successfully!');
                 $('#setup2FAModal').modal('hide');
-                location.reload(); // Refresh to show new 2FA status
+                // Refresh the 2FA status
+                load2FAStatus();
             }
         })
         .catch(error => {
+            console.error('Verify error:', error);
             showAlert('danger', 'Failed to verify 2FA: ' + error.message);
         });
     });

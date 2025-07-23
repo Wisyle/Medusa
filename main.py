@@ -614,6 +614,14 @@ async def setup_2fa_api(
         db.rollback()
         return {"error": str(e)}
 
+@app.get("/api/user/2fa/status")
+async def get_2fa_status(current_user: User = Depends(get_current_active_user)):
+    """Get current 2FA status"""
+    return {
+        "totp_enabled": current_user.totp_enabled,
+        "has_secret": bool(current_user.totp_secret)
+    }
+
 @app.post("/api/user/2fa/verify")
 async def verify_2fa_setup(
     totp_code: str = Form(...),
