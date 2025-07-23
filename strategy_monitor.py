@@ -47,10 +47,15 @@ class StrategyMonitorService:
     
     def _get_strategy_instances(self) -> List[BotInstance]:
         """Get all active instances running this strategy"""
-        return self.db.query(BotInstance).filter(
-            BotInstance.strategies.contains([self.strategy_name]),
-            BotInstance.is_active == True
-        ).all()
+        # Get all active instances and filter in Python for better compatibility
+        all_instances = self.db.query(BotInstance).filter(BotInstance.is_active == True).all()
+        
+        strategy_instances = []
+        for instance in all_instances:
+            if instance.strategies and self.strategy_name in instance.strategies:
+                strategy_instances.append(instance)
+        
+        return strategy_instances
     
     def _get_recent_positions(self, instance_ids: List[int], hours: int = 24) -> Dict[str, Any]:
         """Get recent position data for strategy instances"""

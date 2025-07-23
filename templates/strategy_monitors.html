@@ -3,6 +3,65 @@
 {% block title %}Strategy Monitors{% endblock %}
 
 {% block content %}
+<style>
+/* Fix modal styling for dark theme */
+.modal-content {
+    background-color: var(--secondary-black);
+    border: 1px solid var(--medium-gray);
+    color: var(--white);
+}
+
+.modal-header {
+    background-color: var(--light-gray);
+    border-bottom: 1px solid var(--medium-gray);
+    color: var(--white);
+}
+
+.modal-title {
+    color: var(--white);
+}
+
+.close {
+    color: var(--white);
+    opacity: 0.8;
+}
+
+.close:hover {
+    color: var(--white);
+    opacity: 1;
+}
+
+.modal-body {
+    background-color: var(--secondary-black);
+    color: var(--white);
+}
+
+.modal-footer {
+    background-color: var(--light-gray);
+    border-top: 1px solid var(--medium-gray);
+}
+
+.form-group label {
+    color: var(--white);
+}
+
+.form-check-label {
+    color: var(--white);
+}
+
+.btn-secondary {
+    background-color: var(--medium-gray);
+    border-color: var(--medium-gray);
+    color: var(--white);
+}
+
+.btn-secondary:hover {
+    background-color: var(--light-gray);
+    border-color: var(--light-gray);
+    color: var(--white);
+}
+</style>
+
 <div class="container">
     <div class="row">
         <div class="col-md-12">
