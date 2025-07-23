@@ -397,6 +397,59 @@ class ExchangePoller:
                     logger.error(f"Failed to execute {operation_name}: {e}")
                     raise
 
+    def _execute_db_operation_with_return(self, operation_func, operation_name: str, max_retries: int = 3):
+        """Execute database operation with retry logic and return value"""
+        for attempt in range(max_retries):
+            try:
+                return operation_func()
+            except (OperationalError, DisconnectionError) as e:
+                error_msg = str(e).lower()
+                if 'ssl syscall error' in error_msg or 'eof detected' in error_msg or 'connection' in error_msg:
+                    logger.warning(f"Database connection error during {operation_name} (attempt {attempt + 1}/{max_retries}): {e}")
+                    
+                    try:
+                        self.db.rollback()
+                    except Exception:
+                        pass
+                    
+                    if attempt < max_retries - 1:
+                        wait_time = (2 ** attempt) * 0.5
+                        logger.info(f"Retrying {operation_name} in {wait_time} seconds...")
+                        time.sleep(wait_time)
+                        
+                        try:
+                            self._recreate_db_session()
+                        except Exception as recreate_error:
+                            logger.error(f"Failed to recreate session: {recreate_error}")
+                            if attempt == max_retries - 1:
+                                raise
+                    else:
+                        logger.error(f"Failed to execute {operation_name} after {max_retries} attempts")
+                        raise
+                else:
+                    raise
+            except Exception as e:
+                if 'rolled back' in str(e).lower():
+                    logger.warning(f"Session rollback error during {operation_name}: {e}")
+                    try:
+                        self.db.rollback()
+                    except Exception:
+                        pass
+                    
+                    if attempt < max_retries - 1:
+                        try:
+                            self._recreate_db_session()
+                        except Exception as recreate_error:
+                            logger.error(f"Failed to recreate session: {recreate_error}")
+                            if attempt == max_retries - 1:
+                                raise
+                    else:
+                        logger.error(f"Failed to execute {operation_name} after {max_retries} attempts")
+                        raise
+                else:
+                    logger.error(f"Failed to execute {operation_name}: {e}")
+                    raise
+
     def _log_activity(self, event_type: str, symbol: Optional[str] = None, message: str = "", data: Optional[Dict] = None):
         """Log activity to database with connection error recovery"""
         def _log_operation():
@@ -548,14 +601,21 @@ class ExchangePoller:
             return []
     
     def _get_previous_state(self, symbol: str, data_type: str) -> Optional[Dict]:
-        """Get previous state for comparison"""
-        state = self.db.query(PollState).filter(
-            PollState.instance_id == self.instance_id,
-            PollState.symbol == symbol,
-            PollState.data_type == data_type
-        ).order_by(PollState.timestamp.desc()).first()
+        """Get previous state for comparison with connection error recovery"""
+        def _get_operation():
+            state = self.db.query(PollState).filter(
+                PollState.instance_id == self.instance_id,
+                PollState.symbol == symbol,
+                PollState.data_type == data_type
+            ).order_by(PollState.timestamp.desc()).first()
+            
+            return state.data if state else None
         
-        return state.data if state else None
+        try:
+            return self._execute_db_operation_with_return(_get_operation, "get_previous_state")
+        except Exception as e:
+            logger.error(f"Failed to get previous state for {symbol} {data_type}: {e}")
+            return None
     
     def _save_state(self, symbol: str, data_type: str, data: Dict):
         """Save current state with connection error recovery"""
@@ -904,7 +964,23 @@ class ExchangePoller:
             
         except Exception as e:
             error_msg = str(e)
-            logger.error(f"[{cycle_id}] Poll failed for instance {self.instance_id}: {error_msg}")
+            
+            # Check if this is a database connection error
+            if isinstance(e, (OperationalError, DisconnectionError)) or 'ssl syscall error' in error_msg.lower() or 'eof detected' in error_msg.lower():
+                logger.warning(f"[{cycle_id}] Database connection error for instance {self.instance_id}: {error_msg}")
+                
+                # Try to recover the database connection
+                try:
+                    logger.info(f"[{cycle_id}] Attempting to recover database connection...")
+                    self._recreate_db_session()
+                    logger.info(f"[{cycle_id}] Database connection recovered successfully")
+                    # Don't update error status for connection issues as they're recoverable
+                    return
+                except Exception as recovery_error:
+                    logger.error(f"[{cycle_id}] Failed to recover database connection: {recovery_error}")
+                    error_msg = f"Database connection recovery failed: {recovery_error}"
+            else:
+                logger.error(f"[{cycle_id}] Poll failed for instance {self.instance_id}: {error_msg}")
             
             def _update_error():
                 self.instance.last_error = error_msg
