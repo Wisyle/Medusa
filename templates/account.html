@@ -24,12 +24,12 @@
                 <form id="profileForm">
                     <div class="mb-3">
                         <label for="email" class="form-label">Email</label>
-                        <input type="email" class="form-control" id="email" value="{{ user.email }}" readonly>
+                        <input type="email" class="form-control" id="email" readonly>
                         <small class="text-white-50">Email cannot be changed</small>
                     </div>
                     <div class="mb-3">
                         <label for="full_name" class="form-label">Full Name</label>
-                        <input type="text" class="form-control" id="full_name" value="{{ user.full_name or '' }}" placeholder="Enter your full name">
+                        <input type="text" class="form-control" id="full_name" placeholder="Enter your full name">
                     </div>
                     <button type="submit" class="btn btn-primary">
                         <i class="fas fa-save"></i>
@@ -85,7 +85,12 @@
                 </h5>
             </div>
             <div class="card-body">
-                {% if user.totp_secret %}
+                {% raw %}
+                <div id="twofa-status-loading" class="text-center">
+                    <i class="fas fa-spinner fa-spin"></i> Loading 2FA status...
+                </div>
+                <div id="twofa-enabled" style="display: none;">
+                {% endraw %}
                 <div class="row">
                     <div class="col-md-8">
                         <div class="alert alert-success" role="alert">
@@ -106,7 +111,10 @@
                         <p class="mt-2 text-success"><strong>Protected</strong></p>
                     </div>
                 </div>
-                {% else %}
+                {% raw %}
+                </div>
+                <div id="twofa-disabled" style="display: none;">
+                {% endraw %}
                 <div class="row">
                     <div class="col-md-8">
                         <div class="alert alert-warning" role="alert">
@@ -127,7 +135,9 @@
                         <p class="mt-2 text-warning"><strong>Not Protected</strong></p>
                     </div>
                 </div>
-                {% endif %}
+                {% raw %}
+                </div>
+                {% endraw %}
             </div>
         </div>
     </div>
@@ -217,7 +227,60 @@
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 <script>
+// Load user profile data
+function loadUserProfile() {
+    fetch('/api/user/profile', {
+        method: 'GET',
+        headers: {
+            'Authorization': 'Bearer ' + localStorage.getItem('token')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            showAlert('danger', 'Failed to load profile: ' + data.error);
+        } else {
+            $('#email').val(data.email);
+            $('#full_name').val(data.full_name || '');
+        }
+    })
+    .catch(error => {
+        console.error('Error loading profile:', error);
+        showAlert('danger', 'Failed to load profile data');
+    });
+}
+
+// Load 2FA status
+function load2FAStatus() {
+    fetch('/api/user/2fa/status', {
+        method: 'GET',
+        headers: {
+            'Authorization': 'Bearer ' + localStorage.getItem('token')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        $('#twofa-status-loading').hide();
+        if (data.totp_enabled) {
+            $('#twofa-enabled').show();
+        } else {
+            $('#twofa-disabled').show();
+        }
+    })
+    .catch(error => {
+        console.error('Error loading 2FA status:', error);
+        $('#twofa-status-loading').hide();
+        showAlert('danger', 'Failed to load 2FA status');
+    });
+}
+
 $(document).ready(function() {
+    // Load user profile data
+    loadUserProfile();
+    
+    // Load 2FA status
+    load2FAStatus();
+    
     // Profile form submission
     $('#profileForm').on('submit', function(e) {
         e.preventDefault();
@@ -227,6 +290,9 @@ $(document).ready(function() {
         
         fetch('/api/user/profile', {
             method: 'POST',
+            headers: {
+                'Authorization': 'Bearer ' + localStorage.getItem('token')
+            },
             body: formData
         })
         .then(response => response.json())
@@ -260,6 +326,9 @@ $(document).ready(function() {
         
         fetch('/api/user/change-password', {
             method: 'POST',
+            headers: {
+                'Authorization': 'Bearer ' + localStorage.getItem('token')
+            },
             body: formData
         })
         .then(response => response.json())
@@ -278,7 +347,12 @@ $(document).ready(function() {
     
     // Enable 2FA
     $('#enable2FABtn').on('click', function() {
-        fetch('/api/user/2fa/setup', { method: 'POST' })
+        fetch('/api/user/2fa/setup', { 
+            method: 'POST',
+            headers: {
+                'Authorization': 'Bearer ' + localStorage.getItem('token')
+            }
+        })
         .then(response => response.json())
         .then(data => {
             if (data.error) {
@@ -312,6 +386,9 @@ $(document).ready(function() {
         
         fetch('/api/user/2fa/verify', {
             method: 'POST',
+            headers: {
+                'Authorization': 'Bearer ' + localStorage.getItem('token')
+            },
             body: formData
         })
         .then(response => response.json())
@@ -343,6 +420,9 @@ $(document).ready(function() {
         
         fetch('/api/user/2fa/disable', {
             method: 'POST',
+            headers: {
+                'Authorization': 'Bearer ' + localStorage.getItem('token')
+            },
             body: formData
         })
         .then(response => response.json())
@@ -359,23 +439,6 @@ $(document).ready(function() {
             showAlert('danger', 'Failed to disable 2FA: ' + error.message);
         });
     });
-    
-    function showAlert(type, message) {
-        const alertHtml = `
-            <div class="alert alert-${type} alert-dismissible fade show" role="alert">
-                ${message}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        `;
-        
-        // Insert at top of content
-        $('.pt-3.pb-2.mb-3.border-bottom').after(alertHtml);
-        
-        // Auto-dismiss after 5 seconds
-        setTimeout(function() {
-            $('.alert').fadeOut();
-        }, 5000);
-    }
 });
 </script>
 {% endblock %}

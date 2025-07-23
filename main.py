@@ -529,11 +529,22 @@ async def edit_instance_page(request: Request, instance_id: int):
     return templates.TemplateResponse("edit_instance.html", {"request": request, "instance_id": instance_id})
 
 @app.get("/account", response_class=HTMLResponse)
-async def account_page(request: Request, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
-    """Account settings page"""
-    return templates.TemplateResponse("account.html", {"request": request, "user": current_user})
+async def account_page(request: Request):
+    """Account settings page - authentication handled by JavaScript"""
+    return templates.TemplateResponse("account.html", {"request": request})
 
 # Account Settings API Routes
+@app.get("/api/user/profile")
+async def get_user_profile(current_user: User = Depends(get_current_active_user)):
+    """Get current user profile"""
+    return {
+        "email": current_user.email,
+        "full_name": current_user.full_name,
+        "is_active": current_user.is_active,
+        "totp_enabled": current_user.totp_enabled,
+        "created_at": current_user.created_at.isoformat() if current_user.created_at else None
+    }
+
 @app.post("/api/user/profile")
 async def update_profile(
     full_name: str = Form(...),
