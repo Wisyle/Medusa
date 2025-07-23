@@ -1,15 +1,17 @@
 # TGL MEDUSA - Cryptocurrency Bot Monitoring System
 
-A production-ready Python application for monitoring Tar Global trading bots across multiple cryptocurrency exchanges with real-time notifications and web-based administration.
+A production-ready Python application for monitoring Tar Global trading bots across multiple cryptocurrency exchanges with real-time notifications, web-based administration, and advanced strategy-level aggregation.
 
 ## Features
 
 - **Multi-Exchange Support**: Binance Futures, Bybit, OKX, KuCoin, MEXC, Gate.io, Coinbase Pro, Bitfinex
 - **Strategy Monitoring**: DCA, Grid, Combo, Loop, BTD, DCA Futures, AIS Assisted
+- **Strategy Monitor System**: Aggregate performance data across multiple instances by strategy
 - **Web Admin Panel**: Create, configure, start/stop, and monitor bot instances
 - **Real-time Notifications**: Telegram notifications with beautiful Unicode formatting
+- **Advanced Reporting**: Strategy-level PnL tracking, position summaries, trade analytics
 - **Webhook Integration**: Structured JSON payloads for external systems
-- **Change Detection**: SQLite-based state tracking for positions, orders, and trades
+- **Change Detection**: PostgreSQL/SQLite-based state tracking for positions, orders, and trades
 - **Multi-Instance Management**: Run multiple bot instances simultaneously
 - **Health Monitoring**: System health checks and error logging
 
@@ -100,13 +102,78 @@ The application will start on `http://localhost:8000` (or your configured host/p
 
 ### API Endpoints
 
+#### Core System
 - `GET /api/health` - System health check
+- `GET /api/strategy-monitor-health` - Strategy monitor health check
+
+#### Bot Instances
 - `GET /api/instances` - List all bot instances
 - `POST /api/instances` - Create new instance
 - `POST /api/instances/{id}/start` - Start instance
 - `POST /api/instances/{id}/stop` - Stop instance
 - `DELETE /api/instances/{id}` - Delete instance
 - `GET /api/instances/{id}/logs` - Get instance logs
+
+#### Strategy Monitors
+- `GET /strategy-monitors` - Strategy monitor management page
+- `GET /api/strategy-monitors` - List all strategy monitors
+- `POST /strategy-monitors` - Create new strategy monitor
+- `PUT /strategy-monitors/{id}` - Update strategy monitor
+- `DELETE /strategy-monitors/{id}` - Delete strategy monitor
+- `POST /strategy-monitors/{id}/toggle` - Toggle monitor active status
+- `POST /strategy-monitors/{id}/test-report` - Send test report
+
+## Strategy Monitor System
+
+The Strategy Monitor System provides high-level aggregation and reporting across multiple bot instances running the same strategy.
+
+### Features
+- **Strategy-Level Aggregation**: Combines data from all instances running the same strategy
+- **Comprehensive Reporting**: PnL tracking, position summaries, order/trade analytics
+- **Beautiful Telegram Reports**: Professional formatting with Unicode emojis and code blocks
+- **Configurable Intervals**: Reports every 30 minutes to 24 hours
+- **No API Keys Required**: Uses existing instance data
+- **Error Tracking**: Monitors and reports system health
+
+### Sample Strategy Report
+```
+🎯 **Scalping Strategy Monitor** - 2024-12-19 15:30:00 UTC
+
+📈 **Overview**
+• Active Instances: 3
+• Total PnL (24h): $+1,247.50
+• Active Positions: 8
+• Active Orders: 12
+• Trades (24h): 156
+• Volume (24h): $89,450.25
+
+🏢 **Instances**
+  1. `BTC-Scalper-1` - bybit
+  2. `ETH-Scalper-2` - bybit
+  3. `SOL-Scalper-3` - bybit
+
+💰 **PnL by Symbol (24h)**
+```
+🟢 BTC/USDT:USDT    $+487.25
+🟢 ETH/USDT:USDT    $+325.80
+🔴 SOL/USDT:USDT     $-45.30
+```
+
+🎯 **Active Positions** (8)
+```
+🟢 BTC/USDT     long    0.0045 @$97,245.50
+🔴 ETH/USDT     short   0.1250 @$3,845.20
+```
+
+📊 **Monitoring Active** | Next Report: 16:30:00
+```
+
+### Setup Strategy Monitor
+1. Navigate to **Strategy Monitors** in the web interface
+2. Select a strategy from your active instances
+3. Configure Telegram bot token and chat ID
+4. Set reporting interval and features
+5. Save and monitor will start automatically
 
 ## Bot Instance Configuration
 

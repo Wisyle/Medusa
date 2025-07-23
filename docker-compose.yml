@@ -45,5 +45,20 @@ services:
       - .:/app
     command: python worker.py
 
+  medusa-strategy-monitor:
+    build: .
+    environment:
+      - DATABASE_URL=postgresql://medusa_user:medusa_password@db:5432/medusa_loggers
+      - SECRET_KEY=dev-secret-key-change-in-production
+      - APP_NAME=TGL MEDUSA
+      - DEBUG=true
+      - ENVIRONMENT=development
+    depends_on:
+      - db
+    volumes:
+      - .:/app
+    command: python strategy_monitor_worker.py
+    restart: unless-stopped
+
 volumes:
   postgres_data:
