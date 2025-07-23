@@ -225,8 +225,8 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
 <script>
 // Load user profile data
 function loadUserProfile() {
@@ -255,41 +255,109 @@ function loadUserProfile() {
 function generateQRCode(data) {
     const qrContainer = $('#qrcode-container');
     
+    // Method 1: Try QRCode.js library
     if (typeof QRCode !== 'undefined') {
-        // Use QRCode library
-        QRCode.toCanvas(document.createElement('canvas'), data.qr_url, function (error, canvas) {
-            if (error) {
-                console.error('QRCode library error:', error);
-                generateQRCodeFallback(data);
-                return;
-            }
+        try {
+            const canvas = document.createElement('canvas');
+            QRCode.toCanvas(canvas, data.qr_url, {
+                width: 200,
+                margin: 2,
+                color: {
+                    dark: '#000000',
+                    light: '#FFFFFF'
+                }
+            }, function (error) {
+                if (error) {
+                    console.error('QRCode library error:', error);
+                    generateQRCodeWithQRious(data);
+                    return;
+                }
+                
+                qrContainer.empty().append(canvas);
+                $('#manual-secret').text(data.secret);
+                $('#setup2FAModal').modal('show');
+            });
+            return; // Exit if successful
+        } catch (error) {
+            console.error('QRCode error:', error);
+        }
+    }
+    
+    // Method 2: Try QRious library
+    generateQRCodeWithQRious(data);
+}
+
+// Generate QR code using QRious library
+function generateQRCodeWithQRious(data) {
+    const qrContainer = $('#qrcode-container');
+    
+    if (typeof QRious !== 'undefined') {
+        try {
+            const qr = new QRious({
+                value: data.qr_url,
+                size: 200,
+                background: 'white',
+                foreground: 'black'
+            });
             
-            qrContainer.empty().append(canvas);
+            const img = $('<img>')
+                .attr('src', qr.toDataURL())
+                .attr('alt', 'QR Code')
+                .addClass('img-fluid');
+            
+            qrContainer.empty().append(img);
             $('#manual-secret').text(data.secret);
             $('#setup2FAModal').modal('show');
-        });
-    } else {
-        // Use fallback method
-        generateQRCodeFallback(data);
+            return;
+        } catch (error) {
+            console.error('QRious error:', error);
+        }
     }
+    
+    // Method 3: Fallback to online services
+    generateQRCodeFallback(data);
 }
 
 // Fallback QR code generation using online service
 function generateQRCodeFallback(data) {
     const qrContainer = $('#qrcode-container');
-    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(data.qr_url)}`;
     
-    const img = $('<img>')
-        .attr('src', qrUrl)
-        .attr('alt', 'QR Code')
-        .addClass('img-fluid')
-        .on('error', function() {
+    // Try multiple QR code services for better reliability
+    const qrServices = [
+        `https://chart.googleapis.com/chart?chs=200x200&cht=qr&chl=${encodeURIComponent(data.qr_url)}`,
+        `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(data.qr_url)}`,
+        `https://qr-server.com/api/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(data.qr_url)}`
+    ];
+    
+    let currentServiceIndex = 0;
+    
+    function tryNextService() {
+        if (currentServiceIndex >= qrServices.length) {
             qrContainer.html('<div class="alert alert-warning">QR code could not be generated. Please use manual entry below.</div>');
-        });
+            $('#manual-secret').text(data.secret);
+            $('#setup2FAModal').modal('show');
+            return;
+        }
+        
+        const img = $('<img>')
+            .attr('src', qrServices[currentServiceIndex])
+            .attr('alt', 'QR Code')
+            .addClass('img-fluid')
+            .on('load', function() {
+                qrContainer.empty().append(img);
+                $('#manual-secret').text(data.secret);
+                $('#setup2FAModal').modal('show');
+            })
+            .on('error', function() {
+                currentServiceIndex++;
+                tryNextService();
+            });
+        
+        // Append to a hidden container first to test loading
+        $('<div>').css('display', 'none').append(img).appendTo('body');
+    }
     
-    qrContainer.empty().append(img);
-    $('#manual-secret').text(data.secret);
-    $('#setup2FAModal').modal('show');
+    tryNextService();
 }
 
 // Load 2FA status
@@ -400,6 +468,10 @@ $(document).ready(function() {
             if (data.error) {
                 showAlert('danger', data.error);
             } else {
+                // Debug: Log the QR URL to console
+                console.log('QR URL:', data.qr_url);
+                console.log('Secret:', data.secret);
+                
                 // Generate QR code using the new function
                 generateQRCode(data);
             }
