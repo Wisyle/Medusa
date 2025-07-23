@@ -111,6 +111,38 @@ def migrate_postgresql():
             else:
                 logger.info("✅ users table already exists")
             
+            # Check and add strategy_monitors table
+            if not check_table_exists_pg(conn, 'strategy_monitors'):
+                logger.info("➕ Creating strategy_monitors table...")
+                try:
+                    conn.execute(text("""
+                        CREATE TABLE strategy_monitors (
+                            id SERIAL PRIMARY KEY,
+                            strategy_name VARCHAR(255) UNIQUE NOT NULL,
+                            telegram_bot_token VARCHAR(255),
+                            telegram_chat_id VARCHAR(255),
+                            telegram_topic_id VARCHAR(255),
+                            report_interval INTEGER DEFAULT 3600,
+                            include_positions BOOLEAN DEFAULT TRUE,
+                            include_orders BOOLEAN DEFAULT TRUE,
+                            include_trades BOOLEAN DEFAULT TRUE,
+                            include_pnl BOOLEAN DEFAULT TRUE,
+                            max_recent_positions INTEGER DEFAULT 20,
+                            is_active BOOLEAN DEFAULT TRUE,
+                            last_report TIMESTAMP,
+                            last_error TEXT,
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            updated_at TIMESTAMP
+                        )
+                    """))
+                    conn.commit()
+                    logger.info("✅ Successfully created strategy_monitors table")
+                except Exception as e:
+                    logger.error(f"❌ Failed to create strategy_monitors table: {e}")
+                    conn.rollback()
+            else:
+                logger.info("✅ strategy_monitors table already exists")
+            
             # Check and update poll_states table data_type column
             if check_table_exists_pg(conn, 'poll_states'):
                 if check_column_exists_pg(conn, 'poll_states', 'data_type'):
@@ -201,6 +233,37 @@ def migrate_sqlite():
                 logger.error(f"❌ Failed to create users table: {e}")
         else:
             logger.info("✅ users table already exists")
+        
+        # Check and add strategy_monitors table
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='strategy_monitors'")
+        if not cursor.fetchone():
+            try:
+                logger.info("➕ Creating strategy_monitors table")
+                cursor.execute("""
+                    CREATE TABLE strategy_monitors (
+                        id INTEGER PRIMARY KEY,
+                        strategy_name VARCHAR(255) UNIQUE NOT NULL,
+                        telegram_bot_token VARCHAR(255),
+                        telegram_chat_id VARCHAR(255),
+                        telegram_topic_id VARCHAR(255),
+                        report_interval INTEGER DEFAULT 3600,
+                        include_positions BOOLEAN DEFAULT 1,
+                        include_orders BOOLEAN DEFAULT 1,
+                        include_trades BOOLEAN DEFAULT 1,
+                        include_pnl BOOLEAN DEFAULT 1,
+                        max_recent_positions INTEGER DEFAULT 20,
+                        is_active BOOLEAN DEFAULT 1,
+                        last_report DATETIME,
+                        last_error TEXT,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME
+                    )
+                """)
+                logger.info("✅ Successfully created strategy_monitors table")
+            except Exception as e:
+                logger.error(f"❌ Failed to create strategy_monitors table: {e}")
+        else:
+            logger.info("✅ strategy_monitors table already exists")
         
         # Check poll_states table (SQLite doesn't support ALTER COLUMN TYPE easily)
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='poll_states'")

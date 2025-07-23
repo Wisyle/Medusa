@@ -113,4 +113,6 @@ def get_db():
         db.close()
 
 def init_db():
+    # Import all models to ensure they're registered
+    from strategy_monitor_model import StrategyMonitor
     Base.metadata.create_all(bind=engine)

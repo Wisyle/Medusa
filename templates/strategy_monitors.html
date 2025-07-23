@@ -1,0 +1,411 @@
+{% extends "base.html" %}
+
+{% block title %}Strategy Monitors{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-12">
+            <h2>Strategy Monitor System</h2>
+            <p class="text-muted">Aggregate and monitor strategy performance across multiple instances</p>
+            
+            <!-- Create New Monitor -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Create Strategy Monitor</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="/strategy-monitors">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="strategy_name">Strategy Name</label>
+                                    <select class="form-control" id="strategy_name" name="strategy_name" required>
+                                        <option value="">Select Strategy</option>
+                                        {% for strategy in available_strategies %}
+                                        <option value="{{ strategy }}">{{ strategy }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="telegram_bot_token">Telegram Bot Token</label>
+                                    <input type="text" class="form-control" id="telegram_bot_token" name="telegram_bot_token" required>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="telegram_chat_id">Telegram Chat ID</label>
+                                    <input type="text" class="form-control" id="telegram_chat_id" name="telegram_chat_id" required>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="telegram_topic_id">Topic ID (Optional)</label>
+                                    <input type="text" class="form-control" id="telegram_topic_id" name="telegram_topic_id">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="report_interval">Report Interval (seconds)</label>
+                                    <select class="form-control" id="report_interval" name="report_interval">
+                                        <option value="1800">30 minutes</option>
+                                        <option value="3600" selected>1 hour</option>
+                                        <option value="7200">2 hours</option>
+                                        <option value="14400">4 hours</option>
+                                        <option value="28800">8 hours</option>
+                                        <option value="43200">12 hours</option>
+                                        <option value="86400">24 hours</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="max_recent_positions">Max Recent Positions</label>
+                                    <input type="number" class="form-control" id="max_recent_positions" name="max_recent_positions" value="20" min="5" max="50">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label>Include in Reports</label>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="include_positions" name="include_positions" checked>
+                                        <label class="form-check-label" for="include_positions">Positions</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="include_orders" name="include_orders" checked>
+                                        <label class="form-check-label" for="include_orders">Orders</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="include_trades" name="include_trades" checked>
+                                        <label class="form-check-label" for="include_trades">Trades</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="include_pnl" name="include_pnl" checked>
+                                        <label class="form-check-label" for="include_pnl">PnL</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary">Create Monitor</button>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Existing Monitors -->
+            <div class="card">
+                <div class="card-header">
+                    <h5>Active Strategy Monitors</h5>
+                </div>
+                <div class="card-body">
+                    {% if monitors %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Strategy</th>
+                                    <th>Status</th>
+                                    <th>Report Interval</th>
+                                    <th>Last Report</th>
+                                    <th>Features</th>
+                                    <th>Last Error</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for monitor in monitors %}
+                                <tr id="monitor-{{ monitor.id }}">
+                                    <td>
+                                        <strong>{{ monitor.strategy_name }}</strong>
+                                    </td>
+                                    <td>
+                                        {% if monitor.is_active %}
+                                        <span class="badge badge-success">Active</span>
+                                        {% else %}
+                                        <span class="badge badge-secondary">Inactive</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% set hours = monitor.report_interval // 3600 %}
+                                        {% set minutes = (monitor.report_interval % 3600) // 60 %}
+                                        {% if hours > 0 %}
+                                            {{ hours }}h
+                                            {% if minutes > 0 %}{{ minutes }}m{% endif %}
+                                        {% else %}
+                                            {{ minutes }}m
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if monitor.last_report %}
+                                        <span class="text-muted">{{ monitor.last_report.strftime('%Y-%m-%d %H:%M:%S') }}</span>
+                                        {% else %}
+                                        <span class="text-muted">Never</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <small>
+                                            {% if monitor.include_positions %}📊{% endif %}
+                                            {% if monitor.include_orders %}📋{% endif %}
+                                            {% if monitor.include_trades %}🔄{% endif %}
+                                            {% if monitor.include_pnl %}💰{% endif %}
+                                        </small>
+                                    </td>
+                                    <td>
+                                        {% if monitor.last_error %}
+                                        <span class="text-danger" title="{{ monitor.last_error }}">❌ Error</span>
+                                        {% else %}
+                                        <span class="text-success">✅ OK</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group" aria-label="Monitor actions">
+                                            <button class="btn btn-sm btn-outline-primary" onclick="toggleMonitor({{ monitor.id }})">
+                                                {% if monitor.is_active %}Pause{% else %}Resume{% endif %}
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-info" onclick="testReport({{ monitor.id }})">
+                                                Test Report
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-warning" onclick="editMonitor({{ monitor.id }})">
+                                                Edit
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger" onclick="deleteMonitor({{ monitor.id }}, '{{ monitor.strategy_name }}')">
+                                                Delete
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        <h5>No Strategy Monitors</h5>
+                        <p>Create your first strategy monitor to start aggregating data across multiple instances.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Monitor Modal -->
+<div class="modal fade" id="editMonitorModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Strategy Monitor</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <form id="editMonitorForm">
+                <div class="modal-body">
+                    <input type="hidden" id="edit_monitor_id">
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="edit_telegram_bot_token">Telegram Bot Token</label>
+                                <input type="text" class="form-control" id="edit_telegram_bot_token" name="telegram_bot_token">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="edit_telegram_chat_id">Telegram Chat ID</label>
+                                <input type="text" class="form-control" id="edit_telegram_chat_id" name="telegram_chat_id">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="edit_telegram_topic_id">Topic ID (Optional)</label>
+                                <input type="text" class="form-control" id="edit_telegram_topic_id" name="telegram_topic_id">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="edit_report_interval">Report Interval</label>
+                                <select class="form-control" id="edit_report_interval" name="report_interval">
+                                    <option value="1800">30 minutes</option>
+                                    <option value="3600">1 hour</option>
+                                    <option value="7200">2 hours</option>
+                                    <option value="14400">4 hours</option>
+                                    <option value="28800">8 hours</option>
+                                    <option value="43200">12 hours</option>
+                                    <option value="86400">24 hours</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="edit_max_recent_positions">Max Recent Positions</label>
+                                <input type="number" class="form-control" id="edit_max_recent_positions" name="max_recent_positions" min="5" max="50">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Include in Reports</label>
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="edit_include_positions" name="include_positions">
+                                    <label class="form-check-label" for="edit_include_positions">Positions</label>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="edit_include_orders" name="include_orders">
+                                    <label class="form-check-label" for="edit_include_orders">Orders</label>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="edit_include_trades" name="include_trades">
+                                    <label class="form-check-label" for="edit_include_trades">Trades</label>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="edit_include_pnl" name="include_pnl">
+                                    <label class="form-check-label" for="edit_include_pnl">PnL</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleMonitor(monitorId) {
+    fetch(`/strategy-monitors/${monitorId}/toggle`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.message) {
+            alert(data.message);
+            location.reload();
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Failed to toggle monitor');
+    });
+}
+
+function testReport(monitorId) {
+    if (!confirm('Send a test report for this strategy monitor?')) return;
+    
+    fetch(`/strategy-monitors/${monitorId}/test-report`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.message) {
+            alert(data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Failed to send test report');
+    });
+}
+
+function editMonitor(monitorId) {
+    // Fetch monitor details and populate edit form
+    fetch(`/api/strategy-monitors`)
+    .then(response => response.json())
+    .then(monitors => {
+        const monitor = monitors.find(m => m.id === monitorId);
+        if (monitor) {
+            document.getElementById('edit_monitor_id').value = monitor.id;
+            document.getElementById('edit_telegram_bot_token').value = monitor.telegram_bot_token || '';
+            document.getElementById('edit_telegram_chat_id').value = monitor.telegram_chat_id || '';
+            document.getElementById('edit_telegram_topic_id').value = monitor.telegram_topic_id || '';
+            document.getElementById('edit_report_interval').value = monitor.report_interval;
+            document.getElementById('edit_max_recent_positions').value = monitor.max_recent_positions;
+            document.getElementById('edit_include_positions').checked = monitor.include_positions;
+            document.getElementById('edit_include_orders').checked = monitor.include_orders;
+            document.getElementById('edit_include_trades').checked = monitor.include_trades;
+            document.getElementById('edit_include_pnl').checked = monitor.include_pnl;
+            
+            $('#editMonitorModal').modal('show');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Failed to load monitor details');
+    });
+}
+
+function deleteMonitor(monitorId, strategyName) {
+    if (!confirm(`Delete strategy monitor for '${strategyName}'?`)) return;
+    
+    fetch(`/strategy-monitors/${monitorId}`, {
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.message) {
+            alert(data.message);
+            location.reload();
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Failed to delete monitor');
+    });
+}
+
+// Handle edit form submission
+document.getElementById('editMonitorForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const monitorId = document.getElementById('edit_monitor_id').value;
+    const formData = new FormData(this);
+    
+    fetch(`/strategy-monitors/${monitorId}`, {
+        method: 'PUT',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.message) {
+            alert(data.message);
+            $('#editMonitorModal').modal('hide');
+            location.reload();
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Failed to update monitor');
+    });
+});
+</script>
+{% endblock %}

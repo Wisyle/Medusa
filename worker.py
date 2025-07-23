@@ -6,6 +6,7 @@ from sqlalchemy.orm import sessionmaker
 
 from database import BotInstance, get_database_url
 from polling import run_poller
+from init_strategy_monitor import initialize_strategy_monitor_system
 
 def get_db_session():
     """Create database session for worker with retry logic"""
@@ -46,6 +47,10 @@ def get_db_session():
 async def monitor_instances():
     """Monitor and restart failed instances - standalone version"""
     print('TGL MEDUSA Worker Starting...')
+    
+    # Initialize Strategy Monitor System
+    print('🎯 Initializing Strategy Monitor System...')
+    initialize_strategy_monitor_system()
     
     await send_startup_notification()
     
