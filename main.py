@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Depends, HTTPException, Request, Form
 from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
 import os
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -18,11 +19,20 @@ from api_library_routes import add_api_library_routes
 from auth import (
     authenticate_user, create_access_token, get_current_active_user,
     create_user, generate_totp_secret, generate_totp_qr_code,
-    UserCreate, UserLogin, UserResponse, Token
+    UserCreate, UserLogin, UserResponse, Token, get_current_user
 )
 from strategy_monitor_model import StrategyMonitor
 
 app = FastAPI(title="TGL MEDUSA - Crypto Bot Monitor", version="2.0.0")
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Add API Library routes
 add_api_library_routes(app)
@@ -517,6 +527,141 @@ async def instance_detail(request: Request, instance_id: int):
 async def edit_instance_page(request: Request, instance_id: int):
     """Edit instance form"""
     return templates.TemplateResponse("edit_instance.html", {"request": request, "instance_id": instance_id})
+
+@app.get("/account", response_class=HTMLResponse)
+async def account_page(request: Request, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
+    """Account settings page"""
+    return templates.TemplateResponse("account.html", {"request": request, "user": current_user})
+
+# Account Settings API Routes
+@app.post("/api/user/profile")
+async def update_profile(
+    full_name: str = Form(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Update user profile"""
+    try:
+        current_user.full_name = full_name.strip() if full_name else None
+        db.commit()
+        return {"message": "Profile updated successfully"}
+    except Exception as e:
+        db.rollback()
+        return {"error": str(e)}
+
+@app.post("/api/user/change-password")
+async def change_password(
+    current_password: str = Form(...),
+    new_password: str = Form(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Change user password"""
+    try:
+        from auth import verify_password, get_password_hash
+        
+        # Verify current password
+        if not verify_password(current_password, current_user.hashed_password):
+            return {"error": "Current password is incorrect"}
+        
+        # Validate new password
+        if len(new_password) < 8:
+            return {"error": "New password must be at least 8 characters long"}
+        
+        # Update password
+        current_user.hashed_password = get_password_hash(new_password)
+        db.commit()
+        
+        return {"message": "Password changed successfully"}
+    except Exception as e:
+        db.rollback()
+        return {"error": str(e)}
+
+@app.post("/api/user/2fa/setup")
+async def setup_2fa_api(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Setup 2FA - generate secret and QR code"""
+    try:
+        if current_user.totp_secret and current_user.totp_enabled:
+            return {"error": "2FA is already enabled"}
+        
+        secret = generate_totp_secret()
+        qr_url = generate_totp_qr_code(current_user.email, secret)
+        
+        # Store secret temporarily (not enabled yet)
+        current_user.totp_secret = secret
+        current_user.totp_enabled = False
+        db.commit()
+        
+        return {
+            "secret": secret,
+            "qr_url": qr_url
+        }
+    except Exception as e:
+        db.rollback()
+        return {"error": str(e)}
+
+@app.post("/api/user/2fa/verify")
+async def verify_2fa_setup(
+    totp_code: str = Form(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Verify and enable 2FA"""
+    try:
+        import pyotp
+        
+        if not current_user.totp_secret:
+            return {"error": "2FA setup not initiated"}
+        
+        totp = pyotp.TOTP(current_user.totp_secret)
+        if not totp.verify(totp_code):
+            return {"error": "Invalid verification code"}
+        
+        # Enable 2FA
+        current_user.totp_enabled = True
+        db.commit()
+        
+        return {"message": "2FA enabled successfully"}
+    except Exception as e:
+        db.rollback()
+        return {"error": str(e)}
+
+@app.post("/api/user/2fa/disable")
+async def disable_2fa(
+    password: str = Form(...),
+    totp_code: str = Form(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Disable 2FA"""
+    try:
+        from auth import verify_password
+        import pyotp
+        
+        # Verify password
+        if not verify_password(password, current_user.hashed_password):
+            return {"error": "Incorrect password"}
+        
+        # Verify TOTP code
+        if not current_user.totp_secret:
+            return {"error": "2FA not enabled"}
+        
+        totp = pyotp.TOTP(current_user.totp_secret)
+        if not totp.verify(totp_code):
+            return {"error": "Invalid verification code"}
+        
+        # Disable 2FA
+        current_user.totp_secret = None
+        current_user.totp_enabled = False
+        db.commit()
+        
+        return {"message": "2FA disabled successfully"}
+    except Exception as e:
+        db.rollback()
+        return {"error": str(e)}
 
 @app.get("/system-logs", response_class=HTMLResponse)
 async def system_logs_page(request: Request):

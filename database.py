@@ -58,16 +58,26 @@ class BotInstance(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
-    # Relationship to API Credential
-    api_credential = relationship("ApiCredential", foreign_keys=[api_credential_id])
+    # Relationship to API Credential (defined as string to avoid circular import)
+    # api_credential = relationship("ApiCredential", foreign_keys=[api_credential_id])
     
     def get_api_credentials(self):
         """Get API credentials from either direct fields or API library"""
-        if self.api_credential_id and self.api_credential:
-            return self.api_credential.get_full_credentials()
-        else:
-            # Fallback to direct credentials for backward compatibility
-            return {
+        if self.api_credential_id:
+            # Import here to avoid circular imports
+            from api_library_model import ApiCredential
+            from sqlalchemy.orm import sessionmaker
+            Session = sessionmaker(bind=engine)
+            db = Session()
+            try:
+                credential = db.query(ApiCredential).filter(ApiCredential.id == self.api_credential_id).first()
+                if credential:
+                    return credential.get_full_credentials()
+            finally:
+                db.close()
+        
+        # Fallback to direct credentials for backward compatibility
+        return {
                 'api_key': self.api_key,
                 'api_secret': self.api_secret,
                 'api_passphrase': self.api_passphrase
