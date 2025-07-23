@@ -156,28 +156,32 @@
             </div>
             <div class="modal-body">
                 <div id="qr-step">
-                    <h6>Step 1: Scan QR Code</h6>
-                    <p class="text-white-50">Use your authenticator app to scan this QR code:</p>
+                    <h6>Step 1: Add to Authenticator App</h6>
+                    <p class="text-white-50">Use your authenticator app (Google Authenticator, Authy, etc.) to scan this QR code or enter the manual key:</p>
                     <div class="text-center mb-3">
                         <div id="qrcode-container" style="min-height: 200px; display: flex; align-items: center; justify-content: center; border: 1px solid #444; border-radius: 8px; padding: 10px; background-color: #f8f9fa;"></div>
                     </div>
-                    <p class="text-white-50 small">
-                        <strong>Manual Entry:</strong> If you can't scan the QR code, enter this secret key manually:
-                        <br><code id="manual-secret" class="text-info"></code>
-                    </p>
+                    <div class="alert alert-info">
+                        <strong>Manual Entry Key:</strong><br>
+                        <code id="manual-secret" class="text-dark bg-light p-2 rounded d-block mt-2" style="font-size: 1.1em; letter-spacing: 1px;"></code>
+                        <small class="text-muted mt-2 d-block">Copy this key and add it manually to your authenticator app if you can't scan the QR code.</small>
+                    </div>
                 </div>
                 <div id="verify-step" style="display: none;">
                     <h6>Step 2: Verify Setup</h6>
-                    <p class="text-white-50">Enter the 6-digit code from your authenticator app:</p>
+                    <p class="text-white-50">Enter the 6-digit code from your authenticator app to complete the setup:</p>
                     <form id="verify2FAForm">
                         <div class="mb-3">
                             <label for="totp_code" class="form-label">Verification Code</label>
-                            <input type="text" class="form-control text-center" id="totp_code" maxlength="6" pattern="[0-9]{6}" required>
+                            <input type="text" class="form-control text-center" id="totp_code" maxlength="6" pattern="[0-9]{6}" required placeholder="000000" style="font-size: 1.5em; letter-spacing: 3px;">
+                            <small class="text-white-50">Enter the 6-digit code from your authenticator app</small>
                         </div>
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-check"></i>
-                            Verify and Enable 2FA
-                        </button>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-check"></i>
+                                Verify and Enable 2FA
+                            </button>
+                        </div>
                     </form>
                 </div>
             </div>
@@ -255,8 +259,9 @@ function generateQRCode(data) {
     const qrContainer = $('#qrcode-container');
     qrContainer.html('<div class="text-center"><i class="fas fa-spinner fa-spin"></i> Generating QR code...</div>');
     
-    // Clear any previous content
-    qrContainer.empty();
+    // Show the modal first with manual entry
+    $('#manual-secret').text(data.secret);
+    $('#setup2FAModal').modal('show');
     
     // Try the QRCode library first
     if (typeof QRCode !== 'undefined') {
@@ -281,8 +286,8 @@ function generateQRCode(data) {
                 } else {
                     // Success - show the canvas
                     qrContainer.empty().append(canvas);
-                    $('#manual-secret').text(data.secret);
-                    $('#setup2FAModal').modal('show');
+                    // Show verification step after QR is generated
+                    showVerificationStep();
                 }
             });
         } catch (error) {
@@ -305,19 +310,38 @@ function generateSimpleQRCode(data) {
     const img = new Image();
     img.onload = function() {
         qrContainer.empty().append(img);
-        $('#manual-secret').text(data.secret);
-        $('#setup2FAModal').modal('show');
+        // Show verification step after QR is loaded
+        showVerificationStep();
     };
     img.onerror = function() {
-        // If image fails, show manual entry only
-        qrContainer.html('<div class="alert alert-warning"><i class="fas fa-exclamation-triangle"></i> QR code could not be generated. Please use manual entry below.</div>');
-        $('#manual-secret').text(data.secret);
-        $('#setup2FAModal').modal('show');
+        // If image fails, show manual entry only but still allow verification
+        qrContainer.html('<div class="alert alert-info"><i class="fas fa-info-circle"></i> Please use the manual entry key below to set up 2FA in your authenticator app.</div>');
+        // Show verification step even without QR
+        showVerificationStep();
     };
     img.src = qrUrl;
     img.alt = 'QR Code';
     img.className = 'img-fluid';
     img.style.maxWidth = '200px';
+}
+
+// Show the verification step
+function showVerificationStep() {
+    // Add a button to proceed to verification
+    setTimeout(function() {
+        if (!$('#proceed-to-verify').length) {
+            const proceedBtn = $('<button>')
+                .attr('id', 'proceed-to-verify')
+                .addClass('btn btn-success mt-3')
+                .html('<i class="fas fa-arrow-right"></i> I\'ve added this to my authenticator app')
+                .on('click', function() {
+                    $('#qr-step').hide();
+                    $('#verify-step').show();
+                });
+            
+            $('#qrcode-container').parent().append(proceedBtn);
+        }
+    }, 1000);
 }
 
 // Load 2FA status
@@ -417,6 +441,9 @@ $(document).ready(function() {
     
     // Enable 2FA
     $('#enable2FABtn').on('click', function() {
+        // Reset modal state
+        resetModal();
+        
         fetch('/api/user/2fa/setup', { 
             method: 'POST',
             headers: {
@@ -441,6 +468,16 @@ $(document).ready(function() {
             showAlert('danger', 'Failed to setup 2FA: ' + error.message);
         });
     });
+    
+    // Reset modal function
+    function resetModal() {
+        $('#qr-step').show();
+        $('#verify-step').hide();
+        $('#qrcode-container').empty();
+        $('#manual-secret').text('');
+        $('#proceed-to-verify').remove();
+        $('#verify2FAForm')[0].reset();
+    }
     
     // Verify 2FA setup
     $('#verify2FAForm').on('submit', function(e) {
