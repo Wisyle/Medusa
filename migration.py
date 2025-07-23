@@ -20,12 +20,60 @@ def migrate_database():
         else:
             logger.info("🗄️ Running SQLite migrations...")
             migrate_sqlite()
+        
+        # Run API Library migration
+        logger.info("🔑 Running API Library migration...")
+        migrate_api_library_schema()
             
         logger.info("✅ Database migration completed!")
         
     except Exception as e:
         logger.warning(f"Migration skipped - database may not be ready yet: {e}")
         # Don't raise the exception to prevent startup failure
+
+def migrate_api_library_schema():
+    """Migrate API Library schema updates"""
+    try:
+        database_url = settings.database_url
+        engine = create_engine(database_url)
+        
+        with engine.connect() as conn:
+            if database_url.startswith('postgresql'):
+                # PostgreSQL API Library migration
+                if not check_column_exists_pg(conn, 'bot_instances', 'api_credential_id'):
+                    logger.info("Adding api_credential_id column to bot_instances...")
+                    conn.execute(text("ALTER TABLE bot_instances ADD COLUMN api_credential_id INTEGER REFERENCES api_credentials(id);"))
+                    conn.commit()
+                
+                # Make API fields nullable in PostgreSQL
+                try:
+                    conn.execute(text("ALTER TABLE bot_instances ALTER COLUMN api_key DROP NOT NULL;"))
+                    conn.execute(text("ALTER TABLE bot_instances ALTER COLUMN api_secret DROP NOT NULL;"))
+                    conn.commit()
+                    logger.info("✅ Made API key/secret fields nullable in PostgreSQL")
+                except Exception as e:
+                    logger.info(f"ℹ️  API fields already nullable or migration not needed: {e}")
+                    
+            else:
+                # SQLite API Library migration
+                try:
+                    result = conn.execute(text("PRAGMA table_info(bot_instances);"))
+                    columns = [row[1] for row in result.fetchall()]
+                    
+                    if 'api_credential_id' not in columns:
+                        logger.info("Adding api_credential_id column to bot_instances...")
+                        conn.execute(text("ALTER TABLE bot_instances ADD COLUMN api_credential_id INTEGER;"))
+                        conn.commit()
+                except Exception as e:
+                    logger.info(f"ℹ️  API Library schema migration not needed: {e}")
+        
+        # Ensure API credentials table exists
+        from database import Base
+        Base.metadata.create_all(bind=engine)
+        logger.info("✅ API Library schema migration completed")
+        
+    except Exception as e:
+        logger.warning(f"API Library migration skipped: {e}")
 
 def check_column_exists_pg(conn, table_name: str, column_name: str) -> bool:
     """Check if a column exists in PostgreSQL"""

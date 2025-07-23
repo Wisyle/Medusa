@@ -324,8 +324,21 @@ async def run_strategy_monitor(strategy_name: str):
                 if monitor.should_send_report():
                     await monitor.send_report()
                 
-                # Sleep for 60 seconds before checking again
-                await asyncio.sleep(60)
+                # Dynamic sleep based on report interval
+                # For intervals <= 5 minutes, check every 30 seconds
+                # For intervals <= 15 minutes, check every 60 seconds  
+                # For longer intervals, check every 5 minutes
+                sleep_time = 60  # Default
+                if monitor.monitor_config:
+                    interval = monitor.monitor_config.report_interval
+                    if interval <= 300:  # 5 minutes or less
+                        sleep_time = 30
+                    elif interval <= 900:  # 15 minutes or less
+                        sleep_time = 60
+                    else:
+                        sleep_time = min(300, interval // 4)  # Check 4 times per interval, max 5 minutes
+                
+                await asyncio.sleep(sleep_time)
                 
             except Exception as e:
                 logger.error(f"Strategy monitor error for {strategy_name}: {e}")

@@ -27,6 +27,11 @@ class ExchangePoller:
         if not self.instance:
             raise ValueError(f"Bot instance {instance_id} not found")
         
+        # Get API credentials (either from library or direct)
+        self.api_credentials = self.instance.get_api_credentials()
+        if not self.api_credentials or not self.api_credentials.get('api_key') or not self.api_credentials.get('api_secret'):
+            raise ValueError(f"Bot instance {instance_id} has no valid API credentials")
+        
         self.exchange = self._init_exchange()
         self.telegram_bot = self._init_telegram()
         
@@ -48,8 +53,8 @@ class ExchangePoller:
         
         configs_to_try = [
             {
-                'apiKey': self.instance.api_key,
-                'secret': self.instance.api_secret,
+                'apiKey': self.api_credentials['api_key'],
+                'secret': self.api_credentials['api_secret'],
                 'sandbox': False,
                 'enableRateLimit': True,
                 'urls': {
@@ -90,8 +95,8 @@ class ExchangePoller:
                 'rateLimit': 800
             },
             {
-                'apiKey': self.instance.api_key,
-                'secret': self.instance.api_secret,
+                'apiKey': self.api_credentials['api_key'],
+                'secret': self.api_credentials['api_secret'],
                 'sandbox': False,
                 'enableRateLimit': True,
                 'urls': {
@@ -130,8 +135,8 @@ class ExchangePoller:
                 'rateLimit': 800
             },
             {
-                'apiKey': self.instance.api_key,
-                'secret': self.instance.api_secret,
+                'apiKey': self.api_credentials['api_key'],
+                'secret': self.api_credentials['api_secret'],
                 'sandbox': False,
                 'enableRateLimit': True,
                 'urls': {
@@ -168,8 +173,8 @@ class ExchangePoller:
                 'rateLimit': 800
             },
             {
-                'apiKey': self.instance.api_key,
-                'secret': self.instance.api_secret,
+                'apiKey': self.api_credentials['api_key'],
+                'secret': self.api_credentials['api_secret'],
                 'sandbox': False,
                 'enableRateLimit': True,
                 'urls': {
@@ -200,8 +205,8 @@ class ExchangePoller:
                 'rateLimit': 800
             },
             {
-                'apiKey': self.instance.api_key,
-                'secret': self.instance.api_secret,
+                'apiKey': self.api_credentials['api_key'],
+                'secret': self.api_credentials['api_secret'],
                 'sandbox': False,
                 'enableRateLimit': True,
                 'headers': {
@@ -219,8 +224,8 @@ class ExchangePoller:
                 'rateLimit': 800
             },
             {
-                'apiKey': self.instance.api_key,
-                'secret': self.instance.api_secret,
+                'apiKey': self.api_credentials['api_key'],
+                'secret': self.api_credentials['api_secret'],
                 'sandbox': False,
                 'enableRateLimit': True,
                 'urls': {
@@ -248,8 +253,8 @@ class ExchangePoller:
                 'rateLimit': 800
             },
             {
-                'apiKey': self.instance.api_key,
-                'secret': self.instance.api_secret,
+                'apiKey': self.api_credentials['api_key'],
+                'secret': self.api_credentials['api_secret'],
                 'sandbox': False,
                 'enableRateLimit': True,
                 'headers': {
@@ -277,8 +282,8 @@ class ExchangePoller:
         ]
         
         for i, config in enumerate(configs_to_try):
-            if self.instance.api_passphrase:
-                config['passphrase'] = self.instance.api_passphrase
+            if self.api_credentials.get('api_passphrase'):
+                config['passphrase'] = self.api_credentials.get('api_passphrase')
                 
             try:
                 exchange_class = getattr(ccxt, self.instance.exchange.lower())

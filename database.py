@@ -1,6 +1,6 @@
-from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, Boolean, Text, JSON
+from sqlalchemy import create_engine, Column, Integer, String, Boolean, DateTime, Text, JSON, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.orm import sessionmaker, Session, relationship
 from datetime import datetime
 from typing import Optional, Dict, Any
 import json
@@ -35,8 +35,11 @@ class BotInstance(Base):
     name = Column(String(100), nullable=False)
     exchange = Column(String(50), nullable=False)
     market_type = Column(String(20), default='unified')  # 'spot', 'futures', 'unified'
-    api_key = Column(String(255), nullable=False)
-    api_secret = Column(String(255), nullable=False)
+    
+    # API Credentials - either direct or from library
+    api_credential_id = Column(Integer, ForeignKey('api_credentials.id'), nullable=True)  # New: API Library reference
+    api_key = Column(String(255), nullable=True)  # Legacy: Direct API key (made nullable for backward compatibility)
+    api_secret = Column(String(255), nullable=True)  # Legacy: Direct API secret
     api_passphrase = Column(String(255), nullable=True)  # For some exchanges
     
     strategies = Column(JSON, default=list)  # List of enabled strategies
@@ -54,6 +57,21 @@ class BotInstance(Base):
     
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationship to API Credential
+    api_credential = relationship("ApiCredential", foreign_keys=[api_credential_id])
+    
+    def get_api_credentials(self):
+        """Get API credentials from either direct fields or API library"""
+        if self.api_credential_id and self.api_credential:
+            return self.api_credential.get_full_credentials()
+        else:
+            # Fallback to direct credentials for backward compatibility
+            return {
+                'api_key': self.api_key,
+                'api_secret': self.api_secret,
+                'api_passphrase': self.api_passphrase
+            }
 
 class PollState(Base):
     __tablename__ = "poll_states"
@@ -115,4 +133,5 @@ def get_db():
 def init_db():
     # Import all models to ensure they're registered
     from strategy_monitor_model import StrategyMonitor
+    from api_library_model import ApiCredential
     Base.metadata.create_all(bind=engine)

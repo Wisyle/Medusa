@@ -11,8 +11,10 @@ from datetime import datetime, timedelta
 import uvicorn
 
 from database import get_db, init_db, BotInstance, ActivityLog, ErrorLog, User
+from api_library_model import ApiCredential
 from polling import run_poller
 from config import settings
+from api_library_routes import add_api_library_routes
 from auth import (
     authenticate_user, create_access_token, get_current_active_user,
     create_user, generate_totp_secret, generate_totp_qr_code,
@@ -21,6 +23,9 @@ from auth import (
 from strategy_monitor_model import StrategyMonitor
 
 app = FastAPI(title="TGL MEDUSA - Crypto Bot Monitor", version="2.0.0")
+
+# Add API Library routes
+add_api_library_routes(app)
 
 templates = Jinja2Templates(directory="templates")
 
@@ -76,13 +81,43 @@ async def enable_2fa(totp_code: str = Form(...), current_user: User = Depends(ge
     return {"message": "2FA enabled successfully"}
 
 @app.get("/api/health")
-async def health_check():
-    """Health check endpoint"""
-    return {
-        "status": "healthy",
-        "timestamp": datetime.utcnow().isoformat(),
-        "active_instances": len(active_processes)
-    }
+async def health_check(db: Session = Depends(get_db)):
+    """Health check endpoint with migration status"""
+    try:
+        # Check if API Library migration completed
+        from sqlalchemy import inspect
+        inspector = inspect(db.bind)
+        tables = inspector.get_table_names()
+        
+        api_library_ready = False
+        bot_instances_migrated = False
+        
+        if 'api_credentials' in tables:
+            api_library_ready = True
+            
+        if 'bot_instances' in tables:
+            columns = {col['name']: col for col in inspector.get_columns('bot_instances')}
+            if 'api_credential_id' in columns:
+                bot_instances_migrated = True
+        
+        migration_status = "completed" if (api_library_ready and bot_instances_migrated) else "in_progress"
+        
+        return {
+            "status": "healthy",
+            "timestamp": datetime.utcnow().isoformat(),
+            "active_instances": len(active_processes),
+            "migration_status": migration_status,
+            "api_library_ready": api_library_ready,
+            "bot_instances_migrated": bot_instances_migrated
+        }
+    except Exception as e:
+        return {
+            "status": "degraded",
+            "timestamp": datetime.utcnow().isoformat(),
+            "active_instances": len(active_processes),
+            "migration_status": "error",
+            "error": str(e)
+        }
 
 @app.get("/api/strategy-monitor-health")
 async def strategy_monitor_health(db: Session = Depends(get_db)):
@@ -177,8 +212,10 @@ async def create_instance(
     name: str = Form(...),
     exchange: str = Form(...),
     market_type: str = Form("unified"),
-    api_key: str = Form(...),
-    api_secret: str = Form(...),
+    api_source: str = Form("library"),  # "library" or "direct"
+    api_credential_id: Optional[int] = Form(None),
+    api_key: Optional[str] = Form(None),
+    api_secret: Optional[str] = Form(None),
     api_passphrase: str = Form(""),
     strategies: str = Form(""),
     polling_interval: int = Form(60),
@@ -192,31 +229,85 @@ async def create_instance(
 ):
     """Create new bot instance"""
     try:
-        validation_errors = validate_instance_data(name, exchange, api_key, api_secret, trading_pair)
+        # Handle API credentials based on source
+        if api_source == "library":
+            if not api_credential_id:
+                raise HTTPException(status_code=400, detail="API credential must be selected when using library")
+            
+            # Check if credential exists and is available
+            credential = db.query(ApiCredential).filter(ApiCredential.id == api_credential_id).first()
+            if not credential:
+                raise HTTPException(status_code=400, detail="Selected API credential not found")
+            
+            if credential.is_in_use:
+                current_instance = db.query(BotInstance).filter(BotInstance.api_credential_id == api_credential_id).first()
+                current_name = current_instance.name if current_instance else "Unknown"
+                raise HTTPException(status_code=400, detail=f"API credential is already in use by instance '{current_name}'")
+            
+            if credential.exchange.lower() != exchange.lower():
+                raise HTTPException(status_code=400, detail=f"API credential is for {credential.exchange}, but instance is for {exchange}")
+            
+            # Validation for library mode - just check basic fields
+            validation_errors = validate_instance_data(name, exchange, "dummy", "dummy", trading_pair)
+        else:
+            # Direct API mode - validate API credentials
+            if not api_key or not api_secret:
+                raise HTTPException(status_code=400, detail="API key and secret are required for direct mode")
+            
+            validation_errors = validate_instance_data(name, exchange, api_key, api_secret, trading_pair)
         if validation_errors:
             raise HTTPException(status_code=400, detail="; ".join(validation_errors))
         
         strategy_list = [s.strip() for s in strategies.split(",") if s.strip()] if strategies else []
         
-        instance = BotInstance(
-            name=name.strip(),
-            exchange=exchange.strip(),
-            market_type=market_type.strip(),
-            api_key=api_key.strip(),
-            api_secret=api_secret.strip(),
-            api_passphrase=api_passphrase.strip() if api_passphrase else None,
-            strategies=strategy_list,
-            polling_interval=polling_interval,
-            webhook_url=webhook_url.strip() if webhook_url else None,
-            telegram_bot_token=telegram_bot_token.strip() if telegram_bot_token else None,
-            telegram_chat_id=telegram_chat_id.strip() if telegram_chat_id else None,
-            telegram_topic_id=telegram_topic_id.strip() if telegram_topic_id else None,
-            trading_pair=trading_pair.strip() if trading_pair else None
-        )
+        # Create instance based on API source
+        if api_source == "library":
+            instance = BotInstance(
+                name=name.strip(),
+                exchange=exchange.strip(),
+                market_type=market_type.strip(),
+                api_credential_id=api_credential_id,
+                api_key=None,  # Will use credential from library
+                api_secret=None,  # Will use credential from library
+                api_passphrase=None,  # Will use credential from library
+                strategies=strategy_list,
+                polling_interval=polling_interval,
+                webhook_url=webhook_url.strip() if webhook_url else None,
+                telegram_bot_token=telegram_bot_token.strip() if telegram_bot_token else None,
+                telegram_chat_id=telegram_chat_id.strip() if telegram_chat_id else None,
+                telegram_topic_id=telegram_topic_id.strip() if telegram_topic_id else None,
+                trading_pair=trading_pair.strip() if trading_pair else None
+            )
+        else:
+            instance = BotInstance(
+                name=name.strip(),
+                exchange=exchange.strip(),
+                market_type=market_type.strip(),
+                api_credential_id=None,
+                api_key=api_key.strip(),
+                api_secret=api_secret.strip(),
+                api_passphrase=api_passphrase.strip() if api_passphrase else None,
+                strategies=strategy_list,
+                polling_interval=polling_interval,
+                webhook_url=webhook_url.strip() if webhook_url else None,
+                telegram_bot_token=telegram_bot_token.strip() if telegram_bot_token else None,
+                telegram_chat_id=telegram_chat_id.strip() if telegram_chat_id else None,
+                telegram_topic_id=telegram_topic_id.strip() if telegram_topic_id else None,
+                trading_pair=trading_pair.strip() if trading_pair else None
+            )
         
         db.add(instance)
         db.commit()
         db.refresh(instance)
+        
+        # If using API library, mark credential as in use
+        if api_source == "library" and api_credential_id:
+            credential = db.query(ApiCredential).filter(ApiCredential.id == api_credential_id).first()
+            if credential:
+                credential.is_in_use = True
+                credential.current_instance_id = instance.id
+                credential.last_used = datetime.utcnow()
+                db.commit()
         
         return {"id": instance.id, "message": "Instance created successfully"}
         

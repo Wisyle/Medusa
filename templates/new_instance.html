@@ -76,30 +76,72 @@
                         <i class="fas fa-key"></i>
                         API Configuration
                     </h5>
+                    
                     <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label for="api_key" class="form-label">API Key *</label>
-                            <input type="text" class="form-control" id="api_key" name="api_key" required 
-                                   placeholder="Your exchange API key">
-                        </div>
-                        <div class="col-md-6">
-                            <label for="api_secret" class="form-label">API Secret *</label>
-                            <input type="password" class="form-control" id="api_secret" name="api_secret" required 
-                                   placeholder="Your exchange API secret">
+                        <div class="col-md-12">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" id="use_library" name="api_source" value="library" checked>
+                                <label class="form-check-label" for="use_library">
+                                    <strong>Use API from Library</strong> (Recommended)
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" id="use_direct" name="api_source" value="direct">
+                                <label class="form-check-label" for="use_direct">
+                                    <strong>Enter API Credentials Directly</strong>
+                                </label>
+                            </div>
                         </div>
                     </div>
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label for="api_passphrase" class="form-label">API Passphrase</label>
-                            <input type="password" class="form-control" id="api_passphrase" name="api_passphrase" 
-                                   placeholder="Required for some exchanges (OKX, KuCoin)">
-                            <small class="form-text text-muted">Only required for OKX and KuCoin</small>
+                    
+                    <!-- API Library Selection -->
+                    <div id="api_library_section" class="mb-3">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <label for="api_credential_id" class="form-label">Select API Credential</label>
+                                <select class="form-control" id="api_credential_id" name="api_credential_id">
+                                    <option value="">Loading available APIs...</option>
+                                </select>
+                                <small class="form-text text-muted">Only showing available API credentials for the selected exchange</small>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">&nbsp;</label>
+                                <div>
+                                    <a href="/api-library" target="_blank" class="btn btn-outline-info btn-sm">
+                                        <i class="fas fa-plus"></i> Manage API Library
+                                    </a>
+                                </div>
+                            </div>
                         </div>
-                        <div class="col-md-6">
-                            <label for="polling_interval" class="form-label">Polling Interval (seconds)</label>
-                            <input type="number" class="form-control" id="polling_interval" name="polling_interval" 
-                                   value="60" min="30" max="300">
-                            <small class="form-text text-muted">How often to check for changes (30-300 seconds)</small>
+                    </div>
+                    
+                    <!-- Direct API Input -->
+                    <div id="direct_api_section" style="display: none;">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="api_key" class="form-label">API Key *</label>
+                                <input type="text" class="form-control" id="api_key" name="api_key" 
+                                       placeholder="Your exchange API key">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="api_secret" class="form-label">API Secret *</label>
+                                <input type="password" class="form-control" id="api_secret" name="api_secret" 
+                                       placeholder="Your exchange API secret">
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="api_passphrase" class="form-label">API Passphrase</label>
+                                <input type="password" class="form-control" id="api_passphrase" name="api_passphrase" 
+                                       placeholder="Required for some exchanges (OKX, KuCoin)">
+                                <small class="form-text text-muted">Only required for OKX and KuCoin</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="polling_interval" class="form-label">Polling Interval (seconds)</label>
+                                <input type="number" class="form-control" id="polling_interval" name="polling_interval" 
+                                       value="60" min="30" max="300">
+                                <small class="form-text text-muted">How often to check for changes (30-300 seconds)</small>
+                            </div>
                         </div>
                     </div>
 
@@ -247,6 +289,83 @@
 
 {% block scripts %}
 <script>
+// Toggle between API Library and Direct API input
+document.getElementById('use_library').addEventListener('change', function() {
+    if (this.checked) {
+        document.getElementById('api_library_section').style.display = 'block';
+        document.getElementById('direct_api_section').style.display = 'none';
+        // Clear direct API fields
+        document.getElementById('api_key').value = '';
+        document.getElementById('api_secret').value = '';
+        document.getElementById('api_passphrase').value = '';
+        // Make library selection required
+        document.getElementById('api_credential_id').required = true;
+        // Make direct fields not required
+        document.getElementById('api_key').required = false;
+        document.getElementById('api_secret').required = false;
+    }
+});
+
+document.getElementById('use_direct').addEventListener('change', function() {
+    if (this.checked) {
+        document.getElementById('api_library_section').style.display = 'none';
+        document.getElementById('direct_api_section').style.display = 'block';
+        // Clear library selection
+        document.getElementById('api_credential_id').value = '';
+        // Make direct fields required
+        document.getElementById('api_key').required = true;
+        document.getElementById('api_secret').required = true;
+        // Make library selection not required
+        document.getElementById('api_credential_id').required = false;
+    }
+});
+
+// Load available API credentials when exchange changes
+document.getElementById('exchange').addEventListener('change', function() {
+    const exchange = this.value;
+    loadAvailableApiCredentials(exchange);
+});
+
+function loadAvailableApiCredentials(exchange) {
+    if (!exchange) {
+        document.getElementById('api_credential_id').innerHTML = '<option value="">Select exchange first</option>';
+        return;
+    }
+    
+    const token = localStorage.getItem('access_token');
+    fetch(`/api/api-credentials/available?exchange=${exchange}`, {
+        headers: {
+            'Authorization': 'Bearer ' + token
+        }
+    })
+    .then(response => response.json())
+    .then(credentials => {
+        const select = document.getElementById('api_credential_id');
+        select.innerHTML = '<option value="">Select API Credential</option>';
+        
+        if (credentials.length === 0) {
+            select.innerHTML += '<option value="" disabled>No available API credentials for this exchange</option>';
+        } else {
+            credentials.forEach(credential => {
+                const option = document.createElement('option');
+                option.value = credential.id;
+                option.textContent = `${credential.name} (${credential.api_key})`;
+                select.appendChild(option);
+            });
+        }
+    })
+    .catch(error => {
+        console.error('Error loading API credentials:', error);
+        document.getElementById('api_credential_id').innerHTML = '<option value="">Error loading credentials</option>';
+    });
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    // Trigger change to set initial state
+    document.getElementById('use_library').dispatchEvent(new Event('change'));
+});
+
 document.getElementById('instance-form').addEventListener('submit', function(e) {
     e.preventDefault();
     
