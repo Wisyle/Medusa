@@ -31,10 +31,6 @@ services:
         value: "0.0.0.0"
       - key: PORT
         value: "10000"
-      - key: DEFAULT_TELEGRAM_BOT_TOKEN
-        sync: false
-      - key: DEFAULT_TELEGRAM_CHAT_ID
-        sync: false
 
   # Background Worker Service - Polling & Monitoring
   - type: worker
@@ -58,10 +54,6 @@ services:
         value: "false"
       - key: ENVIRONMENT
         value: "production"
-      - key: DEFAULT_TELEGRAM_BOT_TOKEN
-        sync: false
-      - key: DEFAULT_TELEGRAM_CHAT_ID
-        sync: false
 
   # Strategy Monitor Service - Strategic Monitoring
   - type: worker
@@ -85,10 +77,6 @@ services:
         value: "false"
       - key: ENVIRONMENT
         value: "production"
-      - key: DEFAULT_TELEGRAM_BOT_TOKEN
-        sync: false
-      - key: DEFAULT_TELEGRAM_CHAT_ID
-        sync: false
 
 databases:
   - name: tar-dashboard-db

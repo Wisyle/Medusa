@@ -30,6 +30,12 @@ git push origin master
 4. Select the repository containing your TAR Dashboard code
 5. **Render will automatically detect the `render.yaml` and create all services**
 
+### **📋 What You'll See During Deployment:**
+- **Environment Variables**: Only required ones (DATABASE_URL, SECRET_KEY, etc.)
+- **No Telegram prompts**: Telegram is configured per instance in dashboard
+- **4 Services Created**: Web, Worker, Strategy Monitor, Database
+- **Auto-Generated Secrets**: Render creates secure keys automatically
+
 ### **Step 3: Services Created Automatically**
 
 Render will create these services from your `render.yaml`:
@@ -103,7 +109,7 @@ All services share the same PostgreSQL database and communicate via:
 All services automatically receive:
 - `DATABASE_URL` - Linked to PostgreSQL database
 - `SECRET_KEY` & `JWT_SECRET` - Auto-generated secure keys
-- `TELEGRAM_BOT_TOKEN` & `CHAT_ID` - For notifications
+- **No Telegram tokens needed** - Configure per instance in dashboard
 - Production configuration settings
 
 ---
@@ -118,7 +124,7 @@ All services automatically receive:
 ### **⚠️ IMMEDIATE SECURITY STEPS:**
 1. **Change default password** immediately after login
 2. **Enable 2FA** for enhanced security
-3. **Add Telegram credentials** for notifications
+3. **Create bot instances** with individual Telegram configurations
 4. **Create additional users** with appropriate roles
 
 ---
@@ -167,7 +173,7 @@ Each service can be scaled independently:
 
 ## 🌍 **ENVIRONMENT VARIABLES**
 
-### **Shared Across All Services:**
+### **Required for All Services:**
 ```env
 DATABASE_URL=postgresql://[auto-generated]
 SECRET_KEY=[auto-generated]
@@ -178,11 +184,19 @@ DEBUG=false
 ENVIRONMENT=production
 ```
 
-### **Optional (Set via Render Dashboard):**
-```env
-DEFAULT_TELEGRAM_BOT_TOKEN=your_bot_token
-DEFAULT_TELEGRAM_CHAT_ID=your_chat_id
-```
+### **⚠️ Telegram Configuration:**
+**Telegram tokens are NOT set as environment variables!**
+
+Instead, configure Telegram **per bot instance** in the dashboard:
+1. **Login to dashboard** after deployment
+2. **Create/Edit Bot Instance** → Add Telegram Bot Token & Chat ID
+3. **Create Strategy Monitor** → Configure Telegram notifications
+4. **Each instance can have different Telegram settings**
+
+This allows:
+- **Different bots** → **Different Telegram channels**
+- **Per-strategy notifications** → **Targeted alerts**
+- **Flexible notification routing** → **Custom chat groups**
 
 ---
 
@@ -205,8 +219,9 @@ Login to dashboard and check:
 
 #### **3. Worker Service Test:**
 - Create a new bot instance
+- **Add Telegram Bot Token & Chat ID** to the instance
 - Verify polling starts automatically
-- Check for Telegram notifications
+- Check for Telegram notifications in your configured channel
 - Monitor activity logs
 
 #### **4. Strategy Monitor Test:**
