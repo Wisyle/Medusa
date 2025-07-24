@@ -3,7 +3,7 @@ services:
   - type: web
     name: tar-dashboard-web
     env: python
-    plan: free
+    plan: starter
     buildCommand: "pip install -r requirements.txt"
     startCommand: "python main.py"
     autoDeploy: true
@@ -36,7 +36,7 @@ services:
   - type: worker
     name: tar-dashboard-worker
     env: python
-    plan: free
+    plan: starter
     buildCommand: "pip install -r requirements.txt"
     startCommand: "python worker.py"
     envVars:
@@ -59,7 +59,7 @@ services:
   - type: worker
     name: tar-dashboard-strategy-monitor
     env: python
-    plan: free
+    plan: starter
     buildCommand: "pip install -r requirements.txt"
     startCommand: "python init_strategy_monitor.py && python strategy_monitor_worker.py"
     envVars:
@@ -82,4 +82,4 @@ databases:
   - name: tar-dashboard-db
     databaseName: tar_dashboard
     user: tar_admin
-    plan: free
+    plan: starter
