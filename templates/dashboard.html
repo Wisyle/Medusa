@@ -490,8 +490,122 @@
 let instances = [];
 
 function refreshDashboard() {
-    loadInstances();
-    loadHealth();
+    loadDashboardData();
+}
+
+// Load dashboard data based on active tab
+async function loadDashboardData() {
+    try {
+        const token = localStorage.getItem('access_token');
+        if (!token) {
+            window.location.href = '/login';
+            return;
+        }
+
+        // Get active tab
+        const activeTab = document.querySelector('.nav-pills .nav-link.active');
+        const tabId = activeTab ? activeTab.getAttribute('data-bs-target').replace('#', '') : 'trading-bots';
+        
+        await loadTabData(tabId);
+    } catch (error) {
+        console.error('Error loading dashboard data:', error);
+    }
+}
+
+// Load data for specific tab
+async function loadTabData(tabId) {
+    const token = localStorage.getItem('access_token');
+    const headers = { 'Authorization': `Bearer ${token}` };
+
+    try {
+        switch(tabId) {
+            case 'trading-bots':
+                await loadTradingBotsData(headers);
+                break;
+            case 'dex-arbitrage':
+                await loadDEXArbitrageData(headers);
+                break;
+            case 'validators':
+                await loadValidatorNodesData(headers);
+                break;
+            case 'overview':
+                await loadSystemOverviewData(headers);
+                break;
+        }
+    } catch (error) {
+        if (error.status === 401) {
+            localStorage.removeItem('access_token');
+            window.location.href = '/login';
+        } else {
+            console.error(`Error loading ${tabId} data:`, error);
+        }
+    }
+}
+
+// Load trading bots data
+async function loadTradingBotsData(headers) {
+    try {
+        const [botsResponse, instancesResponse] = await Promise.all([
+            fetch('/api/dashboard/trading-bots', { headers }),
+            fetch('/api/instances', { headers })
+        ]);
+
+        if (botsResponse.ok && instancesResponse.ok) {
+            const botsData = await botsResponse.json();
+            const instances = await instancesResponse.json();
+            
+            updateTradingBotsStats(botsData);
+            updateInstancesTable(instances);
+        }
+    } catch (error) {
+        console.error('Error loading trading bots data:', error);
+    }
+}
+
+// Load DEX arbitrage data
+async function loadDEXArbitrageData(headers) {
+    try {
+        const response = await fetch('/api/dashboard/dex-arbitrage', { headers });
+        if (response.ok) {
+            const data = await response.json();
+            updateDEXArbitrageStats(data);
+        }
+    } catch (error) {
+        console.error('Error loading DEX arbitrage data:', error);
+    }
+}
+
+// Load validator nodes data
+async function loadValidatorNodesData(headers) {
+    try {
+        const response = await fetch('/api/dashboard/validators', { headers });
+        if (response.ok) {
+            const data = await response.json();
+            updateValidatorNodesStats(data);
+        }
+    } catch (error) {
+        console.error('Error loading validator nodes data:', error);
+    }
+}
+
+// Load system overview data
+async function loadSystemOverviewData(headers) {
+    try {
+        const [overviewResponse, activityResponse] = await Promise.all([
+            fetch('/api/dashboard/overview', { headers }),
+            fetch('/api/dashboard/activity', { headers })
+        ]);
+
+        if (overviewResponse.ok && activityResponse.ok) {
+            const overviewData = await overviewResponse.json();
+            const activityData = await activityResponse.json();
+            
+            updateSystemOverviewStats(overviewData);
+            updateRecentActivity(activityData);
+        }
+    } catch (error) {
+        console.error('Error loading system overview data:', error);
+    }
 }
 
 function loadHealth() {
@@ -569,6 +683,83 @@ function loadInstances() {
                 </tr>
             `;
         });
+}
+
+// Update trading bots statistics
+function updateTradingBotsStats(data) {
+    document.getElementById('total-instances').textContent = data.total_instances || 0;
+    document.getElementById('active-instances').textContent = data.active_instances || 0;
+    document.getElementById('error-instances').textContent = data.error_instances || 0;
+    document.getElementById('total-pnl').textContent = `$${(data.total_pnl || 0).toFixed(2)}`;
+}
+
+// Update DEX arbitrage statistics
+function updateDEXArbitrageStats(data) {
+    document.getElementById('active-arbitrage').textContent = data.active_arbitrage || 0;
+    document.getElementById('opportunities').textContent = data.opportunities || 0;
+    document.getElementById('trading-pairs').textContent = data.trading_pairs || 0;
+    document.getElementById('arbitrage-pnl').textContent = `$${(data.arbitrage_pnl || 0).toFixed(2)}`;
+}
+
+// Update validator nodes statistics
+function updateValidatorNodesStats(data) {
+    document.getElementById('ton-validators').textContent = data.ton_validators || 0;
+    document.getElementById('solana-alpha').textContent = data.solana_alpha || 0;
+    document.getElementById('ethereum-epsilon').textContent = data.ethereum_epsilon || 0;
+    document.getElementById('validator-rewards').textContent = `$${(data.validator_rewards || 0).toFixed(2)}`;
+}
+
+// Update system overview statistics
+function updateSystemOverviewStats(data) {
+    const healthElement = document.getElementById('system-health');
+    const connectionsElement = document.getElementById('api-connections');
+    const usersElement = document.getElementById('active-users');
+    const pnlElement = document.getElementById('system-total-pnl');
+    
+    if (healthElement) {
+        healthElement.textContent = data.system_health || 'unknown';
+        healthElement.className = data.system_health === 'healthy' ? 'h5 mb-0 font-weight-bold text-success' : 'h5 mb-0 font-weight-bold text-warning';
+    }
+    if (connectionsElement) connectionsElement.textContent = data.api_connections || 0;
+    if (usersElement) usersElement.textContent = data.active_users || 0;
+    if (pnlElement) pnlElement.textContent = `$${(data.total_pnl || 0).toFixed(2)}`;
+}
+
+// Update recent activity
+function updateRecentActivity(activities) {
+    const activityContainer = document.getElementById('recent-activity');
+    if (!activityContainer) return;
+    
+    if (!activities || activities.length === 0) {
+        activityContainer.innerHTML = '<p class="text-muted">No recent activity</p>';
+        return;
+    }
+
+    const activityHTML = activities.map(activity => `
+        <div class="activity-item mb-2 p-2 border-start border-3 ${getSeverityClass(activity.severity)}">
+            <div class="d-flex justify-content-between">
+                <span class="fw-medium">${activity.message}</span>
+                <small class="text-muted">${formatTimestamp(activity.timestamp)}</small>
+            </div>
+            <small class="text-muted">${activity.type.toUpperCase()}</small>
+        </div>
+    `).join('');
+
+    activityContainer.innerHTML = activityHTML;
+}
+
+// Helper functions
+function getSeverityClass(severity) {
+    switch(severity) {
+        case 'error': return 'border-danger';
+        case 'warning': return 'border-warning';
+        case 'info': return 'border-info';
+        default: return 'border-secondary';
+    }
+}
+
+function formatTimestamp(timestamp) {
+    return new Date(timestamp).toLocaleString();
 }
 
 function updateStats() {
@@ -717,6 +908,16 @@ document.addEventListener('DOMContentLoaded', function() {
     .catch(error => {
         console.error('Error verifying token:', error);
         refreshDashboard(); // Try anyway
+    });
+    
+    // Add tab change event listeners
+    const tabButtons = document.querySelectorAll('.nav-pills .nav-link');
+    tabButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            setTimeout(() => {
+                refreshDashboard();
+            }, 100); // Small delay to ensure tab is active
+        });
     });
     
     // Auto-refresh every 30 seconds

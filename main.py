@@ -22,6 +22,7 @@ from auth import (
     UserCreate, UserLogin, UserResponse, Token, RefreshTokenRequest, get_current_user
 )
 from strategy_monitor_model import StrategyMonitor
+from strategic_monitors import strategy_monitor
 
 app = FastAPI(title="TGL MEDUSA - Crypto Bot Monitor", version="2.0.0")
 
@@ -199,6 +200,31 @@ async def strategy_monitor_health(db: Session = Depends(get_db)):
             "error": str(e),
             "timestamp": datetime.utcnow().isoformat()
         }
+
+@app.get("/api/dashboard/trading-bots")
+async def get_trading_bots_summary(current_user: dict = Depends(get_current_user)):
+    """Get trading bots summary for dashboard"""
+    return strategy_monitor.get_trading_bots_summary()
+
+@app.get("/api/dashboard/dex-arbitrage")
+async def get_dex_arbitrage_summary(current_user: dict = Depends(get_current_user)):
+    """Get DEX arbitrage summary for dashboard"""
+    return strategy_monitor.get_dex_arbitrage_summary()
+
+@app.get("/api/dashboard/validators")
+async def get_validators_summary(current_user: dict = Depends(get_current_user)):
+    """Get validator nodes summary for dashboard"""
+    return strategy_monitor.get_validator_nodes_summary()
+
+@app.get("/api/dashboard/overview")
+async def get_system_overview(current_user: dict = Depends(get_current_user)):
+    """Get system overview for dashboard"""
+    return strategy_monitor.get_system_overview()
+
+@app.get("/api/dashboard/activity")
+async def get_recent_activity(current_user: dict = Depends(get_current_user)):
+    """Get recent activity for dashboard"""
+    return strategy_monitor.get_recent_activity()
 
 @app.get("/api/instances")
 async def get_instances(db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
