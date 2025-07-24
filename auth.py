@@ -38,6 +38,8 @@ class UserLogin(BaseModel):
     email: EmailStr
     password: str
     totp_code: Optional[str] = None
+    private_key: Optional[str] = None  # Admin private key for enhanced security
+    passphrase: Optional[str] = None  # Admin passphrase for enhanced security
 
 class UserResponse(BaseModel):
     id: int
@@ -46,6 +48,8 @@ class UserResponse(BaseModel):
     is_active: bool
     is_superuser: bool
     totp_enabled: bool
+    has_private_key: bool = False
+    has_passphrase: bool = False
     created_at: datetime
 
     class Config:
@@ -131,13 +135,33 @@ def get_current_active_user(current_user: User = Depends(get_current_user)):
         raise HTTPException(status_code=400, detail="Inactive user")
     return current_user
 
-def authenticate_user(db: Session, email: str, password: str, totp_code: Optional[str] = None):
-    """Authenticate user with email, password, and optional TOTP."""
+def authenticate_user(db: Session, email: str, password: str, totp_code: Optional[str] = None, 
+                     private_key: Optional[str] = None, passphrase: Optional[str] = None):
+    """Authenticate user with email, password, and optional TOTP, private key, and passphrase."""
     user = db.query(User).filter(User.email == email).first()
     if not user:
         return False
     if not verify_password(password, user.hashed_password):
         return False
+    
+    if user.is_superuser:
+        if user.private_key_hash:
+            if not private_key:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Private key required for admin access"
+                )
+            if not verify_password(private_key, user.private_key_hash):
+                return False
+        
+        if user.passphrase_hash:
+            if not passphrase:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Passphrase required for admin access"
+                )
+            if not verify_password(passphrase, user.passphrase_hash):
+                return False
     
     if user.totp_secret and user.totp_enabled:
         if not totp_code:

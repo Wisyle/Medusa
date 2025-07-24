@@ -41,6 +41,28 @@
                                    placeholder="6-digit code" maxlength="6">
                         </div>
                         
+                        <div class="mb-3" id="admin_security_fields" style="display: none;">
+                            <div class="alert alert-info">
+                                <i class="fas fa-shield-alt"></i>
+                                <strong>Admin Security Required</strong>
+                                <p class="mb-0">Additional security layers are required for admin access.</p>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="private_key" class="form-label">Private Key</label>
+                                <input type="password" class="form-control" id="private_key" name="private_key" placeholder="Enter your private key">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="passphrase" class="form-label">Passphrase</label>
+                                <input type="password" class="form-control" id="passphrase" name="passphrase" placeholder="Enter your passphrase">
+                            </div>
+                        </div>
+                        
+                        <div class="alert alert-danger" id="error-alert" style="display: none;">
+                            <span id="error-message"></span>
+                        </div>
+                        
                         <div class="d-grid">
                             <button type="submit" class="btn btn-primary">
                                 <i class="fas fa-sign-in-alt"></i>
@@ -166,7 +188,9 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
     const loginData = {
         email: formData.get('email'),
         password: formData.get('password'),
-        totp_code: formData.get('totp_code') || null
+        totp_code: formData.get('totp_code') || null,
+        private_key: formData.get('private_key') || null,
+        passphrase: formData.get('passphrase') || null
     };
     
     try {
@@ -185,10 +209,19 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
             window.location.href = '/';
         } else {
             const error = await response.json();
-            alert('Login failed: ' + error.detail);
+            const errorMessage = error.detail;
+            
+            // Show admin security fields if required
+            if (errorMessage.includes('Private key required') || errorMessage.includes('Passphrase required')) {
+                document.getElementById('admin_security_fields').style.display = 'block';
+            }
+            
+            document.getElementById('error-message').textContent = errorMessage;
+            document.getElementById('error-alert').style.display = 'block';
         }
     } catch (error) {
-        alert('Login error: ' + error.message);
+        document.getElementById('error-message').textContent = 'Network error. Please try again.';
+        document.getElementById('error-alert').style.display = 'block';
     }
 });
 </script>

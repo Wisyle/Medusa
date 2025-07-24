@@ -52,8 +52,15 @@ active_processes = {}
 
 @app.post("/auth/login", response_model=Token)
 async def login(user_login: UserLogin, db: Session = Depends(get_db)):
-    """Login with email, password, and optional TOTP"""
-    user = authenticate_user(db, user_login.email, user_login.password, user_login.totp_code)
+    """Login with email, password, and optional TOTP, private key, and passphrase"""
+    user = authenticate_user(
+        db, 
+        user_login.email, 
+        user_login.password, 
+        user_login.totp_code,
+        user_login.private_key,
+        user_login.passphrase
+    )
     if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
     

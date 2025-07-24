@@ -177,6 +177,8 @@ class User(Base):
     is_superuser = Column(Boolean, default=False)
     totp_secret = Column(String(255), nullable=True)
     totp_enabled = Column(Boolean, default=False)
+    private_key_hash = Column(String(255), nullable=True)  # Admin private key hash for enhanced security
+    passphrase_hash = Column(String(255), nullable=True)  # Admin passphrase hash for enhanced security
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
