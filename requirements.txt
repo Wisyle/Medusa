@@ -28,5 +28,4 @@ pyyaml>=6.0.0
 dnspython>=2.0.0
 web3>=6.0.0
 solana>=0.30.0
-ton-client>=0.1.0
 plotly>=5.0.0

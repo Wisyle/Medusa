@@ -75,7 +75,6 @@
                     <h5>Saved API Credentials</h5>
                 </div>
                 <div class="card-body">
-                    {% if api_credentials %}
                     <div class="table-responsive">
                         <table class="table table-striped">
                             <thead>
@@ -91,6 +90,7 @@
                                 </tr>
                             </thead>
                             <tbody id="credentials-table-body">
+                                {% if api_credentials %}
                                 {% for credential in api_credentials %}
                                 <tr id="credential-{{ credential.id }}">
                                     <td>
@@ -153,15 +153,17 @@
                                     </td>
                                 </tr>
                                 {% endfor %}
+                                {% else %}
+                                <tr>
+                                    <td colspan="8" class="text-center text-muted">
+                                        <i class="fas fa-info-circle"></i>
+                                        No API credentials found. <a href="#" onclick="showCreateModal()">Create one now</a>.
+                                    </td>
+                                </tr>
+                                {% endif %}
                             </tbody>
                         </table>
                     </div>
-                    {% else %}
-                    <div class="alert alert-info">
-                        <h5><i class="fas fa-info-circle"></i> No API Credentials</h5>
-                        <p>Create your first API credential to start managing reusable API keys across multiple bot instances.</p>
-                    </div>
-                    {% endif %}
                 </div>
             </div>
         </div>
@@ -508,7 +510,7 @@ function loadCredentials() {
                       '<span class="text-muted">-</span>'}
                 </td>
                 <td>
-                    ${credential.tags ? 
+                    ${credential.tags && typeof credential.tags === 'string' ? 
                       credential.tags.split(',').map(tag => `<span class="badge badge-secondary">${tag.trim()}</span>`).join(' ') : 
                       '<span class="text-muted">-</span>'}
                 </td>
