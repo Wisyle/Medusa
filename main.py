@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, Request, Form
+from fastapi import FastAPI, Depends, HTTPException, Request, Form, status, WebSocket, WebSocketDisconnect, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 import os
@@ -7,6 +7,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 from typing import List, Optional
 import asyncio
+import json
 import multiprocessing
 from datetime import datetime, timedelta
 import uvicorn
@@ -17,13 +18,59 @@ from polling import run_poller
 from config import settings
 from api_library_routes import add_api_library_routes
 from auth import (
-    authenticate_user, create_access_token, get_current_active_user,
-    create_user, generate_totp_secret, generate_totp_qr_code,
-    UserCreate, UserLogin, UserResponse, Token, get_current_user
+    authenticate_user, create_access_token, create_refresh_token, verify_refresh_token,
+    get_current_active_user, get_current_user_html, create_user, generate_totp_secret, generate_totp_qr_code,
+    UserCreate, UserLogin, UserResponse, Token, RefreshTokenRequest, get_current_user
 )
 from strategy_monitor_model import StrategyMonitor
+from strategic_monitors import strategy_monitor
 
-app = FastAPI(title="TGL MEDUSA - Crypto Bot Monitor", version="2.0.0")
+app = FastAPI(title="TAR Global Strategies - Unified Command Hub", version="2.0.0")
+
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: List[WebSocket] = []
+        self.user_connections: dict = {}  # user_id -> websocket mapping
+
+    async def connect(self, websocket: WebSocket, user_id: int = None):
+        await websocket.accept()
+        self.active_connections.append(websocket)
+        if user_id:
+            self.user_connections[user_id] = websocket
+        print(f"WebSocket connected. Total connections: {len(self.active_connections)}")
+
+    def disconnect(self, websocket: WebSocket, user_id: int = None):
+        if websocket in self.active_connections:
+            self.active_connections.remove(websocket)
+        if user_id and user_id in self.user_connections:
+            del self.user_connections[user_id]
+        print(f"WebSocket disconnected. Total connections: {len(self.active_connections)}")
+
+    async def send_personal_message(self, message: str, websocket: WebSocket):
+        try:
+            await websocket.send_text(message)
+        except Exception as e:
+            print(f"Error sending personal message: {e}")
+            self.disconnect(websocket)
+
+    async def send_to_user(self, message: str, user_id: int):
+        if user_id in self.user_connections:
+            websocket = self.user_connections[user_id]
+            await self.send_personal_message(message, websocket)
+
+    async def broadcast(self, message: str):
+        disconnected = []
+        for connection in self.active_connections:
+            try:
+                await connection.send_text(message)
+            except Exception as e:
+                print(f"Error broadcasting to connection: {e}")
+                disconnected.append(connection)
+        
+        for conn in disconnected:
+            self.disconnect(conn)
+
+manager = ConnectionManager()
 
 # Add CORS middleware
 app.add_middleware(
@@ -51,14 +98,79 @@ if os.path.exists("static"):
 active_processes = {}
 
 @app.post("/auth/login", response_model=Token)
-async def login(user_login: UserLogin, db: Session = Depends(get_db)):
-    """Login with email, password, and optional TOTP"""
-    user = authenticate_user(db, user_login.email, user_login.password, user_login.totp_code)
-    if not user:
+async def login(user_login: UserLogin, response: Response, db: Session = Depends(get_db)):
+    """Login with email, password, and optional TOTP, private key, and passphrase"""
+    user = authenticate_user(
+        db, 
+        user_login.email, 
+        user_login.password, 
+        user_login.totp_code,
+        user_login.private_key,
+        user_login.passphrase
+    )
+    
+    if user == "private_key_required":
+        raise HTTPException(status_code=400, detail="Private key required for admin access")
+    elif user == "passphrase_required":
+        raise HTTPException(status_code=400, detail="Passphrase required for admin access")
+    elif user == "totp_required":
+        raise HTTPException(status_code=400, detail="TOTP code required")
+    elif not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
-    access_token = create_access_token(data={"sub": user.email})
-    return {"access_token": access_token, "token_type": "bearer"}
+    access_token = create_access_token(data={
+        "sub": user.email,
+        "is_superuser": user.is_superuser,
+        "user_id": user.id
+    })
+    refresh_token = create_refresh_token(data={
+        "sub": user.email,
+        "is_superuser": user.is_superuser,
+        "user_id": user.id
+    })
+    
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        secure=False,  # Set to True in production with HTTPS
+        samesite="lax",
+        max_age=settings.access_token_expire_minutes * 60
+    )
+    response.set_cookie(
+        key="refresh_token", 
+        value=refresh_token,
+        httponly=True,
+        secure=False,  # Set to True in production with HTTPS
+        samesite="lax",
+        max_age=7 * 24 * 60 * 60  # 7 days
+    )
+    
+    return {"access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer"}
+
+@app.post("/auth/refresh", response_model=Token)
+async def refresh_token(refresh_request: RefreshTokenRequest, db: Session = Depends(get_db)):
+    """Refresh access token using refresh token"""
+    token_data = verify_refresh_token(refresh_request.refresh_token)
+    
+    user = db.query(User).filter(User.email == token_data.email).first()
+    if not user or not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found or inactive"
+        )
+    
+    access_token = create_access_token(data={
+        "sub": user.email,
+        "is_superuser": user.is_superuser,
+        "user_id": user.id
+    })
+    new_refresh_token = create_refresh_token(data={
+        "sub": user.email,
+        "is_superuser": user.is_superuser,
+        "user_id": user.id
+    })
+    return {"access_token": access_token, "refresh_token": new_refresh_token, "token_type": "bearer"}
 
 @app.post("/auth/register", response_model=UserResponse)
 async def register(user_create: UserCreate, db: Session = Depends(get_db)):
@@ -159,6 +271,107 @@ async def strategy_monitor_health(db: Session = Depends(get_db)):
             "error": str(e),
             "timestamp": datetime.utcnow().isoformat()
         }
+
+@app.get("/api/dashboard/trading-bots")
+async def get_trading_bots_summary(current_user: dict = Depends(get_current_user)):
+    """Get trading bots summary for dashboard"""
+    return strategy_monitor.get_trading_bots_summary()
+
+@app.get("/api/dashboard/dex-arbitrage")
+async def get_dex_arbitrage_summary(current_user: dict = Depends(get_current_user)):
+    """Get DEX arbitrage summary for dashboard"""
+    return strategy_monitor.get_dex_arbitrage_summary()
+
+@app.get("/api/dashboard/validators")
+async def get_validators_summary(current_user: dict = Depends(get_current_user)):
+    """Get validator nodes summary for dashboard"""
+    return strategy_monitor.get_validator_nodes_summary()
+
+@app.get("/api/dashboard/overview")
+async def get_dashboard_overview(current_user: dict = Depends(get_current_user)):
+    """Get complete dashboard overview data"""
+    return {
+        "trading_bots": strategy_monitor.get_trading_bots_summary(),
+        "dex_arbitrage": strategy_monitor.get_dex_arbitrage_summary(),
+        "validators": strategy_monitor.get_validator_nodes_summary(),
+        "system_overview": strategy_monitor.get_system_overview()
+    }
+
+@app.get("/api/dashboard/activity")
+async def get_recent_activity(current_user: dict = Depends(get_current_user)):
+    """Get recent activity for dashboard"""
+    return strategy_monitor.get_recent_activity()
+
+@app.websocket("/ws/{user_id}")
+async def websocket_endpoint(websocket: WebSocket, user_id: int, db: Session = Depends(get_db)):
+    """WebSocket endpoint for real-time dashboard updates"""
+    try:
+        user = db.query(User).filter(User.id == user_id, User.is_active == True).first()
+        if not user:
+            await websocket.close(code=4001, reason="User not found or inactive")
+            return
+
+        await manager.connect(websocket, user_id)
+        
+        await manager.send_personal_message(json.dumps({
+            "type": "connection",
+            "status": "connected",
+            "message": "Real-time updates connected",
+            "timestamp": datetime.utcnow().isoformat()
+        }), websocket)
+
+        await stream_dashboard_data(websocket, user_id, db)
+        
+    except WebSocketDisconnect:
+        manager.disconnect(websocket, user_id)
+        print(f"User {user_id} disconnected from WebSocket")
+    except Exception as e:
+        print(f"WebSocket error for user {user_id}: {e}")
+        manager.disconnect(websocket, user_id)
+
+async def stream_dashboard_data(websocket: WebSocket, user_id: int, db: Session):
+    """Stream real-time dashboard data to connected client"""
+    try:
+        while True:
+            from strategic_monitors import strategy_monitor
+            
+            update_data = {
+                "type": "dashboard_update",
+                "timestamp": datetime.utcnow().isoformat(),
+                "data": {
+                    "trading_bots": strategy_monitor.get_trading_bots_summary(),
+                    "dex_arbitrage": strategy_monitor.get_dex_arbitrage_summary(),
+                    "validators": strategy_monitor.get_validator_nodes_summary(),
+                    "system_overview": strategy_monitor.get_system_overview(),
+                    "recent_activity": strategy_monitor.get_recent_activity(limit=5)
+                }
+            }
+            
+            await manager.send_personal_message(json.dumps(update_data), websocket)
+            
+            await asyncio.sleep(10)
+            
+    except WebSocketDisconnect:
+        manager.disconnect(websocket, user_id)
+    except Exception as e:
+        print(f"Error in data streaming for user {user_id}: {e}")
+        manager.disconnect(websocket, user_id)
+
+@app.post("/api/broadcast")
+async def broadcast_message(message: dict, current_user: User = Depends(get_current_active_user)):
+    """Broadcast message to all connected WebSocket clients (admin only)"""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    broadcast_data = {
+        "type": "broadcast",
+        "message": message.get("message", ""),
+        "timestamp": datetime.utcnow().isoformat(),
+        "from": "system"
+    }
+    
+    await manager.broadcast(json.dumps(broadcast_data))
+    return {"status": "Message broadcasted", "connections": len(manager.active_connections)}
 
 @app.get("/api/instances")
 async def get_instances(db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
@@ -510,34 +723,34 @@ async def setup_2fa_page(request: Request):
     return templates.TemplateResponse("setup_2fa.html", {"request": request})
 
 @app.get("/", response_class=HTMLResponse)
-async def dashboard(request: Request):
+async def dashboard(request: Request, current_user: User = Depends(get_current_user_html)):
     """Main dashboard"""
-    return templates.TemplateResponse("dashboard.html", {"request": request})
+    return templates.TemplateResponse("dashboard.html", {"request": request, "user": current_user})
 
 @app.get("/instances", response_class=HTMLResponse)
-async def instances_page(request: Request):
+async def instances_page(request: Request, current_user: User = Depends(get_current_user_html)):
     """Instances management page"""
-    return templates.TemplateResponse("instances.html", {"request": request})
+    return templates.TemplateResponse("instances.html", {"request": request, "user": current_user})
 
 @app.get("/instances/new", response_class=HTMLResponse)
-async def new_instance_page(request: Request):
+async def new_instance_page(request: Request, current_user: User = Depends(get_current_user_html)):
     """New instance form"""
-    return templates.TemplateResponse("new_instance.html", {"request": request})
+    return templates.TemplateResponse("new_instance.html", {"request": request, "user": current_user})
 
 @app.get("/instances/{instance_id}", response_class=HTMLResponse)
-async def instance_detail(request: Request, instance_id: int):
+async def instance_detail(request: Request, instance_id: int, current_user: User = Depends(get_current_user_html)):
     """Instance detail page"""
-    return templates.TemplateResponse("instance_detail.html", {"request": request, "instance_id": instance_id})
+    return templates.TemplateResponse("instance_detail.html", {"request": request, "instance_id": instance_id, "user": current_user})
 
 @app.get("/instances/{instance_id}/edit", response_class=HTMLResponse)
-async def edit_instance_page(request: Request, instance_id: int):
+async def edit_instance_page(request: Request, instance_id: int, current_user: User = Depends(get_current_user_html)):
     """Edit instance form"""
-    return templates.TemplateResponse("edit_instance.html", {"request": request, "instance_id": instance_id})
+    return templates.TemplateResponse("edit_instance.html", {"request": request, "instance_id": instance_id, "user": current_user})
 
 @app.get("/account", response_class=HTMLResponse)
-async def account_page(request: Request):
-    """Account settings page - authentication handled by JavaScript"""
-    return templates.TemplateResponse("account.html", {"request": request})
+async def account_page(request: Request, current_user: User = Depends(get_current_user_html)):
+    """Account settings page"""
+    return templates.TemplateResponse("account.html", {"request": request, "user": current_user})
 
 # Account Settings API Routes
 @app.get("/api/user/profile")
@@ -689,9 +902,9 @@ async def disable_2fa(
         return {"error": str(e)}
 
 @app.get("/system-logs", response_class=HTMLResponse)
-async def system_logs_page(request: Request):
+async def system_logs_page(request: Request, current_user: User = Depends(get_current_user_html)):
     """System logs dashboard"""
-    return templates.TemplateResponse("system_logs.html", {"request": request})
+    return templates.TemplateResponse("system_logs.html", {"request": request, "user": current_user})
 
 @app.get("/api/system-logs")
 async def get_system_logs(
@@ -837,22 +1050,9 @@ async def monitor_instances():
 # Strategy Monitor Routes
 
 @app.get("/strategy-monitors", response_class=HTMLResponse)
-async def strategy_monitors_page(request: Request, db: Session = Depends(get_db)):
+async def strategy_monitors_page(request: Request, current_user: User = Depends(get_current_user_html)):
     """Strategy monitors management page"""
-    monitors = db.query(StrategyMonitor).order_by(StrategyMonitor.strategy_name).all()
-    
-    # Get available strategies from instances
-    instances = db.query(BotInstance).filter(BotInstance.is_active == True).all()
-    all_strategies = set()
-    for instance in instances:
-        if instance.strategies:
-            all_strategies.update(instance.strategies)
-    
-    return templates.TemplateResponse("strategy_monitors.html", {
-        "request": request,
-        "monitors": monitors,
-        "available_strategies": sorted(all_strategies)
-    })
+    return templates.TemplateResponse("strategy_monitors.html", {"request": request, "user": current_user})
 
 @app.post("/strategy-monitors")
 async def create_strategy_monitor(
@@ -1030,20 +1230,198 @@ async def get_strategy_monitors(db: Session = Depends(get_db)):
     return result
 
 @app.get("/dex-arbitrage", response_class=HTMLResponse)
-async def dex_arbitrage_page(request: Request, current_user: User = Depends(get_current_active_user)):
+async def dex_arbitrage_page(request: Request, current_user: User = Depends(get_current_user_html)):
     """DEX arbitrage monitoring page"""
-    return templates.TemplateResponse("dex_arbitrage.html", {
-        "request": request,
-        "user": current_user
-    })
+    return templates.TemplateResponse("dex_arbitrage.html", {"request": request, "user": current_user})
 
 @app.get("/validators", response_class=HTMLResponse)
-async def validators_page(request: Request, current_user: User = Depends(get_current_active_user)):
+async def validators_page(request: Request, current_user: User = Depends(get_current_user_html)):
     """Validator nodes monitoring page"""
-    return templates.TemplateResponse("validators.html", {
-        "request": request,
-        "user": current_user
-    })
+    return templates.TemplateResponse("validators.html", {"request": request, "user": current_user})
+
+
+@app.get("/admin/users", response_class=HTMLResponse)
+async def admin_users_page(request: Request, current_user: User = Depends(get_current_user_html)):
+    """Admin user management page - only accessible to superusers"""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    return templates.TemplateResponse("admin_users.html", {"request": request, "user": current_user})
+
+@app.get("/api/admin/users")
+async def get_all_users(current_user: User = Depends(get_current_active_user), db: Session = Depends(get_db)):
+    """Get all users with their roles - only accessible to superusers"""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Access denied. Superuser privileges required.")
+    
+    users = db.query(User).all()
+    result = []
+    
+    for user in users:
+        user_data = {
+            "id": user.id,
+            "email": user.email,
+            "full_name": user.full_name,
+            "is_active": user.is_active,
+            "is_superuser": user.is_superuser,
+            "totp_enabled": user.totp_enabled,
+            "created_at": user.created_at.isoformat(),
+            "roles": []
+        }
+        
+        for user_role in user.roles:
+            role_data = {
+                "id": user_role.role.id,
+                "name": user_role.role.name,
+                "description": user_role.role.description
+            }
+            user_data["roles"].append(role_data)
+        
+        result.append(user_data)
+    
+    return result
+
+@app.get("/api/admin/roles")
+async def get_all_roles(current_user: User = Depends(get_current_active_user), db: Session = Depends(get_db)):
+    """Get all available roles - only accessible to superusers"""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Access denied. Superuser privileges required.")
+    
+    from database import Role, RolePermission, Permission
+    
+    roles = db.query(Role).all()
+    result = []
+    
+    for role in roles:
+        role_data = {
+            "id": role.id,
+            "name": role.name,
+            "description": role.description,
+            "permissions": []
+        }
+        
+        for role_permission in role.permissions:
+            perm_data = {
+                "id": role_permission.permission.id,
+                "name": role_permission.permission.name,
+                "description": role_permission.permission.description,
+                "resource": role_permission.permission.resource,
+                "action": role_permission.permission.action
+            }
+            role_data["permissions"].append(perm_data)
+        
+        result.append(role_data)
+    
+    return result
+
+@app.post("/api/admin/users")
+async def create_user_admin(
+    user_data: dict,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Create a new user - only accessible to superusers"""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Access denied. Superuser privileges required.")
+    
+    from database import Role, UserRole
+    from auth import get_password_hash
+    
+    # Check if user already exists
+    existing_user = db.query(User).filter(User.email == user_data["email"]).first()
+    if existing_user:
+        raise HTTPException(status_code=400, detail="User with this email already exists")
+    
+    new_user = User(
+        email=user_data["email"],
+        full_name=user_data.get("full_name"),
+        hashed_password=get_password_hash(user_data["password"]),
+        is_active=user_data.get("is_active", True),
+        is_superuser=False  # Only existing superusers can create other superusers via edit
+    )
+    
+    db.add(new_user)
+    db.flush()  # Get the user ID
+    
+    role_ids = user_data.get("role_ids", [])
+    for role_id in role_ids:
+        role = db.query(Role).filter(Role.id == role_id).first()
+        if role:
+            user_role = UserRole(
+                user_id=new_user.id,
+                role_id=role_id,
+                assigned_by=current_user.id
+            )
+            db.add(user_role)
+    
+    db.commit()
+    
+    return {"message": "User created successfully", "user_id": new_user.id}
+
+@app.put("/api/admin/users/{user_id}")
+async def update_user_admin(
+    user_id: int,
+    user_data: dict,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Update a user - only accessible to superusers"""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Access denied. Superuser privileges required.")
+    
+    from database import Role, UserRole
+    
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    user.email = user_data.get("email", user.email)
+    user.full_name = user_data.get("full_name", user.full_name)
+    user.is_active = user_data.get("is_active", user.is_active)
+    user.is_superuser = user_data.get("is_superuser", user.is_superuser)
+    
+    if "role_ids" in user_data:
+        db.query(UserRole).filter(UserRole.user_id == user_id).delete()
+        
+        role_ids = user_data["role_ids"]
+        for role_id in role_ids:
+            role = db.query(Role).filter(Role.id == role_id).first()
+            if role:
+                user_role = UserRole(
+                    user_id=user_id,
+                    role_id=role_id,
+                    assigned_by=current_user.id
+                )
+                db.add(user_role)
+    
+    db.commit()
+    
+    return {"message": "User updated successfully"}
+
+@app.delete("/api/admin/users/{user_id}")
+async def delete_user_admin(
+    user_id: int,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Delete a user - only accessible to superusers"""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Access denied. Superuser privileges required.")
+    
+    from database import UserRole
+    
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if user.is_superuser:
+        raise HTTPException(status_code=400, detail="Cannot delete superuser accounts")
+    
+    db.query(UserRole).filter(UserRole.user_id == user_id).delete()
+    
+    db.delete(user)
+    db.commit()
+    
+    return {"message": "User deleted successfully"}
 
 if __name__ == "__main__":
     uvicorn.run(

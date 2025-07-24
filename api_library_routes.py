@@ -20,22 +20,40 @@ def add_api_library_routes(app: FastAPI):
     """Add API Library routes to the FastAPI app"""
     
     @app.get("/api-library", response_class=HTMLResponse)
-    async def api_library_page(request: Request):
+    async def api_library_page(request: Request, current_user: User = Depends(get_current_active_user)):
         """API Library management page"""
         return templates.TemplateResponse("api_library.html", {
-            "request": request
+            "request": request,
+            "user": current_user
         })
 
     @app.get("/api/api-credentials")
-    async def get_api_credentials(db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
-        """Get all API credentials (masked for security)"""
-        credentials = db.query(ApiCredential).order_by(ApiCredential.name).all()
-        return [credential.to_dict() for credential in credentials]
+    async def get_api_credentials(
+        show_all: bool = False,
+        db: Session = Depends(get_db), 
+        current_user: User = Depends(get_current_active_user)
+    ):
+        """Get API credentials (masked for security) - filtered by user unless admin requests all"""
+        query = db.query(ApiCredential)
+        
+        if not (current_user.is_superuser and show_all):
+            query = query.filter(ApiCredential.user_id == current_user.id)
+        
+        credentials = query.order_by(ApiCredential.name).all()
+        
+        # Include user info for admins viewing all credentials
+        include_user_info = current_user.is_superuser and show_all
+        return [credential.to_dict(include_user_info=include_user_info) for credential in credentials]
     
     @app.get("/api/api-credentials/available")
-    async def get_available_api_credentials(exchange: Optional[str] = None, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
-        """Get available (not in use) API credentials for a specific exchange"""
+    async def get_available_api_credentials(
+        exchange: Optional[str] = None, 
+        db: Session = Depends(get_db), 
+        current_user: User = Depends(get_current_active_user)
+    ):
+        """Get available (not in use) API credentials for a specific exchange - filtered by user"""
         query = db.query(ApiCredential).filter(
+            ApiCredential.user_id == current_user.id,
             ApiCredential.is_active == True,
             ApiCredential.is_in_use == False
         )
@@ -73,8 +91,11 @@ def add_api_library_routes(app: FastAPI):
         if not api_secret.strip():
             raise HTTPException(status_code=400, detail="API secret is required")
         
-        # Check if name already exists
-        existing = db.query(ApiCredential).filter(ApiCredential.name == name.strip()).first()
+        # Check if name already exists for this user
+        existing = db.query(ApiCredential).filter(
+            ApiCredential.user_id == current_user.id,
+            ApiCredential.name == name.strip()
+        ).first()
         if existing:
             raise HTTPException(status_code=400, detail=f"API credential with name '{name}' already exists")
         
@@ -85,6 +106,7 @@ def add_api_library_routes(app: FastAPI):
         
         try:
             credential = ApiCredential(
+                user_id=current_user.id,
                 name=name.strip(),
                 exchange=exchange.strip().lower(),
                 api_key=api_key.strip(),
@@ -125,6 +147,7 @@ def add_api_library_routes(app: FastAPI):
                 # Check if new name conflicts
                 if name.strip() != credential.name:
                     existing = db.query(ApiCredential).filter(
+                        ApiCredential.user_id == current_user.id,
                         ApiCredential.name == name.strip(),
                         ApiCredential.id != credential_id
                     ).first()
@@ -163,9 +186,12 @@ def add_api_library_routes(app: FastAPI):
     ):
         """Delete API credential"""
         
-        credential = db.query(ApiCredential).filter(ApiCredential.id == credential_id).first()
+        credential = db.query(ApiCredential).filter(
+            ApiCredential.id == credential_id,
+            ApiCredential.user_id == current_user.id
+        ).first()
         if not credential:
-            raise HTTPException(status_code=404, detail="API credential not found")
+            raise HTTPException(status_code=404, detail="API credential not found or access denied")
         
         # Check if it's in use
         if credential.is_in_use:
@@ -191,9 +217,12 @@ def add_api_library_routes(app: FastAPI):
     ):
         """Assign API credential to instance"""
         
-        credential = db.query(ApiCredential).filter(ApiCredential.id == credential_id).first()
+        credential = db.query(ApiCredential).filter(
+            ApiCredential.id == credential_id,
+            ApiCredential.user_id == current_user.id
+        ).first()
         if not credential:
-            raise HTTPException(status_code=404, detail="API credential not found")
+            raise HTTPException(status_code=404, detail="API credential not found or access denied")
         
         instance = db.query(BotInstance).filter(BotInstance.id == instance_id).first()
         if not instance:
@@ -240,9 +269,12 @@ def add_api_library_routes(app: FastAPI):
     ):
         """Unassign API credential from its current instance"""
         
-        credential = db.query(ApiCredential).filter(ApiCredential.id == credential_id).first()
+        credential = db.query(ApiCredential).filter(
+            ApiCredential.id == credential_id,
+            ApiCredential.user_id == current_user.id
+        ).first()
         if not credential:
-            raise HTTPException(status_code=404, detail="API credential not found")
+            raise HTTPException(status_code=404, detail="API credential not found or access denied")
         
         if not credential.is_in_use:
             raise HTTPException(status_code=400, detail="API credential is not currently assigned")

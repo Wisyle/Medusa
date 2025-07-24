@@ -12,11 +12,14 @@ class ApiCredential(Base):
     __tablename__ = "api_credentials"
     
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(100), nullable=False, unique=True)  # Human-readable name
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True)  # Owner of the credential
+    name = Column(String(100), nullable=False)  # Human-readable name (unique per user)
     exchange = Column(String(50), nullable=False)  # binance, bybit, etc.
     api_key = Column(String(255), nullable=False)
     api_secret = Column(String(255), nullable=False)
     api_passphrase = Column(String(255), nullable=True)  # For OKX, KuCoin
+    
+    user = relationship("User", back_populates="api_credentials")
     
     # Status and usage tracking
     is_active = Column(Boolean, default=True)
@@ -35,9 +38,10 @@ class ApiCredential(Base):
     def __repr__(self):
         return f"<ApiCredential(name='{self.name}', exchange='{self.exchange}', in_use={self.is_in_use})>"
     
-    def to_dict(self):
-        return {
+    def to_dict(self, include_user_info=False):
+        result = {
             'id': self.id,
+            'user_id': self.user_id,
             'name': self.name,
             'exchange': self.exchange,
             'api_key': self.api_key[:8] + '...' + self.api_key[-4:] if len(self.api_key) > 12 else self.api_key,  # Masked
@@ -52,6 +56,12 @@ class ApiCredential(Base):
             'updated_at': self.updated_at,
             'last_used': self.last_used
         }
+        
+        if include_user_info and hasattr(self, 'user') and self.user:
+            result['user_email'] = self.user.email
+            result['user_name'] = self.user.full_name
+            
+        return result
     
     def get_full_credentials(self):
         """Get full credentials for internal use only"""

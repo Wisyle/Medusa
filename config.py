@@ -24,6 +24,15 @@ class Settings(BaseSettings):
     default_telegram_bot_token: Optional[str] = None
     default_telegram_chat_id: Optional[str] = None
     default_telegram_topic_id: Optional[str] = None
+    telegram_webhook_url: Optional[str] = None
+    telegram_webhook_secret: Optional[str] = None
+    telegram_max_retries: int = 3
+    telegram_retry_delay: int = 5
+    telegram_timeout: int = 30
+    
+    enable_telegram_notifications: bool = True
+    notification_rate_limit: int = 60  # seconds between similar notifications
+    notification_batch_size: int = 10  # max notifications per batch
     
     app_name: str = "TGL MEDUSA"
     app_description: str = "Advanced Cryptocurrency Bot Monitoring System"

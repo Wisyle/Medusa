@@ -1,153 +1,707 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard - TGL MEDUSA{% endblock %}
+{% block title %}Dashboard - TAR Global Strategies{% endblock %}
+
+{% block extra_head %}
+<!-- Chart.js for interactive charts -->
+<script src="https://unpkg.com/chart.js@4.4.0/dist/chart.min.js"></script>
+
+<!-- Custom dashboard styles -->
+<style>
+.chart-container {
+    position: relative;
+    height: 300px;
+    margin-bottom: 20px;
+}
+
+.metric-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    border-radius: 15px;
+    color: white;
+    transition: all 0.3s ease;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+}
+
+.metric-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+}
+
+.metric-card.positive {
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+}
+
+.metric-card.negative {
+    background: linear-gradient(135deg, #fc466b 0%, #3f5efb 100%);
+}
+
+.metric-card.warning {
+    background: linear-gradient(135deg, #fdbb2d 0%, #22c1c3 100%);
+}
+
+.performance-indicator {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 8px;
+    border-radius: 20px;
+    font-size: 0.85em;
+    font-weight: 600;
+}
+
+.performance-indicator.up {
+    background: rgba(56, 239, 125, 0.2);
+    color: #38ef7d;
+}
+
+.performance-indicator.down {
+    background: rgba(252, 70, 107, 0.2);
+    color: #fc466b;
+}
+
+.performance-indicator.neutral {
+    background: rgba(108, 117, 125, 0.2);
+    color: #6c757d;
+}
+
+.mini-chart {
+    height: 60px;
+    margin-top: 10px;
+}
+
+.status-badge {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.8em;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status-badge.online {
+    background: rgba(56, 239, 125, 0.2);
+    color: #38ef7d;
+    border: 1px solid #38ef7d;
+}
+
+.status-badge.offline {
+    background: rgba(252, 70, 107, 0.2);
+    color: #fc466b;
+    border: 1px solid #fc466b;
+}
+
+.status-badge.warning {
+    background: rgba(253, 187, 45, 0.2);
+    color: #fdbb2d;
+    border: 1px solid #fdbb2d;
+}
+
+.data-table {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.data-table th {
+    background: rgba(0, 0, 0, 0.1);
+    border: none;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.85em;
+    letter-spacing: 0.5px;
+}
+
+.data-table td {
+    border: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.activity-item {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 8px;
+    border-left: 4px solid #667eea;
+    transition: all 0.3s ease;
+}
+
+.activity-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateX(5px);
+}
+
+.activity-item.success {
+    border-left-color: #38ef7d;
+}
+
+.activity-item.error {
+    border-left-color: #fc466b;
+}
+
+.activity-item.warning {
+    border-left-color: #fdbb2d;
+}
+
+@media (max-width: 768px) {
+    .chart-container {
+        height: 250px;
+    }
+    
+    .metric-card {
+        margin-bottom: 15px;
+    }
+    
+    .nav-pills .nav-link {
+        font-size: 0.9em;
+        padding: 8px 12px;
+    }
+}
+
+@media (max-width: 576px) {
+    .chart-container {
+        height: 200px;
+    }
+    
+    .nav-pills .nav-link {
+        font-size: 0.8em;
+        padding: 6px 8px;
+    }
+    
+    .nav-pills .nav-link i {
+        display: none;
+    }
+}
+</style>
+{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
-    <h1 class="h2">
-        <i class="fas fa-tachometer-alt crypto-icon"></i>
-        Dashboard
-    </h1>
+    <div>
+        <h1 class="h2">
+            <i class="fas fa-chart-line crypto-icon"></i>
+            TAR Global Strategies
+        </h1>
+        <p class="text-muted mb-0">Unified Command Hub</p>
+    </div>
     <div class="btn-toolbar mb-2 mb-md-0">
-        <div class="btn-group me-2">
-            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="refreshDashboard()">
-                <i class="fas fa-sync-alt"></i>
-                Refresh
-            </button>
+        <div class="d-flex align-items-center gap-3">
+            <span id="connection-status" class="badge bg-secondary">
+                <i class="fas fa-circle text-muted"></i> Connecting...
+            </span>
+            <span id="last-updated" class="text-muted small"></span>
+            <div class="btn-group">
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="refreshDashboard()">
+                    <i class="fas fa-sync-alt"></i>
+                    Refresh
+                </button>
+            </div>
         </div>
     </div>
 </div>
 
-<!-- Stats Cards -->
+<!-- Strategy Overview Tabs -->
 <div class="row mb-4">
-    <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card border-left-primary shadow h-100 py-2">
-            <div class="card-body">
-                <div class="row no-gutters align-items-center">
-                    <div class="col mr-2">
-                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
-                            Total Instances
-                        </div>
-                        <div class="h5 mb-0 font-weight-bold text-gray-800" id="total-instances">
-                            <i class="fas fa-spinner fa-spin"></i>
-                        </div>
-                    </div>
-                    <div class="col-auto">
-                        <i class="fas fa-cogs fa-2x text-gray-300"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card border-left-success shadow h-100 py-2">
-            <div class="card-body">
-                <div class="row no-gutters align-items-center">
-                    <div class="col mr-2">
-                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
-                            Active Instances
-                        </div>
-                        <div class="h5 mb-0 font-weight-bold text-gray-800" id="active-instances">
-                            <i class="fas fa-spinner fa-spin"></i>
-                        </div>
-                    </div>
-                    <div class="col-auto">
-                        <i class="fas fa-play fa-2x text-gray-300"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card border-left-warning shadow h-100 py-2">
-            <div class="card-body">
-                <div class="row no-gutters align-items-center">
-                    <div class="col mr-2">
-                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
-                            With Errors
-                        </div>
-                        <div class="h5 mb-0 font-weight-bold text-gray-800" id="error-instances">
-                            <i class="fas fa-spinner fa-spin"></i>
-                        </div>
-                    </div>
-                    <div class="col-auto">
-                        <i class="fas fa-exclamation-triangle fa-2x text-gray-300"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card border-left-info shadow h-100 py-2">
-            <div class="card-body">
-                <div class="row no-gutters align-items-center">
-                    <div class="col mr-2">
-                        <div class="text-xs font-weight-bold text-uppercase mb-1" style="color: var(--accent-gold);">
-                            System Monitoring
-                        </div>
-                        <div class="h5 mb-0 font-weight-bold text-gray-800" id="system-health">
-                            <i class="fas fa-spinner fa-spin"></i>
-                        </div>
-                    </div>
-                    <div class="col-auto">
-                        <i class="fas fa-heartbeat fa-2x text-gray-300"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <div class="col-12">
+        <ul class="nav nav-pills nav-fill shadow" id="strategy-tabs" role="tablist" style="background: linear-gradient(135deg, var(--secondary-black) 0%, var(--light-gray) 100%); border-radius: 12px; padding: 8px;">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="trading-bots-tab" data-bs-toggle="pill" data-bs-target="#trading-bots" type="button" role="tab" style="border-radius: 8px; margin: 2px;">
+                    <i class="fas fa-robot me-2"></i>Trading Bots
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="dex-arbitrage-tab" data-bs-toggle="pill" data-bs-target="#dex-arbitrage" type="button" role="tab" style="border-radius: 8px; margin: 2px;">
+                    <i class="fas fa-exchange-alt me-2"></i>DEX Arbitrage
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="validators-tab" data-bs-toggle="pill" data-bs-target="#validators" type="button" role="tab" style="border-radius: 8px; margin: 2px;">
+                    <i class="fas fa-shield-alt me-2"></i>Validator Nodes
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="overview-tab" data-bs-toggle="pill" data-bs-target="#overview" type="button" role="tab" style="border-radius: 8px; margin: 2px;">
+                    <i class="fas fa-chart-line me-2"></i>System Overview
+                </button>
+            </li>
+        </ul>
     </div>
 </div>
 
-<!-- Instances Overview -->
-<div class="card shadow mb-4">
-    <div class="card-header py-3">
-        <h6 class="m-0 font-weight-bold text-primary">
-            <i class="fas fa-list"></i>
-            Bot Instances Overview
-        </h6>
-    </div>
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-bordered" id="instances-table">
-                <thead>
-                    <tr>
-                        <th>Name</th>
-                        <th>Exchange</th>
-                        <th>Strategies</th>
-                        <th>Status</th>
-                        <th>Last Poll</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td colspan="6" class="text-center">
-                            <i class="fas fa-spinner fa-spin"></i>
-                            Loading instances...
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+<!-- Tab Content -->
+<div class="tab-content" id="strategy-tab-content">
+    <!-- Trading Bots Tab -->
+    <div class="tab-pane fade show active" id="trading-bots" role="tabpanel">
+        <!-- Trading Bot Stats Cards -->
+        <div class="row mb-4">
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card border-left-primary shadow h-100 py-2">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                    Total Bot Instances
+                                </div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800" id="total-instances">
+                                    <i class="fas fa-spinner fa-spin"></i>
+                                </div>
+                                <div class="mini-chart mt-2">
+                                    <canvas id="bots-mini-chart"></canvas>
+                                </div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-robot fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card border-left-success shadow h-100 py-2">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                    Active Instances
+                                </div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800" id="active-instances">
+                                    <i class="fas fa-spinner fa-spin"></i>
+                                </div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-play fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card border-left-warning shadow h-100 py-2">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                    With Errors
+                                </div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800" id="error-instances">
+                                    <i class="fas fa-spinner fa-spin"></i>
+                                </div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-exclamation-triangle fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card border-left-info shadow h-100 py-2">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-uppercase mb-1" style="color: var(--accent-gold);">
+                                    Total P&L
+                                </div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800" id="total-pnl">
+                                    <i class="fas fa-spinner fa-spin"></i>
+                                </div>
+                                <div class="mini-chart mt-2">
+                                    <canvas id="pnl-mini-chart"></canvas>
+                                </div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-chart-line fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Performance Charts -->
+        <div class="row mb-4">
+            <div class="col-lg-8 mb-3">
+                <div class="card shadow">
+                    <div class="card-header d-flex justify-content-between align-items-center py-3">
+                        <h6 class="m-0 font-weight-bold text-primary">
+                            <i class="fas fa-chart-area me-2"></i>
+                            P&L Performance
+                        </h6>
+                        <div class="btn-group btn-group-sm">
+                            <button type="button" class="btn btn-outline-primary active" data-period="24h">24H</button>
+                            <button type="button" class="btn btn-outline-primary" data-period="7d">7D</button>
+                            <button type="button" class="btn btn-outline-primary" data-period="30d">30D</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="pnl-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4 mb-3">
+                <div class="card shadow">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold text-primary">
+                            <i class="fas fa-chart-pie me-2"></i>
+                            Strategy Distribution
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="strategy-distribution-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bot Instances Overview -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-robot me-2"></i>
+                    Bot Instances Overview
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered" id="instances-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Exchange</th>
+                                <th>Strategies</th>
+                                <th>Status</th>
+                                <th>Last Poll</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="6" class="text-center">
+                                    <i class="fas fa-spinner fa-spin"></i>
+                                    Loading instances...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
-</div>
 
-<!-- Recent Activity -->
-<div class="card shadow mb-4">
-    <div class="card-header py-3">
-        <h6 class="m-0 font-weight-bold text-primary">
-            <i class="fas fa-clock"></i>
-            Recent Activity
-        </h6>
+    <!-- DEX Arbitrage Tab -->
+    <div class="tab-pane fade" id="dex-arbitrage" role="tabpanel">
+        <!-- DEX Arbitrage Stats Cards -->
+        <div class="row mb-4">
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card border-left-success shadow h-100 py-2">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                    Active Arbitrage
+                                </div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800" id="active-arbitrage">
+                                    <i class="fas fa-spinner fa-spin"></i>
+                                </div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-exchange-alt fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card border-left-info shadow h-100 py-2">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                    Opportunities
+                                </div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800" id="arbitrage-opportunities">
+                                    <i class="fas fa-spinner fa-spin"></i>
+                                </div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-search-dollar fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card border-left-warning shadow h-100 py-2">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                    BNB/SOL/USDT Pairs
+                                </div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800" id="trading-pairs">
+                                    <i class="fas fa-spinner fa-spin"></i>
+                                </div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fab fa-bitcoin fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card border-left-primary shadow h-100 py-2">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                    Arbitrage P&L
+                                </div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800" id="arbitrage-pnl">
+                                    <i class="fas fa-spinner fa-spin"></i>
+                                </div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-chart-line fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- DEX Arbitrage Overview -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-success">
+                    <i class="fas fa-exchange-alt me-2"></i>
+                    DEX Arbitrage Overview
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="text-center text-muted">
+                    <i class="fas fa-info-circle me-2"></i>No DEX arbitrage instances configured yet.
+                    <a href="/dex-arbitrage" class="btn btn-sm btn-success ms-2">
+                        <i class="fas fa-plus"></i> Configure Arbitrage
+                    </a>
+                </div>
+            </div>
+        </div>
     </div>
-    <div class="card-body">
-        <div id="recent-activity">
-            <div class="text-center">
-                <i class="fas fa-spinner fa-spin"></i>
-                Loading activity...
+
+    <!-- Validator Nodes Tab -->
+    <div class="tab-pane fade" id="validators" role="tabpanel">
+        <!-- Validator Stats Cards -->
+        <div class="row mb-4">
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card border-left-info shadow h-100 py-2">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                    TON Validators
+                                </div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800" id="ton-validators">
+                                    <i class="fas fa-spinner fa-spin"></i>
+                                </div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-cube fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card border-left-success shadow h-100 py-2">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                    Solana Alpha
+                                </div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800" id="solana-alpha">
+                                    <i class="fas fa-spinner fa-spin"></i>
+                                </div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-sun fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card border-left-primary shadow h-100 py-2">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                    Ethereum Epsilon
+                                </div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800" id="ethereum-epsilon">
+                                    <i class="fas fa-spinner fa-spin"></i>
+                                </div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fab fa-ethereum fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card border-left-warning shadow h-100 py-2">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                    Total Rewards
+                                </div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800" id="validator-rewards">
+                                    <i class="fas fa-spinner fa-spin"></i>
+                                </div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-coins fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Validator Nodes Overview -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-info">
+                    <i class="fas fa-shield-alt me-2"></i>
+                    Validator Nodes Overview
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="text-center text-muted">
+                    <i class="fas fa-info-circle me-2"></i>No validator nodes configured yet.
+                    <a href="/validators" class="btn btn-sm btn-info ms-2">
+                        <i class="fas fa-plus"></i> Configure Validators
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- System Overview Tab -->
+    <div class="tab-pane fade" id="overview" role="tabpanel">
+        <!-- System Overview Stats -->
+        <div class="row mb-4">
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card border-left-success shadow h-100 py-2">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                    System Status
+                                </div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800" id="system-health">
+                                    <i class="fas fa-spinner fa-spin"></i>
+                                </div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-heartbeat fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card border-left-info shadow h-100 py-2">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                    API Connections
+                                </div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800" id="api-connections">
+                                    <i class="fas fa-spinner fa-spin"></i>
+                                </div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-plug fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card border-left-warning shadow h-100 py-2">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                    Active Users
+                                </div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800" id="active-users">
+                                    <i class="fas fa-spinner fa-spin"></i>
+                                </div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-users fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card border-left-primary shadow h-100 py-2">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                    Total P&L
+                                </div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800" id="system-total-pnl">
+                                    <i class="fas fa-spinner fa-spin"></i>
+                                </div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-chart-line fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-clock me-2"></i>
+                    Recent Activity
+                </h6>
+            </div>
+            <div class="card-body">
+                <div id="recent-activity">
+                    <div class="text-center">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        Loading activity...
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -157,10 +711,325 @@
 {% block scripts %}
 <script>
 let instances = [];
+let charts = {}; // Store chart instances
 
 function refreshDashboard() {
-    loadInstances();
-    loadHealth();
+    loadDashboardData();
+}
+
+// Initialize charts when page loads
+function initializeCharts() {
+    // Initialize P&L Performance Chart
+    const pnlCtx = document.getElementById('pnl-chart');
+    if (pnlCtx) {
+        charts.pnlChart = new Chart(pnlCtx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'P&L ($)',
+                    data: [],
+                    borderColor: '#38ef7d',
+                    backgroundColor: 'rgba(56, 239, 125, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        labels: {
+                            color: '#ffffff'
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: {
+                            unit: 'hour'
+                        },
+                        ticks: {
+                            color: '#ffffff'
+                        },
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        }
+                    },
+                    y: {
+                        ticks: {
+                            color: '#ffffff',
+                            callback: function(value) {
+                                return '$' + value.toFixed(2);
+                            }
+                        },
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        }
+                    }
+                },
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                }
+            }
+        });
+    }
+
+    // Initialize Strategy Distribution Chart
+    const strategyCtx = document.getElementById('strategy-distribution-chart');
+    if (strategyCtx) {
+        charts.strategyChart = new Chart(strategyCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Combo', 'Loop', 'DCA Futures', 'Bear DCA', 'AI Assistant'],
+                datasets: [{
+                    data: [0, 0, 0, 0, 0],
+                    backgroundColor: [
+                        '#667eea',
+                        '#764ba2', 
+                        '#38ef7d',
+                        '#fc466b',
+                        '#fdbb2d'
+                    ],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: '#ffffff',
+                            padding: 15,
+                            usePointStyle: true
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Initialize mini charts for metric cards
+    initializeMiniCharts();
+}
+
+function initializeMiniCharts() {
+    // Bot count mini chart
+    const botsCtx = document.getElementById('bots-mini-chart');
+    if (botsCtx) {
+        charts.botsMiniChart = new Chart(botsCtx, {
+            type: 'line',
+            data: {
+                labels: Array.from({length: 24}, (_, i) => i),
+                datasets: [{
+                    data: Array.from({length: 24}, () => Math.floor(Math.random() * 10) + 5),
+                    borderColor: '#ffffff',
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    x: { display: false },
+                    y: { display: false }
+                },
+                elements: {
+                    point: { radius: 0 }
+                }
+            }
+        });
+    }
+
+    // P&L mini chart
+    const pnlMiniCtx = document.getElementById('pnl-mini-chart');
+    if (pnlMiniCtx) {
+        charts.pnlMiniChart = new Chart(pnlMiniCtx, {
+            type: 'line',
+            data: {
+                labels: Array.from({length: 24}, (_, i) => i),
+                datasets: [{
+                    data: Array.from({length: 24}, () => Math.random() * 1000 + 500),
+                    borderColor: '#ffffff',
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    x: { display: false },
+                    y: { display: false }
+                }
+            }
+        });
+    }
+}
+
+// Update chart data
+function updateChartData(chartName, newData) {
+    if (charts[chartName]) {
+        const chart = charts[chartName];
+        
+        if (chartName === 'pnlChart') {
+            chart.data.labels = newData.labels || [];
+            chart.data.datasets[0].data = newData.data || [];
+        } else if (chartName === 'strategyChart') {
+            chart.data.datasets[0].data = newData.data || [0, 0, 0, 0, 0];
+        }
+        
+        chart.update('none'); // Update without animation for better performance
+    }
+}
+
+// Load dashboard data based on active tab
+async function loadDashboardData() {
+    try {
+        const token = localStorage.getItem('access_token');
+        if (!token) {
+            window.location.href = '/login';
+            return;
+        }
+
+        // Get active tab
+        const activeTab = document.querySelector('.nav-pills .nav-link.active');
+        const tabId = activeTab ? activeTab.getAttribute('data-bs-target').replace('#', '') : 'trading-bots';
+        
+        await loadTabData(tabId);
+    } catch (error) {
+        console.error('Error loading dashboard data:', error);
+    }
+}
+
+// Load data for specific tab
+async function loadTabData(tabId) {
+    const token = localStorage.getItem('access_token');
+    const headers = { 'Authorization': `Bearer ${token}` };
+
+    try {
+        switch(tabId) {
+            case 'trading-bots':
+                await loadTradingBotsData(headers);
+                break;
+            case 'dex-arbitrage':
+                await loadDEXArbitrageData(headers);
+                break;
+            case 'validators':
+                await loadValidatorNodesData(headers);
+                break;
+            case 'overview':
+                await loadSystemOverviewData(headers);
+                break;
+        }
+    } catch (error) {
+        if (error.status === 401) {
+            localStorage.removeItem('access_token');
+            window.location.href = '/login';
+        } else {
+            console.error(`Error loading ${tabId} data:`, error);
+        }
+    }
+}
+
+// Load trading bots data
+async function loadTradingBotsData(headers) {
+    try {
+        const [botsResponse, instancesResponse] = await Promise.all([
+            fetch('/api/dashboard/trading-bots', { headers }),
+            fetch('/api/instances', { headers })
+        ]);
+
+        if (botsResponse.ok && instancesResponse.ok) {
+            const botsData = await botsResponse.json();
+            const instances = await instancesResponse.json();
+            
+            updateTradingBotsStats(botsData);
+            updateInstancesTable(instances);
+            
+            // Update charts with new data
+            if (botsData.pnl_history) {
+                updateChartData('pnlChart', {
+                    labels: botsData.pnl_history.map(item => new Date(item.timestamp)),
+                    data: botsData.pnl_history.map(item => item.pnl)
+                });
+            }
+            
+            if (botsData.strategy_distribution) {
+                updateChartData('strategyChart', {
+                    data: Object.values(botsData.strategy_distribution)
+                });
+            }
+        }
+    } catch (error) {
+        console.error('Error loading trading bots data:', error);
+    }
+}
+
+// Load DEX arbitrage data
+async function loadDEXArbitrageData(headers) {
+    try {
+        const response = await fetch('/api/dashboard/dex-arbitrage', { headers });
+        if (response.ok) {
+            const data = await response.json();
+            updateDEXArbitrageStats(data);
+        }
+    } catch (error) {
+        console.error('Error loading DEX arbitrage data:', error);
+    }
+}
+
+// Load validator nodes data
+async function loadValidatorNodesData(headers) {
+    try {
+        const response = await fetch('/api/dashboard/validators', { headers });
+        if (response.ok) {
+            const data = await response.json();
+            updateValidatorNodesStats(data);
+        }
+    } catch (error) {
+        console.error('Error loading validator nodes data:', error);
+    }
+}
+
+// Load system overview data
+async function loadSystemOverviewData(headers) {
+    try {
+        const [overviewResponse, activityResponse] = await Promise.all([
+            fetch('/api/dashboard/overview', { headers }),
+            fetch('/api/dashboard/activity', { headers })
+        ]);
+
+        if (overviewResponse.ok && activityResponse.ok) {
+            const overviewData = await overviewResponse.json();
+            const activityData = await activityResponse.json();
+            
+            updateSystemOverviewStats(overviewData);
+            updateRecentActivity(activityData);
+        }
+    } catch (error) {
+        console.error('Error loading system overview data:', error);
+    }
 }
 
 function loadHealth() {
@@ -238,6 +1107,83 @@ function loadInstances() {
                 </tr>
             `;
         });
+}
+
+// Update trading bots statistics
+function updateTradingBotsStats(data) {
+    document.getElementById('total-instances').textContent = data.total_instances || 0;
+    document.getElementById('active-instances').textContent = data.active_instances || 0;
+    document.getElementById('error-instances').textContent = data.error_instances || 0;
+    document.getElementById('total-pnl').textContent = `$${(data.total_pnl || 0).toFixed(2)}`;
+}
+
+// Update DEX arbitrage statistics
+function updateDEXArbitrageStats(data) {
+    document.getElementById('active-arbitrage').textContent = data.active_arbitrage || 0;
+    document.getElementById('opportunities').textContent = data.opportunities || 0;
+    document.getElementById('trading-pairs').textContent = data.trading_pairs || 0;
+    document.getElementById('arbitrage-pnl').textContent = `$${(data.arbitrage_pnl || 0).toFixed(2)}`;
+}
+
+// Update validator nodes statistics
+function updateValidatorNodesStats(data) {
+    document.getElementById('ton-validators').textContent = data.ton_validators || 0;
+    document.getElementById('solana-alpha').textContent = data.solana_alpha || 0;
+    document.getElementById('ethereum-epsilon').textContent = data.ethereum_epsilon || 0;
+    document.getElementById('validator-rewards').textContent = `$${(data.validator_rewards || 0).toFixed(2)}`;
+}
+
+// Update system overview statistics
+function updateSystemOverviewStats(data) {
+    const healthElement = document.getElementById('system-health');
+    const connectionsElement = document.getElementById('api-connections');
+    const usersElement = document.getElementById('active-users');
+    const pnlElement = document.getElementById('system-total-pnl');
+    
+    if (healthElement) {
+        healthElement.textContent = data.system_health || 'unknown';
+        healthElement.className = data.system_health === 'healthy' ? 'h5 mb-0 font-weight-bold text-success' : 'h5 mb-0 font-weight-bold text-warning';
+    }
+    if (connectionsElement) connectionsElement.textContent = data.api_connections || 0;
+    if (usersElement) usersElement.textContent = data.active_users || 0;
+    if (pnlElement) pnlElement.textContent = `$${(data.total_pnl || 0).toFixed(2)}`;
+}
+
+// Update recent activity
+function updateRecentActivity(activities) {
+    const activityContainer = document.getElementById('recent-activity');
+    if (!activityContainer) return;
+    
+    if (!activities || activities.length === 0) {
+        activityContainer.innerHTML = '<p class="text-muted">No recent activity</p>';
+        return;
+    }
+
+    const activityHTML = activities.map(activity => `
+        <div class="activity-item mb-2 p-2 border-start border-3 ${getSeverityClass(activity.severity)}">
+            <div class="d-flex justify-content-between">
+                <span class="fw-medium">${activity.message}</span>
+                <small class="text-muted">${formatTimestamp(activity.timestamp)}</small>
+            </div>
+            <small class="text-muted">${activity.type.toUpperCase()}</small>
+        </div>
+    `).join('');
+
+    activityContainer.innerHTML = activityHTML;
+}
+
+// Helper functions
+function getSeverityClass(severity) {
+    switch(severity) {
+        case 'error': return 'border-danger';
+        case 'warning': return 'border-warning';
+        case 'info': return 'border-info';
+        default: return 'border-secondary';
+    }
+}
+
+function formatTimestamp(timestamp) {
+    return new Date(timestamp).toLocaleString();
 }
 
 function updateStats() {
@@ -388,8 +1334,207 @@ document.addEventListener('DOMContentLoaded', function() {
         refreshDashboard(); // Try anyway
     });
     
-    // Auto-refresh every 30 seconds
+    // Add tab change event listeners
+    const tabButtons = document.querySelectorAll('.nav-pills .nav-link');
+    tabButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            setTimeout(() => {
+                refreshDashboard();
+            }, 100); // Small delay to ensure tab is active
+        });
+    });
+    
+    // Initialize WebSocket connection for real-time updates
+    initializeWebSocket();
+    
+    // Auto-refresh every 30 seconds as fallback
     setInterval(refreshDashboard, 30000);
+});
+
+// WebSocket connection management
+let websocket = null;
+let reconnectAttempts = 0;
+const maxReconnectAttempts = 5;
+let reconnectInterval = null;
+
+function initializeWebSocket() {
+    const token = localStorage.getItem('access_token');
+    if (!token) return;
+
+    // Get user ID from token (decode JWT payload)
+    try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const userId = payload.user_id;
+        
+        if (!userId) {
+            console.error('User ID not found in token payload');
+            return;
+        }
+        
+        connectWebSocket(userId);
+    } catch (error) {
+        console.error('Error parsing token for WebSocket:', error);
+    }
+}
+
+function connectWebSocket(userId) {
+    try {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/ws/${userId}`;
+        
+        websocket = new WebSocket(wsUrl);
+        
+        websocket.onopen = function(event) {
+            console.log('WebSocket connected for real-time updates');
+            reconnectAttempts = 0;
+            updateConnectionStatus(true);
+            
+            // Clear any existing reconnect interval
+            if (reconnectInterval) {
+                clearInterval(reconnectInterval);
+                reconnectInterval = null;
+            }
+        };
+        
+        websocket.onmessage = function(event) {
+            try {
+                const data = JSON.parse(event.data);
+                handleWebSocketMessage(data);
+            } catch (error) {
+                console.error('Error parsing WebSocket message:', error);
+            }
+        };
+        
+        websocket.onclose = function(event) {
+            console.log('WebSocket disconnected:', event.code, event.reason);
+            updateConnectionStatus(false);
+            
+            // Attempt to reconnect if not intentionally closed
+            if (event.code !== 1000 && reconnectAttempts < maxReconnectAttempts) {
+                attemptReconnect(userId);
+            }
+        };
+        
+        websocket.onerror = function(error) {
+            console.error('WebSocket error:', error);
+            updateConnectionStatus(false);
+        };
+        
+    } catch (error) {
+        console.error('Error creating WebSocket connection:', error);
+        updateConnectionStatus(false);
+    }
+}
+
+function attemptReconnect(userId) {
+    reconnectAttempts++;
+    const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000); // Exponential backoff, max 30s
+    
+    console.log(`Attempting to reconnect WebSocket (${reconnectAttempts}/${maxReconnectAttempts}) in ${delay}ms`);
+    
+    reconnectInterval = setTimeout(() => {
+        connectWebSocket(userId);
+    }, delay);
+}
+
+function handleWebSocketMessage(data) {
+    switch(data.type) {
+        case 'connection':
+            console.log('WebSocket connection confirmed:', data.message);
+            break;
+            
+        case 'dashboard_update':
+            // Update dashboard with real-time data
+            updateDashboardFromWebSocket(data.data);
+            break;
+            
+        case 'broadcast':
+            // Handle system broadcasts
+            showNotification(data.message, 'info');
+            break;
+            
+        default:
+            console.log('Unknown WebSocket message type:', data.type);
+    }
+}
+
+function updateDashboardFromWebSocket(data) {
+    // Get current active tab
+    const activeTab = document.querySelector('.nav-pills .nav-link.active');
+    const tabId = activeTab ? activeTab.getAttribute('data-bs-target').replace('#', '') : 'trading-bots';
+    
+    // Update data based on active tab
+    switch(tabId) {
+        case 'trading-bots':
+            if (data.trading_bots) {
+                updateTradingBotsStats(data.trading_bots);
+            }
+            break;
+        case 'dex-arbitrage':
+            if (data.dex_arbitrage) {
+                updateDEXArbitrageStats(data.dex_arbitrage);
+            }
+            break;
+        case 'validators':
+            if (data.validators) {
+                updateValidatorNodesStats(data.validators);
+            }
+            break;
+        case 'overview':
+            if (data.system_overview) {
+                updateSystemOverviewStats(data.system_overview);
+            }
+            if (data.recent_activity) {
+                updateRecentActivity(data.recent_activity);
+            }
+            break;
+    }
+    
+    // Update last updated timestamp
+    const lastUpdated = document.getElementById('last-updated');
+    if (lastUpdated) {
+        lastUpdated.textContent = `Last updated: ${new Date().toLocaleTimeString()}`;
+    }
+}
+
+function updateConnectionStatus(connected) {
+    const statusElement = document.getElementById('connection-status');
+    if (statusElement) {
+        if (connected) {
+            statusElement.innerHTML = '<i class="fas fa-circle text-success"></i> Live';
+            statusElement.className = 'badge bg-success';
+        } else {
+            statusElement.innerHTML = '<i class="fas fa-circle text-danger"></i> Disconnected';
+            statusElement.className = 'badge bg-danger';
+        }
+    }
+}
+
+function showNotification(message, type = 'info') {
+    // Create a simple notification (you could enhance this with a proper notification library)
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; max-width: 300px;';
+    notification.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.parentNode.removeChild(notification);
+        }
+    }, 5000);
+}
+
+// Close WebSocket when page unloads
+window.addEventListener('beforeunload', function() {
+    if (websocket) {
+        websocket.close(1000, 'Page unloading');
+    }
 });
 </script>
 {% endblock %}
