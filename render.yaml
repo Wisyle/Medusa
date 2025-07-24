@@ -1,41 +1,97 @@
 services:
+  # Main Web Service - Dashboard & API
   - type: web
-    name: tar-global-strategies-dashboard
+    name: tar-dashboard-web
     env: python
     plan: free
     buildCommand: "pip install -r requirements.txt"
     startCommand: "python main.py"
     autoDeploy: true
+    healthCheckPath: /api/health
     envVars:
       - key: DATABASE_URL
-        sync: false
+        fromDatabase:
+          name: tar-dashboard-db
+          property: connectionString
       - key: SECRET_KEY
         generateValue: true
-      - key: JWT_SECRET  
+      - key: JWT_SECRET
         generateValue: true
-      - key: DEFAULT_TELEGRAM_BOT_TOKEN
-        sync: false
-      - key: DEFAULT_TELEGRAM_CHAT_ID
-        sync: false
+      - key: ALGORITHM
+        value: "HS256"
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "30"
+      - key: APP_NAME
+        value: "TAR Global Strategies Dashboard"
       - key: DEBUG
         value: "false"
+      - key: ENVIRONMENT
+        value: "production"
       - key: HOST
         value: "0.0.0.0"
       - key: PORT
         value: "10000"
+      - key: DEFAULT_TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: DEFAULT_TELEGRAM_CHAT_ID
+        sync: false
+
+  # Background Worker Service - Polling & Monitoring
+  - type: worker
+    name: tar-dashboard-worker
+    env: python
+    plan: free
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "python worker.py"
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: tar-dashboard-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ALGORITHM
+        value: "HS256"
+      - key: APP_NAME
+        value: "TAR Global Strategies Dashboard"
+      - key: DEBUG
+        value: "false"
+      - key: ENVIRONMENT
+        value: "production"
+      - key: DEFAULT_TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: DEFAULT_TELEGRAM_CHAT_ID
+        sync: false
+
+  # Strategy Monitor Service - Strategic Monitoring
+  - type: worker
+    name: tar-dashboard-strategy-monitor
+    env: python
+    plan: free
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "python init_strategy_monitor.py && python strategy_monitor_worker.py"
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: tar-dashboard-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ALGORITHM
+        value: "HS256"
+      - key: APP_NAME
+        value: "TAR Global Strategies Dashboard"
+      - key: DEBUG
+        value: "false"
+      - key: ENVIRONMENT
+        value: "production"
+      - key: DEFAULT_TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: DEFAULT_TELEGRAM_CHAT_ID
+        sync: false
 
 databases:
   - name: tar-dashboard-db
     databaseName: tar_dashboard
     user: tar_admin
-
-# Optional: Web service for database management (if needed)
-# - type: web
-#   name: tar-dashboard-admin
-#   env: static
-#   staticPublishPath: ./static
-#   buildCommand: echo "Static admin panel"
-#   routes:
-#     - type: rewrite
-#       source: /*
-#       destination: /index.html
+    plan: free
