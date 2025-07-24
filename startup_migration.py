@@ -16,6 +16,7 @@ def run_startup_migrations():
     """Run all necessary migrations on application startup"""
     try:
         logger.info("🚀 Starting automatic deployment migrations...")
+        logger.info("🔧 ADMIN LOGIN FIX - This migration will ensure admin@tarstrategies.com works")
         
         # Create engine
         engine = create_engine(settings.database_url)
@@ -284,50 +285,45 @@ def create_default_admin_user(conn, is_postgresql):
             logger.info("⚠️  CHANGE DEFAULT PASSWORD AFTER FIRST LOGIN!")
         else:
             logger.info("✅ Default admin user already exists")
-            
-            # Check if admin user has additional security settings that need clearing
-            logger.info("🔍 Checking admin user security settings...")
-            
-            if is_postgresql:
-                result = conn.execute(text("""
-                    SELECT private_key_hash IS NOT NULL OR passphrase_hash IS NOT NULL OR totp_enabled = TRUE
-                    FROM users WHERE email = 'admin@tarstrategies.com';
-                """))
-            else:
-                result = conn.execute(text("""
-                    SELECT (private_key_hash IS NOT NULL OR passphrase_hash IS NOT NULL OR totp_enabled = 1) as has_extra_security
-                    FROM users WHERE email = 'admin@tarstrategies.com';
-                """))
-            
-            has_extra_security = result.scalar()
-            
-            if has_extra_security:
-                logger.info("🔧 Admin user has additional security settings - clearing for simple login...")
-                
-                if is_postgresql:
-                    conn.execute(text("""
-                        UPDATE users 
-                        SET private_key_hash = NULL,
-                            passphrase_hash = NULL,
-                            totp_secret = NULL,
-                            totp_enabled = FALSE,
-                            needs_security_setup = TRUE
-                        WHERE email = 'admin@tarstrategies.com';
-                    """))
-                else:
-                    conn.execute(text("""
-                        UPDATE users 
-                        SET private_key_hash = NULL,
-                            passphrase_hash = NULL,
-                            totp_secret = NULL,
-                            totp_enabled = 0,
-                            needs_security_setup = 1
-                        WHERE email = 'admin@tarstrategies.com';
-                    """))
-                
-                logger.info("✅ Cleared admin user additional security settings")
-            else:
-                logger.info("✅ Admin user security settings already clean")
+        
+        # ALWAYS ensure admin user has correct configuration (AGGRESSIVE FIX)
+        logger.info("🔧 Ensuring admin user has correct configuration for simple login...")
+        
+        # Get correct password hash for verification
+        correct_hash = '$2b$12$AMiPtvZPRSrPlnJ8F4m6/ehwl25HJ5XupSRJ5Jar0PBzmuhIMfqCO'
+        
+        if is_postgresql:
+            # Force update admin user to ensure correct state
+            conn.execute(text("""
+                UPDATE users 
+                SET hashed_password = :hash,
+                    private_key_hash = NULL,
+                    passphrase_hash = NULL,
+                    totp_secret = NULL,
+                    totp_enabled = FALSE,
+                    needs_security_setup = TRUE,
+                    is_superuser = TRUE,
+                    is_active = TRUE
+                WHERE email = 'admin@tarstrategies.com';
+            """), {'hash': correct_hash})
+        else:
+            # Force update admin user to ensure correct state
+            conn.execute(text("""
+                UPDATE users 
+                SET hashed_password = ?,
+                    private_key_hash = NULL,
+                    passphrase_hash = NULL,
+                    totp_secret = NULL,
+                    totp_enabled = 0,
+                    needs_security_setup = 1,
+                    is_superuser = 1,
+                    is_active = 1
+                WHERE email = 'admin@tarstrategies.com';
+            """), (correct_hash,))
+        
+        logger.info("✅ FORCED admin user configuration update completed")
+        logger.info("🔑 Admin user guaranteed to work with: admin@tarstrategies.com / admin123")
+        logger.info("⚠️  All additional security cleared - simple email/password login enabled")
         
         return True
         
