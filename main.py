@@ -37,6 +37,12 @@ app.add_middleware(
 # Add API Library routes
 add_api_library_routes(app)
 
+from dex_arbitrage_routes import router as dex_arbitrage_router
+app.include_router(dex_arbitrage_router)
+
+from validator_node_routes import router as validator_node_router
+app.include_router(validator_node_router)
+
 templates = Jinja2Templates(directory="templates")
 
 if os.path.exists("static"):
@@ -1022,6 +1028,22 @@ async def get_strategy_monitors(db: Session = Depends(get_db)):
         })
     
     return result
+
+@app.get("/dex-arbitrage", response_class=HTMLResponse)
+async def dex_arbitrage_page(request: Request, current_user: User = Depends(get_current_active_user)):
+    """DEX arbitrage monitoring page"""
+    return templates.TemplateResponse("dex_arbitrage.html", {
+        "request": request,
+        "user": current_user
+    })
+
+@app.get("/validators", response_class=HTMLResponse)
+async def validators_page(request: Request, current_user: User = Depends(get_current_active_user)):
+    """Validator nodes monitoring page"""
+    return templates.TemplateResponse("validators.html", {
+        "request": request,
+        "user": current_user
+    })
 
 if __name__ == "__main__":
     uvicorn.run(

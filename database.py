@@ -144,4 +144,6 @@ def init_db():
     # Import all models to ensure they're registered
     from strategy_monitor_model import StrategyMonitor
     from api_library_model import ApiCredential
+    from dex_arbitrage_model import DEXArbitrageInstance, DEXOpportunity
+    from validator_node_model import ValidatorNode, ValidatorReward
     Base.metadata.create_all(bind=engine)
