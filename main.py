@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, Request, Form, status
+from fastapi import FastAPI, Depends, HTTPException, Request, Form, status, WebSocket, WebSocketDisconnect, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 import os
@@ -7,6 +7,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 from typing import List, Optional
 import asyncio
+import json
 import multiprocessing
 from datetime import datetime, timedelta
 import uvicorn
@@ -18,13 +19,58 @@ from config import settings
 from api_library_routes import add_api_library_routes
 from auth import (
     authenticate_user, create_access_token, create_refresh_token, verify_refresh_token,
-    get_current_active_user, create_user, generate_totp_secret, generate_totp_qr_code,
+    get_current_active_user, get_current_user_html, create_user, generate_totp_secret, generate_totp_qr_code,
     UserCreate, UserLogin, UserResponse, Token, RefreshTokenRequest, get_current_user
 )
 from strategy_monitor_model import StrategyMonitor
 from strategic_monitors import strategy_monitor
 
-app = FastAPI(title="TGL MEDUSA - Crypto Bot Monitor", version="2.0.0")
+app = FastAPI(title="TAR Global Strategies - Unified Command Hub", version="2.0.0")
+
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: List[WebSocket] = []
+        self.user_connections: dict = {}  # user_id -> websocket mapping
+
+    async def connect(self, websocket: WebSocket, user_id: int = None):
+        await websocket.accept()
+        self.active_connections.append(websocket)
+        if user_id:
+            self.user_connections[user_id] = websocket
+        print(f"WebSocket connected. Total connections: {len(self.active_connections)}")
+
+    def disconnect(self, websocket: WebSocket, user_id: int = None):
+        if websocket in self.active_connections:
+            self.active_connections.remove(websocket)
+        if user_id and user_id in self.user_connections:
+            del self.user_connections[user_id]
+        print(f"WebSocket disconnected. Total connections: {len(self.active_connections)}")
+
+    async def send_personal_message(self, message: str, websocket: WebSocket):
+        try:
+            await websocket.send_text(message)
+        except Exception as e:
+            print(f"Error sending personal message: {e}")
+            self.disconnect(websocket)
+
+    async def send_to_user(self, message: str, user_id: int):
+        if user_id in self.user_connections:
+            websocket = self.user_connections[user_id]
+            await self.send_personal_message(message, websocket)
+
+    async def broadcast(self, message: str):
+        disconnected = []
+        for connection in self.active_connections:
+            try:
+                await connection.send_text(message)
+            except Exception as e:
+                print(f"Error broadcasting to connection: {e}")
+                disconnected.append(connection)
+        
+        for conn in disconnected:
+            self.disconnect(conn)
+
+manager = ConnectionManager()
 
 # Add CORS middleware
 app.add_middleware(
@@ -52,7 +98,7 @@ if os.path.exists("static"):
 active_processes = {}
 
 @app.post("/auth/login", response_model=Token)
-async def login(user_login: UserLogin, db: Session = Depends(get_db)):
+async def login(user_login: UserLogin, response: Response, db: Session = Depends(get_db)):
     """Login with email, password, and optional TOTP, private key, and passphrase"""
     user = authenticate_user(
         db, 
@@ -62,7 +108,14 @@ async def login(user_login: UserLogin, db: Session = Depends(get_db)):
         user_login.private_key,
         user_login.passphrase
     )
-    if not user:
+    
+    if user == "private_key_required":
+        raise HTTPException(status_code=400, detail="Private key required for admin access")
+    elif user == "passphrase_required":
+        raise HTTPException(status_code=400, detail="Passphrase required for admin access")
+    elif user == "totp_required":
+        raise HTTPException(status_code=400, detail="TOTP code required")
+    elif not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
     access_token = create_access_token(data={
@@ -75,6 +128,24 @@ async def login(user_login: UserLogin, db: Session = Depends(get_db)):
         "is_superuser": user.is_superuser,
         "user_id": user.id
     })
+    
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        secure=False,  # Set to True in production with HTTPS
+        samesite="lax",
+        max_age=settings.access_token_expire_minutes * 60
+    )
+    response.set_cookie(
+        key="refresh_token", 
+        value=refresh_token,
+        httponly=True,
+        secure=False,  # Set to True in production with HTTPS
+        samesite="lax",
+        max_age=7 * 24 * 60 * 60  # 7 days
+    )
+    
     return {"access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer"}
 
 @app.post("/auth/refresh", response_model=Token)
@@ -217,14 +288,90 @@ async def get_validators_summary(current_user: dict = Depends(get_current_user))
     return strategy_monitor.get_validator_nodes_summary()
 
 @app.get("/api/dashboard/overview")
-async def get_system_overview(current_user: dict = Depends(get_current_user)):
-    """Get system overview for dashboard"""
-    return strategy_monitor.get_system_overview()
+async def get_dashboard_overview(current_user: dict = Depends(get_current_user)):
+    """Get complete dashboard overview data"""
+    return {
+        "trading_bots": strategy_monitor.get_trading_bots_summary(),
+        "dex_arbitrage": strategy_monitor.get_dex_arbitrage_summary(),
+        "validators": strategy_monitor.get_validator_nodes_summary(),
+        "system_overview": strategy_monitor.get_system_overview()
+    }
 
 @app.get("/api/dashboard/activity")
 async def get_recent_activity(current_user: dict = Depends(get_current_user)):
     """Get recent activity for dashboard"""
     return strategy_monitor.get_recent_activity()
+
+@app.websocket("/ws/{user_id}")
+async def websocket_endpoint(websocket: WebSocket, user_id: int, db: Session = Depends(get_db)):
+    """WebSocket endpoint for real-time dashboard updates"""
+    try:
+        user = db.query(User).filter(User.id == user_id, User.is_active == True).first()
+        if not user:
+            await websocket.close(code=4001, reason="User not found or inactive")
+            return
+
+        await manager.connect(websocket, user_id)
+        
+        await manager.send_personal_message(json.dumps({
+            "type": "connection",
+            "status": "connected",
+            "message": "Real-time updates connected",
+            "timestamp": datetime.utcnow().isoformat()
+        }), websocket)
+
+        await stream_dashboard_data(websocket, user_id, db)
+        
+    except WebSocketDisconnect:
+        manager.disconnect(websocket, user_id)
+        print(f"User {user_id} disconnected from WebSocket")
+    except Exception as e:
+        print(f"WebSocket error for user {user_id}: {e}")
+        manager.disconnect(websocket, user_id)
+
+async def stream_dashboard_data(websocket: WebSocket, user_id: int, db: Session):
+    """Stream real-time dashboard data to connected client"""
+    try:
+        while True:
+            from strategic_monitors import strategy_monitor
+            
+            update_data = {
+                "type": "dashboard_update",
+                "timestamp": datetime.utcnow().isoformat(),
+                "data": {
+                    "trading_bots": strategy_monitor.get_trading_bots_summary(),
+                    "dex_arbitrage": strategy_monitor.get_dex_arbitrage_summary(),
+                    "validators": strategy_monitor.get_validator_nodes_summary(),
+                    "system_overview": strategy_monitor.get_system_overview(),
+                    "recent_activity": strategy_monitor.get_recent_activity(limit=5)
+                }
+            }
+            
+            await manager.send_personal_message(json.dumps(update_data), websocket)
+            
+            await asyncio.sleep(10)
+            
+    except WebSocketDisconnect:
+        manager.disconnect(websocket, user_id)
+    except Exception as e:
+        print(f"Error in data streaming for user {user_id}: {e}")
+        manager.disconnect(websocket, user_id)
+
+@app.post("/api/broadcast")
+async def broadcast_message(message: dict, current_user: User = Depends(get_current_active_user)):
+    """Broadcast message to all connected WebSocket clients (admin only)"""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    broadcast_data = {
+        "type": "broadcast",
+        "message": message.get("message", ""),
+        "timestamp": datetime.utcnow().isoformat(),
+        "from": "system"
+    }
+    
+    await manager.broadcast(json.dumps(broadcast_data))
+    return {"status": "Message broadcasted", "connections": len(manager.active_connections)}
 
 @app.get("/api/instances")
 async def get_instances(db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
@@ -576,34 +723,34 @@ async def setup_2fa_page(request: Request):
     return templates.TemplateResponse("setup_2fa.html", {"request": request})
 
 @app.get("/", response_class=HTMLResponse)
-async def dashboard(request: Request):
+async def dashboard(request: Request, current_user: User = Depends(get_current_user_html)):
     """Main dashboard"""
-    return templates.TemplateResponse("dashboard.html", {"request": request})
+    return templates.TemplateResponse("dashboard.html", {"request": request, "user": current_user})
 
 @app.get("/instances", response_class=HTMLResponse)
-async def instances_page(request: Request):
+async def instances_page(request: Request, current_user: User = Depends(get_current_user_html)):
     """Instances management page"""
-    return templates.TemplateResponse("instances.html", {"request": request})
+    return templates.TemplateResponse("instances.html", {"request": request, "user": current_user})
 
 @app.get("/instances/new", response_class=HTMLResponse)
-async def new_instance_page(request: Request):
+async def new_instance_page(request: Request, current_user: User = Depends(get_current_user_html)):
     """New instance form"""
-    return templates.TemplateResponse("new_instance.html", {"request": request})
+    return templates.TemplateResponse("new_instance.html", {"request": request, "user": current_user})
 
 @app.get("/instances/{instance_id}", response_class=HTMLResponse)
-async def instance_detail(request: Request, instance_id: int):
+async def instance_detail(request: Request, instance_id: int, current_user: User = Depends(get_current_user_html)):
     """Instance detail page"""
-    return templates.TemplateResponse("instance_detail.html", {"request": request, "instance_id": instance_id})
+    return templates.TemplateResponse("instance_detail.html", {"request": request, "instance_id": instance_id, "user": current_user})
 
 @app.get("/instances/{instance_id}/edit", response_class=HTMLResponse)
-async def edit_instance_page(request: Request, instance_id: int):
+async def edit_instance_page(request: Request, instance_id: int, current_user: User = Depends(get_current_user_html)):
     """Edit instance form"""
-    return templates.TemplateResponse("edit_instance.html", {"request": request, "instance_id": instance_id})
+    return templates.TemplateResponse("edit_instance.html", {"request": request, "instance_id": instance_id, "user": current_user})
 
 @app.get("/account", response_class=HTMLResponse)
-async def account_page(request: Request):
+async def account_page(request: Request, current_user: User = Depends(get_current_user_html)):
     """Account settings page"""
-    return templates.TemplateResponse("account.html", {"request": request})
+    return templates.TemplateResponse("account.html", {"request": request, "user": current_user})
 
 # Account Settings API Routes
 @app.get("/api/user/profile")
@@ -755,9 +902,9 @@ async def disable_2fa(
         return {"error": str(e)}
 
 @app.get("/system-logs", response_class=HTMLResponse)
-async def system_logs_page(request: Request):
+async def system_logs_page(request: Request, current_user: User = Depends(get_current_user_html)):
     """System logs dashboard"""
-    return templates.TemplateResponse("system_logs.html", {"request": request})
+    return templates.TemplateResponse("system_logs.html", {"request": request, "user": current_user})
 
 @app.get("/api/system-logs")
 async def get_system_logs(
@@ -903,9 +1050,9 @@ async def monitor_instances():
 # Strategy Monitor Routes
 
 @app.get("/strategy-monitors", response_class=HTMLResponse)
-async def strategy_monitors_page(request: Request):
+async def strategy_monitors_page(request: Request, current_user: User = Depends(get_current_user_html)):
     """Strategy monitors management page"""
-    return templates.TemplateResponse("strategy_monitors.html", {"request": request})
+    return templates.TemplateResponse("strategy_monitors.html", {"request": request, "user": current_user})
 
 @app.post("/strategy-monitors")
 async def create_strategy_monitor(
@@ -1083,20 +1230,22 @@ async def get_strategy_monitors(db: Session = Depends(get_db)):
     return result
 
 @app.get("/dex-arbitrage", response_class=HTMLResponse)
-async def dex_arbitrage_page(request: Request):
+async def dex_arbitrage_page(request: Request, current_user: User = Depends(get_current_user_html)):
     """DEX arbitrage monitoring page"""
-    return templates.TemplateResponse("dex_arbitrage.html", {"request": request})
+    return templates.TemplateResponse("dex_arbitrage.html", {"request": request, "user": current_user})
 
 @app.get("/validators", response_class=HTMLResponse)
-async def validators_page(request: Request):
+async def validators_page(request: Request, current_user: User = Depends(get_current_user_html)):
     """Validator nodes monitoring page"""
-    return templates.TemplateResponse("validators.html", {"request": request})
+    return templates.TemplateResponse("validators.html", {"request": request, "user": current_user})
 
 
 @app.get("/admin/users", response_class=HTMLResponse)
-async def admin_users_page(request: Request):
+async def admin_users_page(request: Request, current_user: User = Depends(get_current_user_html)):
     """Admin user management page - only accessible to superusers"""
-    return templates.TemplateResponse("admin_users.html", {"request": request})
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    return templates.TemplateResponse("admin_users.html", {"request": request, "user": current_user})
 
 @app.get("/api/admin/users")
 async def get_all_users(current_user: User = Depends(get_current_active_user), db: Session = Depends(get_db)):

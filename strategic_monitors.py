@@ -18,8 +18,8 @@ class StrategyMonitorAggregator:
         """Get aggregated summary of all trading bot instances"""
         try:
             total_instances = self.db.query(BotInstance).count()
-            active_instances = self.db.query(BotInstance).filter(BotInstance.status == 'active').count()
-            error_instances = self.db.query(BotInstance).filter(BotInstance.status == 'error').count()
+            active_instances = self.db.query(BotInstance).filter(BotInstance.is_active == True).count()
+            error_instances = self.db.query(BotInstance).filter(BotInstance.last_error.isnot(None)).count()
             
             total_pnl = 0.0
             
@@ -140,11 +140,12 @@ class StrategyMonitorAggregator:
             ).limit(limit//3).all()
             
             for bot in recent_bots:
+                status = 'active' if bot.is_active else 'inactive'
                 activities.append({
                     'type': 'bot',
-                    'message': f"Bot {bot.name} status: {bot.status}",
+                    'message': f"Bot {bot.name} status: {status}",
                     'timestamp': bot.updated_at.isoformat(),
-                    'severity': 'info' if bot.status == 'active' else 'warning'
+                    'severity': 'info' if bot.is_active else 'warning'
                 })
             
             activities.append({

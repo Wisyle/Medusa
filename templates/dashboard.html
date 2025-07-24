@@ -2,6 +2,178 @@
 
 {% block title %}Dashboard - TAR Global Strategies{% endblock %}
 
+{% block extra_head %}
+<!-- Chart.js for interactive charts -->
+<script src="https://unpkg.com/chart.js@4.4.0/dist/chart.min.js"></script>
+
+<!-- Custom dashboard styles -->
+<style>
+.chart-container {
+    position: relative;
+    height: 300px;
+    margin-bottom: 20px;
+}
+
+.metric-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    border-radius: 15px;
+    color: white;
+    transition: all 0.3s ease;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+}
+
+.metric-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+}
+
+.metric-card.positive {
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+}
+
+.metric-card.negative {
+    background: linear-gradient(135deg, #fc466b 0%, #3f5efb 100%);
+}
+
+.metric-card.warning {
+    background: linear-gradient(135deg, #fdbb2d 0%, #22c1c3 100%);
+}
+
+.performance-indicator {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 8px;
+    border-radius: 20px;
+    font-size: 0.85em;
+    font-weight: 600;
+}
+
+.performance-indicator.up {
+    background: rgba(56, 239, 125, 0.2);
+    color: #38ef7d;
+}
+
+.performance-indicator.down {
+    background: rgba(252, 70, 107, 0.2);
+    color: #fc466b;
+}
+
+.performance-indicator.neutral {
+    background: rgba(108, 117, 125, 0.2);
+    color: #6c757d;
+}
+
+.mini-chart {
+    height: 60px;
+    margin-top: 10px;
+}
+
+.status-badge {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.8em;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status-badge.online {
+    background: rgba(56, 239, 125, 0.2);
+    color: #38ef7d;
+    border: 1px solid #38ef7d;
+}
+
+.status-badge.offline {
+    background: rgba(252, 70, 107, 0.2);
+    color: #fc466b;
+    border: 1px solid #fc466b;
+}
+
+.status-badge.warning {
+    background: rgba(253, 187, 45, 0.2);
+    color: #fdbb2d;
+    border: 1px solid #fdbb2d;
+}
+
+.data-table {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.data-table th {
+    background: rgba(0, 0, 0, 0.1);
+    border: none;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.85em;
+    letter-spacing: 0.5px;
+}
+
+.data-table td {
+    border: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.activity-item {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 8px;
+    border-left: 4px solid #667eea;
+    transition: all 0.3s ease;
+}
+
+.activity-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateX(5px);
+}
+
+.activity-item.success {
+    border-left-color: #38ef7d;
+}
+
+.activity-item.error {
+    border-left-color: #fc466b;
+}
+
+.activity-item.warning {
+    border-left-color: #fdbb2d;
+}
+
+@media (max-width: 768px) {
+    .chart-container {
+        height: 250px;
+    }
+    
+    .metric-card {
+        margin-bottom: 15px;
+    }
+    
+    .nav-pills .nav-link {
+        font-size: 0.9em;
+        padding: 8px 12px;
+    }
+}
+
+@media (max-width: 576px) {
+    .chart-container {
+        height: 200px;
+    }
+    
+    .nav-pills .nav-link {
+        font-size: 0.8em;
+        padding: 6px 8px;
+    }
+    
+    .nav-pills .nav-link i {
+        display: none;
+    }
+}
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
     <div>
@@ -12,11 +184,17 @@
         <p class="text-muted mb-0">Unified Command Hub</p>
     </div>
     <div class="btn-toolbar mb-2 mb-md-0">
-        <div class="btn-group me-2">
-            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="refreshDashboard()">
-                <i class="fas fa-sync-alt"></i>
-                Refresh
-            </button>
+        <div class="d-flex align-items-center gap-3">
+            <span id="connection-status" class="badge bg-secondary">
+                <i class="fas fa-circle text-muted"></i> Connecting...
+            </span>
+            <span id="last-updated" class="text-muted small"></span>
+            <div class="btn-group">
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="refreshDashboard()">
+                    <i class="fas fa-sync-alt"></i>
+                    Refresh
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -65,6 +243,9 @@
                                 </div>
                                 <div class="h5 mb-0 font-weight-bold text-gray-800" id="total-instances">
                                     <i class="fas fa-spinner fa-spin"></i>
+                                </div>
+                                <div class="mini-chart mt-2">
+                                    <canvas id="bots-mini-chart"></canvas>
                                 </div>
                             </div>
                             <div class="col-auto">
@@ -126,10 +307,52 @@
                                 <div class="h5 mb-0 font-weight-bold text-gray-800" id="total-pnl">
                                     <i class="fas fa-spinner fa-spin"></i>
                                 </div>
+                                <div class="mini-chart mt-2">
+                                    <canvas id="pnl-mini-chart"></canvas>
+                                </div>
                             </div>
                             <div class="col-auto">
                                 <i class="fas fa-chart-line fa-2x text-gray-300"></i>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Performance Charts -->
+        <div class="row mb-4">
+            <div class="col-lg-8 mb-3">
+                <div class="card shadow">
+                    <div class="card-header d-flex justify-content-between align-items-center py-3">
+                        <h6 class="m-0 font-weight-bold text-primary">
+                            <i class="fas fa-chart-area me-2"></i>
+                            P&L Performance
+                        </h6>
+                        <div class="btn-group btn-group-sm">
+                            <button type="button" class="btn btn-outline-primary active" data-period="24h">24H</button>
+                            <button type="button" class="btn btn-outline-primary" data-period="7d">7D</button>
+                            <button type="button" class="btn btn-outline-primary" data-period="30d">30D</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="pnl-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4 mb-3">
+                <div class="card shadow">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold text-primary">
+                            <i class="fas fa-chart-pie me-2"></i>
+                            Strategy Distribution
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="strategy-distribution-chart"></canvas>
                         </div>
                     </div>
                 </div>
@@ -488,9 +711,196 @@
 {% block scripts %}
 <script>
 let instances = [];
+let charts = {}; // Store chart instances
 
 function refreshDashboard() {
     loadDashboardData();
+}
+
+// Initialize charts when page loads
+function initializeCharts() {
+    // Initialize P&L Performance Chart
+    const pnlCtx = document.getElementById('pnl-chart');
+    if (pnlCtx) {
+        charts.pnlChart = new Chart(pnlCtx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'P&L ($)',
+                    data: [],
+                    borderColor: '#38ef7d',
+                    backgroundColor: 'rgba(56, 239, 125, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        labels: {
+                            color: '#ffffff'
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: {
+                            unit: 'hour'
+                        },
+                        ticks: {
+                            color: '#ffffff'
+                        },
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        }
+                    },
+                    y: {
+                        ticks: {
+                            color: '#ffffff',
+                            callback: function(value) {
+                                return '$' + value.toFixed(2);
+                            }
+                        },
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        }
+                    }
+                },
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                }
+            }
+        });
+    }
+
+    // Initialize Strategy Distribution Chart
+    const strategyCtx = document.getElementById('strategy-distribution-chart');
+    if (strategyCtx) {
+        charts.strategyChart = new Chart(strategyCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Combo', 'Loop', 'DCA Futures', 'Bear DCA', 'AI Assistant'],
+                datasets: [{
+                    data: [0, 0, 0, 0, 0],
+                    backgroundColor: [
+                        '#667eea',
+                        '#764ba2', 
+                        '#38ef7d',
+                        '#fc466b',
+                        '#fdbb2d'
+                    ],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: '#ffffff',
+                            padding: 15,
+                            usePointStyle: true
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Initialize mini charts for metric cards
+    initializeMiniCharts();
+}
+
+function initializeMiniCharts() {
+    // Bot count mini chart
+    const botsCtx = document.getElementById('bots-mini-chart');
+    if (botsCtx) {
+        charts.botsMiniChart = new Chart(botsCtx, {
+            type: 'line',
+            data: {
+                labels: Array.from({length: 24}, (_, i) => i),
+                datasets: [{
+                    data: Array.from({length: 24}, () => Math.floor(Math.random() * 10) + 5),
+                    borderColor: '#ffffff',
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    x: { display: false },
+                    y: { display: false }
+                },
+                elements: {
+                    point: { radius: 0 }
+                }
+            }
+        });
+    }
+
+    // P&L mini chart
+    const pnlMiniCtx = document.getElementById('pnl-mini-chart');
+    if (pnlMiniCtx) {
+        charts.pnlMiniChart = new Chart(pnlMiniCtx, {
+            type: 'line',
+            data: {
+                labels: Array.from({length: 24}, (_, i) => i),
+                datasets: [{
+                    data: Array.from({length: 24}, () => Math.random() * 1000 + 500),
+                    borderColor: '#ffffff',
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    x: { display: false },
+                    y: { display: false }
+                }
+            }
+        });
+    }
+}
+
+// Update chart data
+function updateChartData(chartName, newData) {
+    if (charts[chartName]) {
+        const chart = charts[chartName];
+        
+        if (chartName === 'pnlChart') {
+            chart.data.labels = newData.labels || [];
+            chart.data.datasets[0].data = newData.data || [];
+        } else if (chartName === 'strategyChart') {
+            chart.data.datasets[0].data = newData.data || [0, 0, 0, 0, 0];
+        }
+        
+        chart.update('none'); // Update without animation for better performance
+    }
 }
 
 // Load dashboard data based on active tab
@@ -556,6 +966,20 @@ async function loadTradingBotsData(headers) {
             
             updateTradingBotsStats(botsData);
             updateInstancesTable(instances);
+            
+            // Update charts with new data
+            if (botsData.pnl_history) {
+                updateChartData('pnlChart', {
+                    labels: botsData.pnl_history.map(item => new Date(item.timestamp)),
+                    data: botsData.pnl_history.map(item => item.pnl)
+                });
+            }
+            
+            if (botsData.strategy_distribution) {
+                updateChartData('strategyChart', {
+                    data: Object.values(botsData.strategy_distribution)
+                });
+            }
         }
     } catch (error) {
         console.error('Error loading trading bots data:', error);
@@ -920,8 +1344,197 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // Auto-refresh every 30 seconds
+    // Initialize WebSocket connection for real-time updates
+    initializeWebSocket();
+    
+    // Auto-refresh every 30 seconds as fallback
     setInterval(refreshDashboard, 30000);
+});
+
+// WebSocket connection management
+let websocket = null;
+let reconnectAttempts = 0;
+const maxReconnectAttempts = 5;
+let reconnectInterval = null;
+
+function initializeWebSocket() {
+    const token = localStorage.getItem('access_token');
+    if (!token) return;
+
+    // Get user ID from token (decode JWT payload)
+    try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const userId = payload.user_id;
+        
+        if (!userId) {
+            console.error('User ID not found in token payload');
+            return;
+        }
+        
+        connectWebSocket(userId);
+    } catch (error) {
+        console.error('Error parsing token for WebSocket:', error);
+    }
+}
+
+function connectWebSocket(userId) {
+    try {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/ws/${userId}`;
+        
+        websocket = new WebSocket(wsUrl);
+        
+        websocket.onopen = function(event) {
+            console.log('WebSocket connected for real-time updates');
+            reconnectAttempts = 0;
+            updateConnectionStatus(true);
+            
+            // Clear any existing reconnect interval
+            if (reconnectInterval) {
+                clearInterval(reconnectInterval);
+                reconnectInterval = null;
+            }
+        };
+        
+        websocket.onmessage = function(event) {
+            try {
+                const data = JSON.parse(event.data);
+                handleWebSocketMessage(data);
+            } catch (error) {
+                console.error('Error parsing WebSocket message:', error);
+            }
+        };
+        
+        websocket.onclose = function(event) {
+            console.log('WebSocket disconnected:', event.code, event.reason);
+            updateConnectionStatus(false);
+            
+            // Attempt to reconnect if not intentionally closed
+            if (event.code !== 1000 && reconnectAttempts < maxReconnectAttempts) {
+                attemptReconnect(userId);
+            }
+        };
+        
+        websocket.onerror = function(error) {
+            console.error('WebSocket error:', error);
+            updateConnectionStatus(false);
+        };
+        
+    } catch (error) {
+        console.error('Error creating WebSocket connection:', error);
+        updateConnectionStatus(false);
+    }
+}
+
+function attemptReconnect(userId) {
+    reconnectAttempts++;
+    const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000); // Exponential backoff, max 30s
+    
+    console.log(`Attempting to reconnect WebSocket (${reconnectAttempts}/${maxReconnectAttempts}) in ${delay}ms`);
+    
+    reconnectInterval = setTimeout(() => {
+        connectWebSocket(userId);
+    }, delay);
+}
+
+function handleWebSocketMessage(data) {
+    switch(data.type) {
+        case 'connection':
+            console.log('WebSocket connection confirmed:', data.message);
+            break;
+            
+        case 'dashboard_update':
+            // Update dashboard with real-time data
+            updateDashboardFromWebSocket(data.data);
+            break;
+            
+        case 'broadcast':
+            // Handle system broadcasts
+            showNotification(data.message, 'info');
+            break;
+            
+        default:
+            console.log('Unknown WebSocket message type:', data.type);
+    }
+}
+
+function updateDashboardFromWebSocket(data) {
+    // Get current active tab
+    const activeTab = document.querySelector('.nav-pills .nav-link.active');
+    const tabId = activeTab ? activeTab.getAttribute('data-bs-target').replace('#', '') : 'trading-bots';
+    
+    // Update data based on active tab
+    switch(tabId) {
+        case 'trading-bots':
+            if (data.trading_bots) {
+                updateTradingBotsStats(data.trading_bots);
+            }
+            break;
+        case 'dex-arbitrage':
+            if (data.dex_arbitrage) {
+                updateDEXArbitrageStats(data.dex_arbitrage);
+            }
+            break;
+        case 'validators':
+            if (data.validators) {
+                updateValidatorNodesStats(data.validators);
+            }
+            break;
+        case 'overview':
+            if (data.system_overview) {
+                updateSystemOverviewStats(data.system_overview);
+            }
+            if (data.recent_activity) {
+                updateRecentActivity(data.recent_activity);
+            }
+            break;
+    }
+    
+    // Update last updated timestamp
+    const lastUpdated = document.getElementById('last-updated');
+    if (lastUpdated) {
+        lastUpdated.textContent = `Last updated: ${new Date().toLocaleTimeString()}`;
+    }
+}
+
+function updateConnectionStatus(connected) {
+    const statusElement = document.getElementById('connection-status');
+    if (statusElement) {
+        if (connected) {
+            statusElement.innerHTML = '<i class="fas fa-circle text-success"></i> Live';
+            statusElement.className = 'badge bg-success';
+        } else {
+            statusElement.innerHTML = '<i class="fas fa-circle text-danger"></i> Disconnected';
+            statusElement.className = 'badge bg-danger';
+        }
+    }
+}
+
+function showNotification(message, type = 'info') {
+    // Create a simple notification (you could enhance this with a proper notification library)
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; max-width: 300px;';
+    notification.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.parentNode.removeChild(notification);
+        }
+    }, 5000);
+}
+
+// Close WebSocket when page unloads
+window.addEventListener('beforeunload', function() {
+    if (websocket) {
+        websocket.close(1000, 'Page unloading');
+    }
 });
 </script>
 {% endblock %}

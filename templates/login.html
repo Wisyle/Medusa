@@ -41,7 +41,7 @@
                                    placeholder="6-digit code" maxlength="6">
                         </div>
                         
-                        <div class="mb-3" id="admin_security_fields" style="display: none;">
+                        <div class="mb-3" id="admin_security_fields" style="display: block;">
                             <div class="alert alert-info">
                                 <i class="fas fa-shield-alt"></i>
                                 <strong>Admin Security Required</strong>
@@ -181,7 +181,14 @@
 }
 </style>
 <script>
-document.getElementById('loginForm').addEventListener('submit', async function(e) {
+document.addEventListener('DOMContentLoaded', function() {
+    const loginForm = document.getElementById('loginForm');
+    if (!loginForm) {
+        console.error('Login form not found!');
+        return;
+    }
+    
+    loginForm.addEventListener('submit', async function(e) {
     e.preventDefault();
     
     const formData = new FormData(this);
@@ -193,7 +200,12 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
         passphrase: formData.get('passphrase') || null
     };
     
+    console.log('Form data being sent:', loginData);
+    console.log('Private key field value:', document.getElementById('private_key').value);
+    console.log('Passphrase field value:', document.getElementById('passphrase').value);
+    
     try {
+        console.log('Sending login request...');
         const response = await fetch('/auth/login', {
             method: 'POST',
             headers: {
@@ -202,13 +214,22 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
             body: JSON.stringify(loginData)
         });
         
+        console.log('Response status:', response.status);
+        console.log('Response ok:', response.ok);
+        
         if (response.ok) {
             const data = await response.json();
+            console.log('Login successful! Response data:', data);
+            console.log('Setting tokens in localStorage...');
             localStorage.setItem('access_token', data.access_token);
             localStorage.setItem('refresh_token', data.refresh_token);
+            console.log('Tokens stored. Access token:', localStorage.getItem('access_token'));
+            console.log('Redirecting to dashboard...');
             window.location.href = '/';
         } else {
+            console.log('Login failed with status:', response.status);
             const error = await response.json();
+            console.log('Error response:', error);
             const errorMessage = error.detail;
             
             // Show admin security fields if required
@@ -220,9 +241,11 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
             document.getElementById('error-alert').style.display = 'block';
         }
     } catch (error) {
+        console.log('Network error during login:', error);
         document.getElementById('error-message').textContent = 'Network error. Please try again.';
         document.getElementById('error-alert').style.display = 'block';
     }
+    });
 });
 </script>
 {% endblock %}
