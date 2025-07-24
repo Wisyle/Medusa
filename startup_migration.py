@@ -267,12 +267,16 @@ def create_default_admin_user(conn, is_postgresql):
                     VALUES ('admin@tarstrategies.com', :password, 'TAR Admin', TRUE, TRUE, TRUE)
                     ON CONFLICT (email) DO UPDATE SET 
                         hashed_password = EXCLUDED.hashed_password,
-                        needs_security_setup = TRUE;
+                        needs_security_setup = TRUE,
+                        private_key_hash = NULL,
+                        passphrase_hash = NULL,
+                        totp_secret = NULL,
+                        totp_enabled = FALSE;
                 """), {'password': default_password_hash})
             else:
                 conn.execute(text("""
-                    INSERT OR REPLACE INTO users (email, hashed_password, full_name, is_superuser, is_active, needs_security_setup) 
-                    VALUES ('admin@tarstrategies.com', ?, 'TAR Admin', 1, 1, 1);
+                    INSERT OR REPLACE INTO users (email, hashed_password, full_name, is_superuser, is_active, needs_security_setup, private_key_hash, passphrase_hash, totp_secret, totp_enabled) 
+                    VALUES ('admin@tarstrategies.com', ?, 'TAR Admin', 1, 1, 1, NULL, NULL, NULL, 0);
                 """), (default_password_hash,))
             
             logger.info("✅ Created default admin user")
@@ -280,6 +284,50 @@ def create_default_admin_user(conn, is_postgresql):
             logger.info("⚠️  CHANGE DEFAULT PASSWORD AFTER FIRST LOGIN!")
         else:
             logger.info("✅ Default admin user already exists")
+            
+            # Check if admin user has additional security settings that need clearing
+            logger.info("🔍 Checking admin user security settings...")
+            
+            if is_postgresql:
+                result = conn.execute(text("""
+                    SELECT private_key_hash IS NOT NULL OR passphrase_hash IS NOT NULL OR totp_enabled = TRUE
+                    FROM users WHERE email = 'admin@tarstrategies.com';
+                """))
+            else:
+                result = conn.execute(text("""
+                    SELECT (private_key_hash IS NOT NULL OR passphrase_hash IS NOT NULL OR totp_enabled = 1) as has_extra_security
+                    FROM users WHERE email = 'admin@tarstrategies.com';
+                """))
+            
+            has_extra_security = result.scalar()
+            
+            if has_extra_security:
+                logger.info("🔧 Admin user has additional security settings - clearing for simple login...")
+                
+                if is_postgresql:
+                    conn.execute(text("""
+                        UPDATE users 
+                        SET private_key_hash = NULL,
+                            passphrase_hash = NULL,
+                            totp_secret = NULL,
+                            totp_enabled = FALSE,
+                            needs_security_setup = TRUE
+                        WHERE email = 'admin@tarstrategies.com';
+                    """))
+                else:
+                    conn.execute(text("""
+                        UPDATE users 
+                        SET private_key_hash = NULL,
+                            passphrase_hash = NULL,
+                            totp_secret = NULL,
+                            totp_enabled = 0,
+                            needs_security_setup = 1
+                        WHERE email = 'admin@tarstrategies.com';
+                    """))
+                
+                logger.info("✅ Cleared admin user additional security settings")
+            else:
+                logger.info("✅ Admin user security settings already clean")
         
         return True
         
