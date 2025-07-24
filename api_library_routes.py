@@ -20,10 +20,11 @@ def add_api_library_routes(app: FastAPI):
     """Add API Library routes to the FastAPI app"""
     
     @app.get("/api-library", response_class=HTMLResponse)
-    async def api_library_page(request: Request):
+    async def api_library_page(request: Request, current_user: User = Depends(get_current_active_user)):
         """API Library management page"""
         return templates.TemplateResponse("api_library.html", {
-            "request": request
+            "request": request,
+            "user": current_user
         })
 
     @app.get("/api/api-credentials")

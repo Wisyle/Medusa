@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, Request, Form
+from fastapi import FastAPI, Depends, HTTPException, Request, Form, status
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 import os
@@ -17,9 +17,9 @@ from polling import run_poller
 from config import settings
 from api_library_routes import add_api_library_routes
 from auth import (
-    authenticate_user, create_access_token, get_current_active_user,
-    create_user, generate_totp_secret, generate_totp_qr_code,
-    UserCreate, UserLogin, UserResponse, Token, get_current_user
+    authenticate_user, create_access_token, create_refresh_token, verify_refresh_token,
+    get_current_active_user, create_user, generate_totp_secret, generate_totp_qr_code,
+    UserCreate, UserLogin, UserResponse, Token, RefreshTokenRequest, get_current_user
 )
 from strategy_monitor_model import StrategyMonitor
 
@@ -58,7 +58,24 @@ async def login(user_login: UserLogin, db: Session = Depends(get_db)):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
     access_token = create_access_token(data={"sub": user.email})
-    return {"access_token": access_token, "token_type": "bearer"}
+    refresh_token = create_refresh_token(data={"sub": user.email})
+    return {"access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer"}
+
+@app.post("/auth/refresh", response_model=Token)
+async def refresh_token(refresh_request: RefreshTokenRequest, db: Session = Depends(get_db)):
+    """Refresh access token using refresh token"""
+    token_data = verify_refresh_token(refresh_request.refresh_token)
+    
+    user = db.query(User).filter(User.email == token_data.email).first()
+    if not user or not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found or inactive"
+        )
+    
+    access_token = create_access_token(data={"sub": user.email})
+    new_refresh_token = create_refresh_token(data={"sub": user.email})
+    return {"access_token": access_token, "refresh_token": new_refresh_token, "token_type": "bearer"}
 
 @app.post("/auth/register", response_model=UserResponse)
 async def register(user_create: UserCreate, db: Session = Depends(get_db)):
@@ -510,34 +527,34 @@ async def setup_2fa_page(request: Request):
     return templates.TemplateResponse("setup_2fa.html", {"request": request})
 
 @app.get("/", response_class=HTMLResponse)
-async def dashboard(request: Request):
+async def dashboard(request: Request, current_user: User = Depends(get_current_active_user)):
     """Main dashboard"""
-    return templates.TemplateResponse("dashboard.html", {"request": request})
+    return templates.TemplateResponse("dashboard.html", {"request": request, "user": current_user})
 
 @app.get("/instances", response_class=HTMLResponse)
-async def instances_page(request: Request):
+async def instances_page(request: Request, current_user: User = Depends(get_current_active_user)):
     """Instances management page"""
-    return templates.TemplateResponse("instances.html", {"request": request})
+    return templates.TemplateResponse("instances.html", {"request": request, "user": current_user})
 
 @app.get("/instances/new", response_class=HTMLResponse)
-async def new_instance_page(request: Request):
+async def new_instance_page(request: Request, current_user: User = Depends(get_current_active_user)):
     """New instance form"""
-    return templates.TemplateResponse("new_instance.html", {"request": request})
+    return templates.TemplateResponse("new_instance.html", {"request": request, "user": current_user})
 
 @app.get("/instances/{instance_id}", response_class=HTMLResponse)
-async def instance_detail(request: Request, instance_id: int):
+async def instance_detail(request: Request, instance_id: int, current_user: User = Depends(get_current_active_user)):
     """Instance detail page"""
-    return templates.TemplateResponse("instance_detail.html", {"request": request, "instance_id": instance_id})
+    return templates.TemplateResponse("instance_detail.html", {"request": request, "instance_id": instance_id, "user": current_user})
 
 @app.get("/instances/{instance_id}/edit", response_class=HTMLResponse)
-async def edit_instance_page(request: Request, instance_id: int):
+async def edit_instance_page(request: Request, instance_id: int, current_user: User = Depends(get_current_active_user)):
     """Edit instance form"""
-    return templates.TemplateResponse("edit_instance.html", {"request": request, "instance_id": instance_id})
+    return templates.TemplateResponse("edit_instance.html", {"request": request, "instance_id": instance_id, "user": current_user})
 
 @app.get("/account", response_class=HTMLResponse)
-async def account_page(request: Request):
-    """Account settings page - authentication handled by JavaScript"""
-    return templates.TemplateResponse("account.html", {"request": request})
+async def account_page(request: Request, current_user: User = Depends(get_current_active_user)):
+    """Account settings page"""
+    return templates.TemplateResponse("account.html", {"request": request, "user": current_user})
 
 # Account Settings API Routes
 @app.get("/api/user/profile")
@@ -689,9 +706,9 @@ async def disable_2fa(
         return {"error": str(e)}
 
 @app.get("/system-logs", response_class=HTMLResponse)
-async def system_logs_page(request: Request):
+async def system_logs_page(request: Request, current_user: User = Depends(get_current_active_user)):
     """System logs dashboard"""
-    return templates.TemplateResponse("system_logs.html", {"request": request})
+    return templates.TemplateResponse("system_logs.html", {"request": request, "user": current_user})
 
 @app.get("/api/system-logs")
 async def get_system_logs(
@@ -837,7 +854,7 @@ async def monitor_instances():
 # Strategy Monitor Routes
 
 @app.get("/strategy-monitors", response_class=HTMLResponse)
-async def strategy_monitors_page(request: Request, db: Session = Depends(get_db)):
+async def strategy_monitors_page(request: Request, current_user: User = Depends(get_current_active_user), db: Session = Depends(get_db)):
     """Strategy monitors management page"""
     monitors = db.query(StrategyMonitor).order_by(StrategyMonitor.strategy_name).all()
     
@@ -851,7 +868,8 @@ async def strategy_monitors_page(request: Request, db: Session = Depends(get_db)
     return templates.TemplateResponse("strategy_monitors.html", {
         "request": request,
         "monitors": monitors,
-        "available_strategies": sorted(all_strategies)
+        "available_strategies": sorted(all_strategies),
+        "user": current_user
     })
 
 @app.post("/strategy-monitors")

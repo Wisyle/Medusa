@@ -226,51 +226,206 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
+        // Token management functions
+        function getStoredTokens() {
+            return {
+                accessToken: localStorage.getItem('access_token'),
+                refreshToken: localStorage.getItem('refresh_token')
+            };
+        }
+        
+        function clearTokens() {
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('refresh_token');
+        }
+        
+        function isTokenExpired(token) {
+            if (!token) return true;
+            
+            try {
+                const payload = JSON.parse(atob(token.split('.')[1]));
+                const expirationTime = payload.exp * 1000;
+                const currentTime = Date.now();
+                
+                return currentTime >= expirationTime;
+            } catch (error) {
+                console.error('Error parsing token:', error);
+                return true;
+            }
+        }
+        
+        function isTokenExpiringSoon(token, minutesThreshold = 5) {
+            if (!token) return true;
+            
+            try {
+                const payload = JSON.parse(atob(token.split('.')[1]));
+                const expirationTime = payload.exp * 1000;
+                const currentTime = Date.now();
+                const thresholdTime = minutesThreshold * 60 * 1000;
+                
+                return (expirationTime - currentTime) < thresholdTime;
+            } catch (error) {
+                console.error('Error parsing token:', error);
+                return true;
+            }
+        }
+        
+        async function refreshAccessToken() {
+            const { refreshToken } = getStoredTokens();
+            
+            if (!refreshToken || isTokenExpired(refreshToken)) {
+                console.log('No valid refresh token available');
+                clearTokens();
+                window.location.href = '/login';
+                return false;
+            }
+            
+            try {
+                const response = await fetch('/auth/refresh', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ refresh_token: refreshToken })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    localStorage.setItem('access_token', data.access_token);
+                    localStorage.setItem('refresh_token', data.refresh_token);
+                    console.log('Token refreshed successfully');
+                    return true;
+                } else {
+                    console.error('Token refresh failed:', response.status);
+                    clearTokens();
+                    window.location.href = '/login';
+                    return false;
+                }
+            } catch (error) {
+                console.error('Token refresh error:', error);
+                clearTokens();
+                window.location.href = '/login';
+                return false;
+            }
+        }
+        
+        async function ensureValidToken() {
+            const { accessToken } = getStoredTokens();
+            
+            if (!accessToken) {
+                return false;
+            }
+            
+            if (isTokenExpired(accessToken)) {
+                console.log('Access token expired, attempting refresh...');
+                return await refreshAccessToken();
+            }
+            
+            if (isTokenExpiringSoon(accessToken)) {
+                console.log('Access token expiring soon, refreshing proactively...');
+                return await refreshAccessToken();
+            }
+            
+            return true;
+        }
+        
         // Check authentication on page load
-        $(document).ready(function() {
-            const token = localStorage.getItem('access_token');
+        $(document).ready(async function() {
+            const { accessToken } = getStoredTokens();
             
             // If no token and not on login/register page, redirect to login
-            if (!token && !window.location.pathname.includes('/login') && !window.location.pathname.includes('/register')) {
+            if (!accessToken && !window.location.pathname.includes('/login') && !window.location.pathname.includes('/register')) {
                 window.location.href = '/login';
                 return;
             }
             
-            // If token exists, add it to all AJAX requests
-            if (token) {
+            // If token exists, ensure it's valid and set up request interceptors
+            if (accessToken) {
+                const tokenValid = await ensureValidToken();
+                if (!tokenValid) {
+                    return; // ensureValidToken will handle redirect
+                }
+                
+                // Set up AJAX requests with token refresh
                 $.ajaxSetup({
-                    beforeSend: function(xhr) {
-                        xhr.setRequestHeader('Authorization', 'Bearer ' + token);
+                    beforeSend: async function(xhr) {
+                        const tokenValid = await ensureValidToken();
+                        if (tokenValid) {
+                            const { accessToken } = getStoredTokens();
+                            xhr.setRequestHeader('Authorization', 'Bearer ' + accessToken);
+                        }
+                    },
+                    error: function(xhr) {
+                        if (xhr.status === 401) {
+                            console.log('Received 401, attempting token refresh...');
+                            refreshAccessToken().then(success => {
+                                if (!success) {
+                                    window.location.href = '/login';
+                                }
+                            });
+                        }
                     }
                 });
                 
-                // Also add it to fetch requests
+                // Enhanced fetch wrapper with token refresh
                 const originalFetch = window.fetch;
-                window.fetch = function(...args) {
+                window.fetch = async function(...args) {
+                    const tokenValid = await ensureValidToken();
+                    if (!tokenValid) {
+                        throw new Error('Authentication failed');
+                    }
+                    
+                    const { accessToken } = getStoredTokens();
+                    
                     if (args[1]) {
                         args[1].headers = args[1].headers || {};
-                        args[1].headers['Authorization'] = 'Bearer ' + token;
+                        args[1].headers['Authorization'] = 'Bearer ' + accessToken;
                     } else {
                         args[1] = {
                             headers: {
-                                'Authorization': 'Bearer ' + token
+                                'Authorization': 'Bearer ' + accessToken
                             }
                         };
                     }
-                    return originalFetch.apply(this, args);
+                    
+                    const response = await originalFetch.apply(this, args);
+                    
+                    // Handle 401 responses by attempting token refresh
+                    if (response.status === 401) {
+                        console.log('Received 401, attempting token refresh...');
+                        const refreshSuccess = await refreshAccessToken();
+                        if (refreshSuccess) {
+                            // Retry the request with new token
+                            const { accessToken: newToken } = getStoredTokens();
+                            args[1].headers['Authorization'] = 'Bearer ' + newToken;
+                            return originalFetch.apply(this, args);
+                        } else {
+                            window.location.href = '/login';
+                            throw new Error('Authentication failed');
+                        }
+                    }
+                    
+                    return response;
                 };
                 
                 // Handle navigation with authentication
-                $('a[href^="/"]').on('click', function(e) {
+                $('a[href^="/"]').on('click', async function(e) {
                     const href = $(this).attr('href');
                     if (href && !href.includes('/login') && !href.includes('/register') && !href.includes('logout')) {
                         e.preventDefault();
+                        
+                        const tokenValid = await ensureValidToken();
+                        if (!tokenValid) {
+                            return;
+                        }
+                        
+                        const { accessToken } = getStoredTokens();
                         
                         // Navigate with auth header
                         fetch(href, {
                             method: 'GET',
                             headers: {
-                                'Authorization': 'Bearer ' + token,
+                                'Authorization': 'Bearer ' + accessToken,
                                 'Accept': 'text/html'
                             }
                         })
@@ -278,10 +433,12 @@
                             if (response.ok) {
                                 window.location.href = href;
                             } else if (response.status === 401) {
-                                localStorage.removeItem('access_token');
+                                console.log('Navigation failed with 401, redirecting to login');
+                                clearTokens();
                                 window.location.href = '/login';
                             } else {
                                 console.error('Navigation failed:', response.status);
+                                window.location.href = href; // Fallback
                             }
                         })
                         .catch(error => {
@@ -290,12 +447,17 @@
                         });
                     }
                 });
+                
+                // Set up periodic token refresh check (every 5 minutes)
+                setInterval(async function() {
+                    await ensureValidToken();
+                }, 5 * 60 * 1000);
             }
             
             // Add logout functionality
             $('.logout-btn').on('click', function(e) {
                 e.preventDefault();
-                localStorage.removeItem('access_token');
+                clearTokens();
                 window.location.href = '/login';
             });
         });

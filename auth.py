@@ -20,10 +20,14 @@ security = HTTPBearer()
 
 class Token(BaseModel):
     access_token: str
+    refresh_token: str
     token_type: str
 
 class TokenData(BaseModel):
     email: Optional[str] = None
+
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str
 
 class UserCreate(BaseModel):
     email: EmailStr
@@ -61,13 +65,24 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(minutes=15)
-    to_encode.update({"exp": expire})
+        expire = datetime.utcnow() + timedelta(minutes=settings.access_token_expire_minutes)
+    to_encode.update({"exp": expire, "type": "access"})
+    encoded_jwt = jwt.encode(to_encode, settings.jwt_secret, algorithm=settings.jwt_algorithm)
+    return encoded_jwt
+
+def create_refresh_token(data: dict, expires_delta: Optional[timedelta] = None):
+    """Create a JWT refresh token."""
+    to_encode = data.copy()
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(days=7)  # 7 days for refresh tokens
+    to_encode.update({"exp": expire, "type": "refresh"})
     encoded_jwt = jwt.encode(to_encode, settings.jwt_secret, algorithm=settings.jwt_algorithm)
     return encoded_jwt
 
 def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    """Verify JWT token."""
+    """Verify JWT access token."""
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -76,12 +91,29 @@ def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
     try:
         payload = jwt.decode(credentials.credentials, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
         email: str = payload.get("sub")
-        if email is None:
+        token_type: str = payload.get("type")
+        if email is None or token_type != "access":
             raise credentials_exception
         token_data = TokenData(email=email)
     except JWTError:
         raise credentials_exception
     return token_data
+
+def verify_refresh_token(refresh_token: str):
+    """Verify JWT refresh token."""
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Invalid refresh token",
+    )
+    try:
+        payload = jwt.decode(refresh_token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
+        email: str = payload.get("sub")
+        token_type: str = payload.get("type")
+        if email is None or token_type != "refresh":
+            raise credentials_exception
+        return TokenData(email=email)
+    except JWTError:
+        raise credentials_exception
 
 def get_current_user(token_data: TokenData = Depends(verify_token), db: Session = Depends(get_db)):
     """Get current authenticated user."""
