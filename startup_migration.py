@@ -264,11 +264,14 @@ def create_default_admin_user(conn, is_postgresql):
             if is_postgresql:
                 conn.execute(text("""
                     INSERT INTO users (email, hashed_password, full_name, is_superuser, is_active, needs_security_setup) 
-                    VALUES ('admin@tarstrategies.com', :password, 'TAR Admin', TRUE, TRUE, TRUE);
+                    VALUES ('admin@tarstrategies.com', :password, 'TAR Admin', TRUE, TRUE, TRUE)
+                    ON CONFLICT (email) DO UPDATE SET 
+                        hashed_password = EXCLUDED.hashed_password,
+                        needs_security_setup = TRUE;
                 """), {'password': default_password_hash})
             else:
                 conn.execute(text("""
-                    INSERT INTO users (email, hashed_password, full_name, is_superuser, is_active, needs_security_setup) 
+                    INSERT OR REPLACE INTO users (email, hashed_password, full_name, is_superuser, is_active, needs_security_setup) 
                     VALUES ('admin@tarstrategies.com', ?, 'TAR Admin', 1, 1, 1);
                 """), (default_password_hash,))
             
