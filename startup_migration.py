@@ -137,6 +137,7 @@ def ensure_users_table(conn, inspector, is_postgresql):
                         totp_enabled BOOLEAN DEFAULT FALSE,
                         private_key_hash VARCHAR(255),
                         passphrase_hash VARCHAR(255),
+                        needs_security_setup INTEGER DEFAULT 0,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     );
@@ -154,6 +155,7 @@ def ensure_users_table(conn, inspector, is_postgresql):
                         totp_enabled INTEGER DEFAULT 0,
                         private_key_hash TEXT,
                         passphrase_hash TEXT,
+                        needs_security_setup INTEGER DEFAULT 0,
                         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
                     );

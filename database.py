@@ -179,6 +179,7 @@ class User(Base):
     totp_enabled = Column(Boolean, default=False)
     private_key_hash = Column(String(255), nullable=True)  # Admin private key hash for enhanced security
     passphrase_hash = Column(String(255), nullable=True)  # Admin passphrase hash for enhanced security
+    needs_security_setup = Column(Boolean, default=False)  # Flag for first-time login users
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     

@@ -56,6 +56,15 @@ class UserResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class SecuritySetup(BaseModel):
+    setup_type: str  # "private_key", "passphrase", "totp", or "complete"
+    private_key: Optional[str] = None
+    passphrase: Optional[str] = None
+    enable_totp: Optional[bool] = False
+
+class AuthMethod(BaseModel):
+    method: str  # "email_password", "email_password_2fa", "private_key_passphrase", "all"
+
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a password against its hash."""
     return pwd_context.verify(plain_password, hashed_password)
@@ -138,27 +147,56 @@ def get_current_active_user(current_user: User = Depends(get_current_user)):
 
 def authenticate_user(db: Session, email: str, password: str, totp_code: Optional[str] = None, 
                      private_key: Optional[str] = None, passphrase: Optional[str] = None):
-    """Authenticate user with email, password, and optional TOTP, private key, and passphrase."""
+    """Authenticate user with flexible security modes."""
     user = db.query(User).filter(User.email == email).first()
     if not user:
         return False
     if not verify_password(password, user.hashed_password):
         return False
     
+    # For superusers, check if additional security is configured
     if user.is_superuser:
-        if user.private_key_hash:
+        # Check if user has any additional security configured
+        has_private_key = user.private_key_hash is not None and user.private_key_hash.strip() != ""
+        has_passphrase = user.passphrase_hash is not None and user.passphrase_hash.strip() != ""
+        has_totp = user.totp_secret is not None and user.totp_enabled
+        
+        # If no additional security is configured, allow first-time login with just email/password
+        if not has_private_key and not has_passphrase and not has_totp:
+            # First time login - mark user as needing security setup
+            user.needs_security_setup = True
+            return user
+        
+        # If additional security is configured, enforce it
+        security_checks_passed = True
+        
+        # Private key authentication
+        if has_private_key:
             if not private_key:
                 return "private_key_required"
             if not verify_password(private_key, user.private_key_hash):
-                return False
+                security_checks_passed = False
         
-        if user.passphrase_hash:
+        # Passphrase authentication
+        if has_passphrase:
             if not passphrase:
                 return "passphrase_required"
             if not verify_password(passphrase, user.passphrase_hash):
-                return False
+                security_checks_passed = False
+        
+        # TOTP authentication
+        if has_totp:
+            if not totp_code:
+                return "totp_required"
+            totp = pyotp.TOTP(user.totp_secret)
+            if not totp.verify(totp_code):
+                security_checks_passed = False
+        
+        if not security_checks_passed:
+            return False
     
-    if user.totp_secret and user.totp_enabled:
+    # For regular users, only check TOTP if enabled
+    elif user.totp_secret and user.totp_enabled:
         if not totp_code:
             return "totp_required"
         totp = pyotp.TOTP(user.totp_secret)
@@ -263,3 +301,67 @@ def create_user(db: Session, user_create: UserCreate):
     db.commit()
     db.refresh(db_user)
     return db_user
+
+def setup_user_security(db: Session, user: User, security_setup: SecuritySetup):
+    """Set up additional security for a user after first login"""
+    try:
+        if security_setup.private_key:
+            user.private_key_hash = get_password_hash(security_setup.private_key)
+        
+        if security_setup.passphrase:
+            user.passphrase_hash = get_password_hash(security_setup.passphrase)
+        
+        if security_setup.enable_totp and not user.totp_secret:
+            user.totp_secret = generate_totp_secret()
+            user.totp_enabled = True
+        
+        # Mark security setup as complete
+        user.needs_security_setup = False
+        
+        db.commit()
+        db.refresh(user)
+        return user
+    except Exception as e:
+        db.rollback()
+        raise e
+
+def get_user_auth_methods(user: User) -> list:
+    """Get available authentication methods for a user"""
+    methods = []
+    
+    has_private_key = user.private_key_hash is not None and user.private_key_hash.strip() != ""
+    has_passphrase = user.passphrase_hash is not None and user.passphrase_hash.strip() != ""
+    has_totp = user.totp_secret is not None and user.totp_enabled
+    
+    # Basic email/password (always available)
+    methods.append({
+        "method": "email_password",
+        "name": "Email & Password",
+        "description": "Basic authentication with email and password"
+    })
+    
+    # Email/password + 2FA
+    if has_totp:
+        methods.append({
+            "method": "email_password_2fa", 
+            "name": "Email, Password & 2FA",
+            "description": "Email, password + Google Authenticator"
+        })
+    
+    # Private key + passphrase
+    if has_private_key and has_passphrase:
+        methods.append({
+            "method": "private_key_passphrase",
+            "name": "Private Key & Passphrase", 
+            "description": "Private key with passphrase authentication"
+        })
+    
+    # All methods combined
+    if has_private_key and has_passphrase and has_totp:
+        methods.append({
+            "method": "all",
+            "name": "Maximum Security",
+            "description": "Email, password, private key, passphrase & 2FA"
+        })
+    
+    return methods

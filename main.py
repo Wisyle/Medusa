@@ -24,7 +24,8 @@ from api_library_routes import add_api_library_routes
 from auth import (
     authenticate_user, create_access_token, create_refresh_token, verify_refresh_token,
     get_current_active_user, get_current_user_html, create_user, generate_totp_secret, generate_totp_qr_code,
-    UserCreate, UserLogin, UserResponse, Token, RefreshTokenRequest, get_current_user
+    UserCreate, UserLogin, UserResponse, Token, RefreshTokenRequest, get_current_user,
+    SecuritySetup, AuthMethod, setup_user_security, get_user_auth_methods
 )
 from strategy_monitor_model import StrategyMonitor
 from strategic_monitors import strategy_monitor
@@ -119,7 +120,7 @@ active_processes = {}
 
 @app.post("/auth/login", response_model=Token)
 async def login(user_login: UserLogin, response: Response, db: Session = Depends(get_db)):
-    """Login with email, password, and optional TOTP, private key, and passphrase"""
+    """Login with flexible authentication modes"""
     user = authenticate_user(
         db, 
         user_login.email, 
@@ -130,18 +131,25 @@ async def login(user_login: UserLogin, response: Response, db: Session = Depends
     )
     
     if user == "private_key_required":
-        raise HTTPException(status_code=400, detail="Private key required for admin access")
+        raise HTTPException(status_code=400, detail="Private key required")
     elif user == "passphrase_required":
-        raise HTTPException(status_code=400, detail="Passphrase required for admin access")
+        raise HTTPException(status_code=400, detail="Passphrase required")
     elif user == "totp_required":
-        raise HTTPException(status_code=400, detail="TOTP code required")
+        raise HTTPException(status_code=400, detail="2FA code required")
     elif not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
+    
+    # Check if user needs security setup (first-time login)
+    additional_data = {}
+    if hasattr(user, 'needs_security_setup') and user.needs_security_setup:
+        additional_data["needs_security_setup"] = True
+        additional_data["is_first_login"] = True
     
     access_token = create_access_token(data={
         "sub": user.email,
         "is_superuser": user.is_superuser,
-        "user_id": user.id
+        "user_id": user.id,
+        **additional_data
     })
     refresh_token = create_refresh_token(data={
         "sub": user.email,
@@ -166,7 +174,12 @@ async def login(user_login: UserLogin, response: Response, db: Session = Depends
         max_age=7 * 24 * 60 * 60  # 7 days
     )
     
-    return {"access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer"}
+    return {
+        "access_token": access_token, 
+        "refresh_token": refresh_token, 
+        "token_type": "bearer",
+        **additional_data
+    }
 
 @app.post("/auth/refresh", response_model=Token)
 async def refresh_token(refresh_request: RefreshTokenRequest, db: Session = Depends(get_db)):
@@ -191,6 +204,60 @@ async def refresh_token(refresh_request: RefreshTokenRequest, db: Session = Depe
         "user_id": user.id
     })
     return {"access_token": access_token, "refresh_token": new_refresh_token, "token_type": "bearer"}
+
+@app.post("/auth/setup-security")
+async def setup_security(
+    security_setup: SecuritySetup, 
+    current_user: User = Depends(get_current_user), 
+    db: Session = Depends(get_db)
+):
+    """Set up additional security after first login"""
+    try:
+        updated_user = setup_user_security(db, current_user, security_setup)
+        
+        # Generate TOTP QR code if TOTP was enabled
+        qr_code = None
+        if security_setup.enable_totp and updated_user.totp_secret:
+            qr_code = generate_totp_qr_code(
+                updated_user.totp_secret, 
+                updated_user.email, 
+                settings.app_name
+            )
+        
+        return {
+            "message": "Security setup completed successfully",
+            "auth_methods": get_user_auth_methods(updated_user),
+            "totp_qr_code": qr_code
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to setup security: {str(e)}")
+
+@app.get("/auth/methods")
+async def get_auth_methods(current_user: User = Depends(get_current_user)):
+    """Get available authentication methods for current user"""
+    return {
+        "methods": get_user_auth_methods(current_user),
+        "needs_setup": getattr(current_user, 'needs_security_setup', False)
+    }
+
+@app.get("/auth/security-status")
+async def get_security_status(current_user: User = Depends(get_current_user)):
+    """Get current user's security configuration status"""
+    has_private_key = current_user.private_key_hash is not None and current_user.private_key_hash.strip() != ""
+    has_passphrase = current_user.passphrase_hash is not None and current_user.passphrase_hash.strip() != ""
+    has_totp = current_user.totp_secret is not None and current_user.totp_enabled
+    
+    return {
+        "email": current_user.email,
+        "is_superuser": current_user.is_superuser,
+        "security_features": {
+            "private_key": has_private_key,
+            "passphrase": has_passphrase,
+            "totp_2fa": has_totp
+        },
+        "needs_security_setup": getattr(current_user, 'needs_security_setup', False),
+        "available_methods": get_user_auth_methods(current_user)
+    }
 
 @app.post("/auth/register", response_model=UserResponse)
 async def register(user_create: UserCreate, db: Session = Depends(get_db)):
@@ -1068,6 +1135,11 @@ async def get_instance_logs(
 async def login_page(request: Request):
     """Login page"""
     return templates.TemplateResponse("login.html", {"request": request})
+
+@app.get("/security-setup", response_class=HTMLResponse)
+async def security_setup_page(request: Request):
+    """Security setup page"""
+    return templates.TemplateResponse("security_setup.html", {"request": request})
 
 @app.get("/register", response_class=HTMLResponse)
 async def register_page(request: Request):

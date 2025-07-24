@@ -35,17 +35,17 @@
                             <input type="password" class="form-control" id="password" name="password" required>
                         </div>
                         
-                        <div class="mb-3">
-                            <label for="totp_code" class="form-label">Google Authenticator Code (if enabled)</label>
+                        <div class="mb-3" id="totp_field" style="display: none;">
+                            <label for="totp_code" class="form-label">2FA Code</label>
                             <input type="text" class="form-control" id="totp_code" name="totp_code" 
                                    placeholder="6-digit code" maxlength="6">
                         </div>
                         
-                        <div class="mb-3" id="admin_security_fields" style="display: block;">
+                        <div class="mb-3" id="admin_security_fields" style="display: none;">
                             <div class="alert alert-info">
                                 <i class="fas fa-shield-alt"></i>
-                                <strong>Admin Security Required</strong>
-                                <p class="mb-0">Additional security layers are required for admin access.</p>
+                                <strong>Additional Security Required</strong>
+                                <p class="mb-0">Enter your private key and/or passphrase for enhanced security.</p>
                             </div>
                             
                             <div class="mb-3">
@@ -189,62 +189,68 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     loginForm.addEventListener('submit', async function(e) {
-    e.preventDefault();
-    
-    const formData = new FormData(this);
-    const loginData = {
-        email: formData.get('email'),
-        password: formData.get('password'),
-        totp_code: formData.get('totp_code') || null,
-        private_key: formData.get('private_key') || null,
-        passphrase: formData.get('passphrase') || null
-    };
-    
-    console.log('Form data being sent:', loginData);
-    console.log('Private key field value:', document.getElementById('private_key').value);
-    console.log('Passphrase field value:', document.getElementById('passphrase').value);
-    
-    try {
-        console.log('Sending login request...');
-        const response = await fetch('/auth/login', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(loginData)
-        });
+        e.preventDefault();
         
-        console.log('Response status:', response.status);
-        console.log('Response ok:', response.ok);
+        const formData = new FormData(this);
+        const loginData = {
+            email: formData.get('email'),
+            password: formData.get('password'),
+            totp_code: formData.get('totp_code') || null,
+            private_key: formData.get('private_key') || null,
+            passphrase: formData.get('passphrase') || null
+        };
         
-        if (response.ok) {
-            const data = await response.json();
-            console.log('Login successful! Response data:', data);
-            console.log('Setting tokens in localStorage...');
-            localStorage.setItem('access_token', data.access_token);
-            localStorage.setItem('refresh_token', data.refresh_token);
-            console.log('Tokens stored. Access token:', localStorage.getItem('access_token'));
-            console.log('Redirecting to dashboard...');
-            window.location.href = '/';
-        } else {
-            console.log('Login failed with status:', response.status);
-            const error = await response.json();
-            console.log('Error response:', error);
-            const errorMessage = error.detail;
+        console.log('Attempting login with email/password...');
+        
+        try {
+            const response = await fetch('/auth/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(loginData)
+            });
             
-            // Show admin security fields if required
-            if (errorMessage.includes('Private key required') || errorMessage.includes('Passphrase required')) {
-                document.getElementById('admin_security_fields').style.display = 'block';
+            console.log('Response status:', response.status);
+            
+            if (response.ok) {
+                const data = await response.json();
+                console.log('Login successful!');
+                
+                // Store tokens
+                localStorage.setItem('access_token', data.access_token);
+                localStorage.setItem('refresh_token', data.refresh_token);
+                
+                // Check if user needs security setup (first-time login)
+                if (data.needs_security_setup) {
+                    console.log('First-time login detected, redirecting to security setup...');
+                    window.location.href = '/security-setup';
+                } else {
+                    console.log('Redirecting to dashboard...');
+                    window.location.href = '/';
+                }
+            } else {
+                const error = await response.json();
+                const errorMessage = error.detail;
+                console.log('Login failed:', errorMessage);
+                
+                // Show specific security fields based on error
+                if (errorMessage.includes('Private key required') || errorMessage.includes('Passphrase required')) {
+                    document.getElementById('admin_security_fields').style.display = 'block';
+                }
+                
+                if (errorMessage.includes('2FA code required')) {
+                    document.getElementById('totp_field').style.display = 'block';
+                }
+                
+                document.getElementById('error-message').textContent = errorMessage;
+                document.getElementById('error-alert').style.display = 'block';
             }
-            
-            document.getElementById('error-message').textContent = errorMessage;
+        } catch (error) {
+            console.error('Network error during login:', error);
+            document.getElementById('error-message').textContent = 'Network error. Please try again.';
             document.getElementById('error-alert').style.display = 'block';
         }
-    } catch (error) {
-        console.log('Network error during login:', error);
-        document.getElementById('error-message').textContent = 'Network error. Please try again.';
-        document.getElementById('error-alert').style.display = 'block';
-    }
     });
 });
 </script>
