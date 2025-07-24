@@ -1,0 +1,3 @@
+[33m6b8b538[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmaster[m[33m, [m[1;31morigin/master[m[33m, [m[1;31morigin/HEAD[m[33m)[m Integrate needs_security_setup fix into startup migrations
+[33m8727626[m Fix missing needs_security_setup column issue
+[33mc7da947[m Implement Lottie animation with GIF fallbacks and fix sidebar visibility
