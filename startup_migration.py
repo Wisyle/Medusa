@@ -259,7 +259,7 @@ def create_default_admin_user(conn, is_postgresql):
             logger.info("➕ Creating default admin user...")
             
             # Default password hash for 'admin123' (change this in production!)
-            default_password_hash = '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LgHGXLGDzQQ5PnW0a'
+            default_password_hash = '$2b$12$AMiPtvZPRSrPlnJ8F4m6/ehwl25HJ5XupSRJ5Jar0PBzmuhIMfqCO'
             
             if is_postgresql:
                 conn.execute(text("""

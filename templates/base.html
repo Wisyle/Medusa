@@ -577,17 +577,105 @@
             return true;
         }
         
+        // Show sidebar only when user is logged in
+        function toggleSidebarVisibility() {
+            const { accessToken } = getStoredTokens();
+            const sidebar = document.getElementById('main-sidebar');
+            const mainContent = document.querySelector('.main-content');
+            const isLoginPage = window.location.pathname.includes('/login') || 
+                               window.location.pathname.includes('/register') ||
+                               window.location.pathname.includes('/security-setup');
+            
+            console.log('toggleSidebarVisibility called', { accessToken: !!accessToken, isLoginPage, pathname: window.location.pathname });
+            
+            // Always hide sidebar on login-related pages OR when no valid token
+            if (isLoginPage || !accessToken) {
+                if (sidebar) {
+                    sidebar.style.display = 'none';
+                }
+                if (mainContent) {
+                    mainContent.classList.remove('col-md-9', 'col-lg-10', 'ms-sm-auto');
+                    mainContent.classList.add('col-12');
+                }
+                return;
+            }
+            
+            // Check if user is actually logged in with valid token
+            const isLoggedIn = accessToken && !isTokenExpired(accessToken);
+            
+            if (isLoggedIn && sidebar && mainContent) {
+                sidebar.style.display = 'block';
+                mainContent.classList.remove('col-12');
+                mainContent.classList.add('col-md-9', 'col-lg-10', 'ms-sm-auto');
+            } else {
+                if (sidebar) {
+                    sidebar.style.display = 'none';
+                }
+                if (mainContent) {
+                    mainContent.classList.remove('col-md-9', 'col-lg-10', 'ms-sm-auto');
+                    mainContent.classList.add('col-12');
+                }
+                // Clear invalid tokens
+                if (accessToken && isTokenExpired(accessToken)) {
+                    clearTokens();
+                }
+            }
+        }
+        
+        // Show/hide admin-only navigation items based on user role
+        function updateAdminNavigation() {
+            const { accessToken } = getStoredTokens();
+            if (accessToken) {
+                try {
+                    const payload = JSON.parse(atob(accessToken.split('.')[1]));
+                    const isSuperuser = payload.is_superuser || false;
+                    
+                    if (isSuperuser) {
+                        $('.admin-only').show();
+                    } else {
+                        $('.admin-only').hide();
+                    }
+                } catch (error) {
+                    console.error('Error parsing token for admin navigation:', error);
+                    $('.admin-only').hide();
+                }
+            } else {
+                $('.admin-only').hide();
+            }
+        }
+        
+        // Get current user info from token
+        function getCurrentUser() {
+            const { accessToken } = getStoredTokens();
+            if (!accessToken) return null;
+            
+            try {
+                const payload = JSON.parse(atob(accessToken.split('.')[1]));
+                return payload;
+            } catch (error) {
+                return null;
+            }
+        }
+        
         // Check authentication on page load
         $(document).ready(async function() {
+            console.log('Document ready - checking authentication');
+            
+            // Always hide sidebar immediately on page load
+            toggleSidebarVisibility();
+            
             const { accessToken } = getStoredTokens();
             const isLoginPage = window.location.pathname.includes('/login') || 
                                window.location.pathname.includes('/register') ||
                                window.location.pathname.includes('/security-setup');
             
-            // Don't redirect if already on login page or if no token (let user access login naturally)
+            console.log('Initial auth check', { hasToken: !!accessToken, isLoginPage });
+            
+            // If no token, ensure sidebar stays hidden and redirect if needed
             if (!accessToken) {
+                toggleSidebarVisibility(); // Ensure sidebar stays hidden
                 if (!isLoginPage) {
-                    // Only redirect after a brief delay to prevent immediate flash
+                    console.log('No token, redirecting to login');
                     setTimeout(() => {
                         window.location.href = '/login';
                     }, 500);
@@ -596,159 +684,133 @@
             }
             
             // If token exists, ensure it's valid and set up request interceptors
-            if (accessToken) {
+            const tokenValid = await ensureValidToken();
+            if (!tokenValid) {
+                console.log('Invalid token, clearing and redirecting');
+                toggleSidebarVisibility(); // Hide sidebar if token invalid
+                clearTokens();
+                if (!isLoginPage) {
+                    setTimeout(() => {
+                        window.location.href = '/login';
+                    }, 500);
+                }
+                return;
+            }
+            
+            console.log('Valid token found, setting up auth');
+            
+            // Set up AJAX requests with token refresh
+            $.ajaxSetup({
+                beforeSend: async function(xhr) {
+                    const tokenValid = await ensureValidToken();
+                    if (tokenValid) {
+                        const { accessToken } = getStoredTokens();
+                        xhr.setRequestHeader('Authorization', 'Bearer ' + accessToken);
+                    }
+                },
+                error: function(xhr) {
+                    if (xhr.status === 401) {
+                        console.log('Received 401, attempting token refresh...');
+                        refreshAccessToken().then(success => {
+                            if (!success) {
+                                window.location.href = '/login';
+                            }
+                        });
+                    }
+                }
+            });
+            
+            // Enhanced fetch wrapper with token refresh
+            const originalFetch = window.fetch;
+            window.fetch = async function(...args) {
                 const tokenValid = await ensureValidToken();
                 if (!tokenValid) {
-                    toggleSidebarVisibility(); // Hide sidebar if token invalid
-                    // Clear invalid tokens and redirect
-                    localStorage.removeItem('accessToken');
-                    localStorage.removeItem('refreshToken');
-                    if (!isLoginPage) {
-                        setTimeout(() => {
-                            window.location.href = '/login';
-                        }, 500);
-                    }
-                    return;
+                    throw new Error('Authentication failed');
                 }
                 
-                // Set up AJAX requests with token refresh
-                $.ajaxSetup({
-                    beforeSend: async function(xhr) {
-                        const tokenValid = await ensureValidToken();
-                        if (tokenValid) {
-                            const { accessToken } = getStoredTokens();
-                            xhr.setRequestHeader('Authorization', 'Bearer ' + accessToken);
-                        }
-                    },
-                    error: function(xhr) {
-                        if (xhr.status === 401) {
-                            console.log('Received 401, attempting token refresh...');
-                            refreshAccessToken().then(success => {
-                                if (!success) {
-                                    window.location.href = '/login';
-                                }
-                            });
-                        }
-                    }
-                });
+                const { accessToken } = getStoredTokens();
                 
-                // Enhanced fetch wrapper with token refresh
-                const originalFetch = window.fetch;
-                window.fetch = async function(...args) {
+                if (args[1]) {
+                    args[1].headers = args[1].headers || {};
+                    args[1].headers['Authorization'] = 'Bearer ' + accessToken;
+                } else {
+                    args[1] = {
+                        headers: {
+                            'Authorization': 'Bearer ' + accessToken
+                        }
+                    };
+                }
+                
+                const response = await originalFetch.apply(this, args);
+                
+                // Handle 401 responses by attempting token refresh
+                if (response.status === 401) {
+                    console.log('Received 401, attempting token refresh...');
+                    const refreshSuccess = await refreshAccessToken();
+                    if (refreshSuccess) {
+                        // Retry the request with new token
+                        const { accessToken: newToken } = getStoredTokens();
+                        args[1].headers['Authorization'] = 'Bearer ' + newToken;
+                        return originalFetch.apply(this, args);
+                    } else {
+                        window.location.href = '/login';
+                        throw new Error('Authentication failed');
+                    }
+                }
+                
+                return response;
+            };
+            
+            // Handle navigation with authentication
+            $('a[href^="/"]').on('click', async function(e) {
+                const href = $(this).attr('href');
+                if (href && !href.includes('/login') && !href.includes('/register') && !href.includes('logout')) {
+                    e.preventDefault();
+                    
                     const tokenValid = await ensureValidToken();
                     if (!tokenValid) {
-                        throw new Error('Authentication failed');
+                        return;
                     }
                     
                     const { accessToken } = getStoredTokens();
                     
-                    if (args[1]) {
-                        args[1].headers = args[1].headers || {};
-                        args[1].headers['Authorization'] = 'Bearer ' + accessToken;
-                    } else {
-                        args[1] = {
-                            headers: {
-                                'Authorization': 'Bearer ' + accessToken
-                            }
-                        };
-                    }
-                    
-                    const response = await originalFetch.apply(this, args);
-                    
-                    // Handle 401 responses by attempting token refresh
-                    if (response.status === 401) {
-                        console.log('Received 401, attempting token refresh...');
-                        const refreshSuccess = await refreshAccessToken();
-                        if (refreshSuccess) {
-                            // Retry the request with new token
-                            const { accessToken: newToken } = getStoredTokens();
-                            args[1].headers['Authorization'] = 'Bearer ' + newToken;
-                            return originalFetch.apply(this, args);
-                        } else {
+                    // Navigate with auth header
+                    fetch(href, {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': 'Bearer ' + accessToken,
+                            'Accept': 'text/html'
+                        }
+                    })
+                    .then(response => {
+                        if (response.ok) {
+                            window.location.href = href;
+                        } else if (response.status === 401) {
+                            console.log('Navigation failed with 401, redirecting to login');
+                            clearTokens();
                             window.location.href = '/login';
-                            throw new Error('Authentication failed');
-                        }
-                    }
-                    
-                    return response;
-                };
-                
-                // Handle navigation with authentication
-                $('a[href^="/"]').on('click', async function(e) {
-                    const href = $(this).attr('href');
-                    if (href && !href.includes('/login') && !href.includes('/register') && !href.includes('logout')) {
-                        e.preventDefault();
-                        
-                        const tokenValid = await ensureValidToken();
-                        if (!tokenValid) {
-                            return;
-                        }
-                        
-                        const { accessToken } = getStoredTokens();
-                        
-                        // Navigate with auth header
-                        fetch(href, {
-                            method: 'GET',
-                            headers: {
-                                'Authorization': 'Bearer ' + accessToken,
-                                'Accept': 'text/html'
-                            }
-                        })
-                        .then(response => {
-                            if (response.ok) {
-                                window.location.href = href;
-                            } else if (response.status === 401) {
-                                console.log('Navigation failed with 401, redirecting to login');
-                                clearTokens();
-                                window.location.href = '/login';
-                            } else {
-                                console.error('Navigation failed:', response.status);
-                                window.location.href = href; // Fallback
-                            }
-                        })
-                        .catch(error => {
-                            console.error('Navigation error:', error);
+                        } else {
+                            console.error('Navigation failed:', response.status);
                             window.location.href = href; // Fallback
-                        });
-                    }
-                });
-                
-                // Set up periodic token refresh check (every 5 minutes)
-                setInterval(async function() {
-                    await ensureValidToken();
-                }, 5 * 60 * 1000);
-                
-                // Show/hide admin-only navigation items based on user role
-                updateAdminNavigation();
-                
-                // Show sidebar after successful authentication
-                toggleSidebarVisibility();
-            } else {
-                // No token, ensure sidebar is hidden
-                toggleSidebarVisibility();
-            }
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Navigation error:', error);
+                        window.location.href = href; // Fallback
+                    });
+                }
+            });
+            
+            // Set up periodic token refresh check (every 5 minutes)
+            setInterval(async function() {
+                await ensureValidToken();
+            }, 5 * 60 * 1000);
             
             // Show/hide admin-only navigation items based on user role
-            function updateAdminNavigation() {
-                const { accessToken } = getStoredTokens();
-                if (accessToken) {
-                    try {
-                        const payload = JSON.parse(atob(accessToken.split('.')[1]));
-                        const isSuperuser = payload.is_superuser || false;
-                        
-                        if (isSuperuser) {
-                            $('.admin-only').show();
-                        } else {
-                            $('.admin-only').hide();
-                        }
-                    } catch (error) {
-                        console.error('Error parsing token for admin navigation:', error);
-                        $('.admin-only').hide();
-                    }
-                } else {
-                    $('.admin-only').hide();
-                }
-            }
+            updateAdminNavigation();
+            
+            // Show sidebar after successful authentication
+            toggleSidebarVisibility();
             
             // Add logout functionality
             $('.logout-btn').on('click', function(e) {
@@ -757,6 +819,15 @@
                 toggleSidebarVisibility(); // Hide sidebar immediately on logout
                 window.location.href = '/login';
             });
+            
+            // Initialize particles and user data (non-auth related)
+            createParticles();
+            
+            // Save username for welcome messages
+            const user = getCurrentUser();
+            if (user && user.full_name) {
+                localStorage.setItem('user_display_name', user.full_name);
+            }
         });
         
         // Global error handler for styled alerts
@@ -808,99 +879,28 @@
                 particlesContainer.appendChild(particle);
             }
         }
-        
-                 // Show sidebar only when user is logged in
-        function toggleSidebarVisibility() {
-            const { accessToken } = getStoredTokens();
-            const sidebar = document.getElementById('main-sidebar');
-            const mainContent = document.querySelector('.main-content');
-            const isLoginPage = window.location.pathname.includes('/login') || 
-                               window.location.pathname.includes('/register') ||
-                               window.location.pathname.includes('/security-setup');
-            
-            // Always hide sidebar on login-related pages OR when no valid token
-            if (isLoginPage || !accessToken) {
-                if (sidebar) {
-                    sidebar.style.display = 'none';
-                }
-                if (mainContent) {
-                    mainContent.classList.remove('col-md-9', 'col-lg-10', 'ms-sm-auto');
-                    mainContent.classList.add('col-12');
-                }
-                return;
-            }
-            
-            // Check if user is actually logged in with valid token
-            const isLoggedIn = accessToken && !isTokenExpired(accessToken);
-            
-            if (isLoggedIn && sidebar && mainContent) {
-                sidebar.style.display = 'block';
-                mainContent.classList.remove('col-12');
-                mainContent.classList.add('col-md-9', 'col-lg-10', 'ms-sm-auto');
-            } else {
-                if (sidebar) {
-                    sidebar.style.display = 'none';
-                }
-                if (mainContent) {
-                    mainContent.classList.remove('col-md-9', 'col-lg-10', 'ms-sm-auto');
-                    mainContent.classList.add('col-12');
-                }
-                // Clear invalid tokens
-                if (accessToken && isTokenExpired(accessToken)) {
-                    localStorage.removeItem('accessToken');
-                    localStorage.removeItem('refreshToken');
-                }
-            }
-        }
-        
-                 // Initialize on DOM ready
-         $(document).ready(function() {
-             createParticles();
-             
-             // Immediately hide sidebar before any async checks
-             toggleSidebarVisibility();
-             
-             // Save username for welcome messages
-             const user = getCurrentUser();
-             if (user && user.full_name) {
-                 localStorage.setItem('user_display_name', user.full_name);
+ 
+         // Lottie error handling
+         function handleLottieError(lottiePlayer, fallbackSrc) {
+             const fallbackImage = lottiePlayer.nextElementSibling; // Get the next sibling (the GIF fallback)
+             if (fallbackImage && fallbackImage.tagName === 'IMG') {
+                 fallbackImage.style.display = 'block';
+                 lottiePlayer.style.display = 'none';
+                 console.warn('Lottie animation failed to load, showing GIF fallback.');
+             } else {
+                 console.error('Lottie player or fallback image not found.');
              }
-         });
-        
-        // Get current user info from token
-        function getCurrentUser() {
-            const { accessToken } = getStoredTokens();
-            if (!accessToken) return null;
-            
-            try {
-                const payload = JSON.parse(atob(accessToken.split('.')[1]));
-                return payload;
-            } catch (error) {
-                return null;
-            }
-        }
-
-        // Lottie error handling
-        function handleLottieError(lottiePlayer, fallbackSrc) {
-            const fallbackImage = lottiePlayer.nextElementSibling; // Get the next sibling (the GIF fallback)
-            if (fallbackImage && fallbackImage.tagName === 'IMG') {
-                fallbackImage.style.display = 'block';
-                lottiePlayer.style.display = 'none';
-                console.warn('Lottie animation failed to load, showing GIF fallback.');
-            } else {
-                console.error('Lottie player or fallback image not found.');
-            }
-        }
-
-        // Lottie load handling
-        function handleLottieLoad(lottiePlayer) {
-            const fallbackImage = lottiePlayer.nextElementSibling; // Get the next sibling (the GIF fallback)
-            if (fallbackImage && fallbackImage.tagName === 'IMG') {
-                fallbackImage.style.display = 'none';
-                lottiePlayer.style.display = 'block';
-            }
-        }
-    </script>
+         }
+ 
+         // Lottie load handling
+         function handleLottieLoad(lottiePlayer) {
+             const fallbackImage = lottiePlayer.nextElementSibling; // Get the next sibling (the GIF fallback)
+             if (fallbackImage && fallbackImage.tagName === 'IMG') {
+                 fallbackImage.style.display = 'none';
+                 lottiePlayer.style.display = 'block';
+             }
+         }
+     </script>
     {% block scripts %}{% endblock %}
 </body>
 </html>
