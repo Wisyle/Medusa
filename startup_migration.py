@@ -263,13 +263,13 @@ def create_default_admin_user(conn, is_postgresql):
             
             if is_postgresql:
                 conn.execute(text("""
-                    INSERT INTO users (email, hashed_password, full_name, is_superuser, is_active) 
-                    VALUES ('admin@tarstrategies.com', :password, 'TAR Admin', TRUE, TRUE);
+                    INSERT INTO users (email, hashed_password, full_name, is_superuser, is_active, needs_security_setup) 
+                    VALUES ('admin@tarstrategies.com', :password, 'TAR Admin', TRUE, TRUE, TRUE);
                 """), {'password': default_password_hash})
             else:
                 conn.execute(text("""
-                    INSERT INTO users (email, hashed_password, full_name, is_superuser, is_active) 
-                    VALUES ('admin@tarstrategies.com', ?, 'TAR Admin', 1, 1);
+                    INSERT INTO users (email, hashed_password, full_name, is_superuser, is_active, needs_security_setup) 
+                    VALUES ('admin@tarstrategies.com', ?, 'TAR Admin', 1, 1, 1);
                 """), (default_password_hash,))
             
             logger.info("✅ Created default admin user")

@@ -138,29 +138,53 @@
             margin-bottom: 20px;
         }
         
-                 .lighthouse-logo-container {
-             position: relative;
-             display: inline-block;
-         }
-         
-         .lighthouse-logo {
-             width: 60px;
-             height: 60px;
-             filter: drop-shadow(0 0 10px var(--glow-blue));
-             transition: transform 0.3s ease;
-         }
-         
-         .lighthouse-logo:hover {
-             transform: scale(1.1);
-         }
-         
-         .gif-fallback {
-             transition: transform 0.3s ease;
-         }
-         
-         .gif-fallback:hover {
-             transform: scale(1.1);
-         }
+        .lighthouse-logo-container {
+            position: relative;
+            display: inline-block;
+            border-radius: 50%;
+            overflow: hidden;
+            background: linear-gradient(135deg, var(--glow-blue) 0%, var(--medium-gray) 100%);
+            padding: 5px;
+            box-shadow: 0 0 20px rgba(64, 150, 255, 0.3);
+        }
+        
+        .lighthouse-logo {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            filter: drop-shadow(0 0 10px var(--glow-blue));
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            display: block;
+        }
+        
+        .lighthouse-logo:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 25px rgba(64, 150, 255, 0.5);
+        }
+        
+        .gif-fallback {
+            border-radius: 50%;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .gif-fallback:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 25px rgba(64, 150, 255, 0.5);
+        }
+        
+        .welcome-logo {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+        }
+        
+        .login-logo {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+        }
         .main-content {
             background: transparent;
             min-height: 100vh;
@@ -556,10 +580,18 @@
         // Check authentication on page load
         $(document).ready(async function() {
             const { accessToken } = getStoredTokens();
+            const isLoginPage = window.location.pathname.includes('/login') || 
+                               window.location.pathname.includes('/register') ||
+                               window.location.pathname.includes('/security-setup');
             
-            // If no token and not on login/register page, redirect to login
-            if (!accessToken && !window.location.pathname.includes('/login') && !window.location.pathname.includes('/register')) {
-                window.location.href = '/login';
+            // Don't redirect if already on login page or if no token (let user access login naturally)
+            if (!accessToken) {
+                if (!isLoginPage) {
+                    // Only redirect after a brief delay to prevent immediate flash
+                    setTimeout(() => {
+                        window.location.href = '/login';
+                    }, 500);
+                }
                 return;
             }
             
@@ -568,7 +600,15 @@
                 const tokenValid = await ensureValidToken();
                 if (!tokenValid) {
                     toggleSidebarVisibility(); // Hide sidebar if token invalid
-                    return; // ensureValidToken will handle redirect
+                    // Clear invalid tokens and redirect
+                    localStorage.removeItem('accessToken');
+                    localStorage.removeItem('refreshToken');
+                    if (!isLoginPage) {
+                        setTimeout(() => {
+                            window.location.href = '/login';
+                        }, 500);
+                    }
+                    return;
                 }
                 
                 // Set up AJAX requests with token refresh
@@ -770,35 +810,48 @@
         }
         
                  // Show sidebar only when user is logged in
-         function toggleSidebarVisibility() {
-             const { accessToken } = getStoredTokens();
-             const sidebar = document.getElementById('main-sidebar');
-             const mainContent = document.querySelector('.main-content');
-             const isLoginPage = window.location.pathname.includes('/login') || 
-                                window.location.pathname.includes('/register') ||
-                                window.location.pathname.includes('/security-setup');
-             
-             // Always hide sidebar on login-related pages
-             if (isLoginPage) {
-                 sidebar.style.display = 'none';
-                 mainContent.classList.remove('col-md-9', 'col-lg-10', 'ms-sm-auto');
-                 mainContent.classList.add('col-12');
-                 return;
-             }
-             
-             // Check if user is actually logged in with valid token
-             const isLoggedIn = accessToken && !isTokenExpired(accessToken);
-             
-             if (isLoggedIn) {
-                 sidebar.style.display = 'block';
-                 mainContent.classList.remove('col-12');
-                 mainContent.classList.add('col-md-9', 'col-lg-10', 'ms-sm-auto');
-             } else {
-                 sidebar.style.display = 'none';
-                 mainContent.classList.remove('col-md-9', 'col-lg-10', 'ms-sm-auto');
-                 mainContent.classList.add('col-12');
-             }
-         }
+        function toggleSidebarVisibility() {
+            const { accessToken } = getStoredTokens();
+            const sidebar = document.getElementById('main-sidebar');
+            const mainContent = document.querySelector('.main-content');
+            const isLoginPage = window.location.pathname.includes('/login') || 
+                               window.location.pathname.includes('/register') ||
+                               window.location.pathname.includes('/security-setup');
+            
+            // Always hide sidebar on login-related pages OR when no valid token
+            if (isLoginPage || !accessToken) {
+                if (sidebar) {
+                    sidebar.style.display = 'none';
+                }
+                if (mainContent) {
+                    mainContent.classList.remove('col-md-9', 'col-lg-10', 'ms-sm-auto');
+                    mainContent.classList.add('col-12');
+                }
+                return;
+            }
+            
+            // Check if user is actually logged in with valid token
+            const isLoggedIn = accessToken && !isTokenExpired(accessToken);
+            
+            if (isLoggedIn && sidebar && mainContent) {
+                sidebar.style.display = 'block';
+                mainContent.classList.remove('col-12');
+                mainContent.classList.add('col-md-9', 'col-lg-10', 'ms-sm-auto');
+            } else {
+                if (sidebar) {
+                    sidebar.style.display = 'none';
+                }
+                if (mainContent) {
+                    mainContent.classList.remove('col-md-9', 'col-lg-10', 'ms-sm-auto');
+                    mainContent.classList.add('col-12');
+                }
+                // Clear invalid tokens
+                if (accessToken && isTokenExpired(accessToken)) {
+                    localStorage.removeItem('accessToken');
+                    localStorage.removeItem('refreshToken');
+                }
+            }
+        }
         
                  // Initialize on DOM ready
          $(document).ready(function() {
