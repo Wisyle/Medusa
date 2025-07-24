@@ -24,7 +24,9 @@ def add_api_library_routes(app: FastAPI):
         """API Library management page"""
         return templates.TemplateResponse("api_library.html", {
             "request": request
-        })    @app.get("/api/api-credentials")
+        })
+
+    @app.get("/api/api-credentials")
     async def get_api_credentials(db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
         """Get all API credentials (masked for security)"""
         credentials = db.query(ApiCredential).order_by(ApiCredential.name).all()
