@@ -339,6 +339,17 @@
         .text-white-50 {
             color: rgba(255, 255, 255, 0.5) !important;
         }
+        
+        .tar-logo-inline {
+            filter: brightness(1.1) contrast(1.1);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .tar-logo-inline:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(255, 215, 0, 0.2);
+        }
     </style>
 </head>
 <body>
@@ -370,10 +381,12 @@
                                 style="width: 60px; height: 60px; filter: drop-shadow(0 0 10px var(--glow-blue)); display: none;" 
                                 class="lighthouse-logo gif-fallback">
                         </div>
-                        <h4 class="text-white mt-3" style="font-family: 'Orbitron', monospace; font-weight: 700;">
-                            LIGHTHOUSE
-                        </h4>
-                        <small class="text-white-50">TAR Global Strategies</small>
+                        <div class="brand-title-container mt-3">
+                                                         <h4 class="text-white mb-1" style="font-family: 'Orbitron', monospace; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                                 <img src="/static/tar-logo.jpg" alt="TAR Logo" class="tar-logo-inline" style="width: 20px; height: 20px; border-radius: 3px;">
+                                 TAR <span style="font-style: italic; color: var(--accent-gold); font-weight: 400;">for</span> GLOBAL STRATEGIES
+                             </h4>
+                        </div>
                     </div>
                     
                     <ul class="nav flex-column">
