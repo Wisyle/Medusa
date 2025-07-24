@@ -1,105 +1,41 @@
 services:
   - type: web
-    name: medusa-web
+    name: tar-global-strategies-dashboard
     env: python
-    region: singapore
-    buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT --workers 1
+    plan: free
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "python main.py"
+    autoDeploy: true
     envVars:
       - key: DATABASE_URL
-        fromDatabase:
-          name: medusa-db
-          property: connectionString
+        sync: false
       - key: SECRET_KEY
         generateValue: true
-      - key: ALGORITHM
-        value: HS256
-      - key: ACCESS_TOKEN_EXPIRE_MINUTES
-        value: 30
-      - key: APP_NAME
-        value: TGL MEDUSA
-      - key: DEBUG
-        value: false
-      - key: ENVIRONMENT
-        value: production
-      - key: RENDER_REGION
-        value: singapore
-      - key: BYPASS_CLOUDFRONT
-        value: 'true'
-      - key: BYBIT_PROXY_ENDPOINTS
-        value: api.bytick.com,api-testnet.bybit.com,api.bybit.com
-      - key: PROXY_COUNTRIES
-        value: singapore,hongkong,japan,uae
-      - key: SPOOF_CLOUDFRONT_HEADERS
-        value: 'true'
-      - key: SINGAPORE_IP_POOL
-        value: '103.28.248.1,103.28.249.1,119.81.28.1,119.81.29.1'
-      - key: CLOUDFRONT_BYPASS_MODE
-        value: 'aggressive'
-    healthCheckPath: /api/health
-
-  - type: worker
-    name: medusa-worker
-    env: python
-    region: singapore
-    buildCommand: pip install -r requirements.txt
-    startCommand: python worker.py
-    envVars:
-      - key: DATABASE_URL
-        fromDatabase:
-          name: medusa-db
-          property: connectionString
-      - key: SECRET_KEY
+      - key: JWT_SECRET  
         generateValue: true
-      - key: ALGORITHM
-        value: HS256
-      - key: APP_NAME
-        value: TGL MEDUSA
+      - key: DEFAULT_TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: DEFAULT_TELEGRAM_CHAT_ID
+        sync: false
       - key: DEBUG
-        value: false
-      - key: ENVIRONMENT
-        value: production
-      - key: RENDER_REGION
-        value: singapore
-      - key: BYPASS_CLOUDFRONT
-        value: 'true'
-      - key: BYBIT_PROXY_ENDPOINTS
-        value: api.bytick.com,api-testnet.bybit.com,api.bybit.com
-      - key: PROXY_COUNTRIES
-        value: singapore,hongkong,japan,uae
-      - key: SPOOF_CLOUDFRONT_HEADERS
-        value: 'true'
-      - key: SINGAPORE_IP_POOL
-        value: '103.28.248.1,103.28.249.1,119.81.28.1,119.81.29.1'
-      - key: CLOUDFRONT_BYPASS_MODE
-        value: 'aggressive'
-
-  - type: worker
-    name: medusa-strategy-monitor
-    env: python
-    region: singapore
-    buildCommand: pip install -r requirements.txt
-    startCommand: python init_strategy_monitor.py && python strategy_monitor_worker.py
-    envVars:
-      - key: DATABASE_URL
-        fromDatabase:
-          name: medusa-db
-          property: connectionString
-      - key: SECRET_KEY
-        generateValue: true
-      - key: ALGORITHM
-        value: HS256
-      - key: APP_NAME
-        value: TGL MEDUSA
-      - key: DEBUG
-        value: false
-      - key: ENVIRONMENT
-        value: production
-      - key: RENDER_REGION
-        value: singapore
+        value: "false"
+      - key: HOST
+        value: "0.0.0.0"
+      - key: PORT
+        value: "10000"
 
 databases:
-  - name: medusa-db
-    databaseName: medusa_loggers
-    user: medusa_admin
-    region: singapore
+  - name: tar-dashboard-db
+    databaseName: tar_dashboard
+    user: tar_admin
+
+# Optional: Web service for database management (if needed)
+# - type: web
+#   name: tar-dashboard-admin
+#   env: static
+#   staticPublishPath: ./static
+#   buildCommand: echo "Static admin panel"
+#   routes:
+#     - type: rewrite
+#       source: /*
+#       destination: /index.html

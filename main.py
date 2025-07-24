@@ -11,6 +11,10 @@ import json
 import multiprocessing
 from datetime import datetime, timedelta
 import uvicorn
+import logging
+
+# Import migration system
+from startup_migration import run_startup_migrations
 
 from database import get_db, init_db, BotInstance, ActivityLog, ErrorLog, User
 from api_library_model import ApiCredential
@@ -24,6 +28,22 @@ from auth import (
 )
 from strategy_monitor_model import StrategyMonitor
 from strategic_monitors import strategy_monitor
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Run automatic migrations before creating FastAPI app
+logger.info("🚀 Running automatic deployment migrations...")
+try:
+    migration_success = run_startup_migrations()
+    if not migration_success:
+        logger.error("❌ Database migrations failed! Application cannot start.")
+        exit(1)
+    logger.info("✅ Database migrations completed successfully!")
+except Exception as e:
+    logger.error(f"❌ Migration error: {e}")
+    logger.error("🛑 Application startup aborted due to migration failure")
+    exit(1)
 
 app = FastAPI(title="TAR Global Strategies - Unified Command Hub", version="2.0.0")
 
@@ -273,34 +293,326 @@ async def strategy_monitor_health(db: Session = Depends(get_db)):
         }
 
 @app.get("/api/dashboard/trading-bots")
-async def get_trading_bots_summary(current_user: dict = Depends(get_current_user)):
-    """Get trading bots summary for dashboard"""
-    return strategy_monitor.get_trading_bots_summary()
+async def get_trading_bots_data(current_user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Get comprehensive trading bots data for dashboard"""
+    try:
+        # Get all bot instances with statistics
+        instances = db.query(BotInstance).all()
+        
+        # Calculate statistics
+        total_instances = len(instances)
+        active_instances = len([i for i in instances if i.is_active])
+        instances_with_errors = len([i for i in instances if i.last_error])
+        
+        # Calculate P&L and performance metrics
+        pnl_24h = 0.0
+        total_volume = 0.0
+        total_trades = 0
+        active_positions = 0
+        
+        # Get recent activity for P&L calculation
+        from datetime import datetime, timedelta
+        yesterday = datetime.utcnow() - timedelta(days=1)
+        
+        recent_activity = db.query(ActivityLog).filter(
+            ActivityLog.timestamp >= yesterday,
+            ActivityLog.event_type.in_(['order_filled', 'position_update'])
+        ).all()
+        
+        # Strategy distribution
+        strategy_distribution = {}
+        for instance in instances:
+            for strategy in instance.strategies or ['Unknown']:
+                strategy_distribution[strategy] = strategy_distribution.get(strategy, 0) + 1
+        
+        # Generate sample P&L history for charts
+        pnl_history = []
+        base_time = datetime.utcnow() - timedelta(hours=24)
+        for hour in range(24):
+            timestamp = base_time + timedelta(hours=hour)
+            # Calculate actual P&L from activity logs in this hour
+            hour_start = timestamp
+            hour_end = timestamp + timedelta(hours=1)
+            
+            hour_activity = [a for a in recent_activity 
+                           if hour_start <= a.timestamp < hour_end]
+            
+            hour_pnl = sum([
+                float(a.data.get('unrealized_pnl', 0)) if a.data and a.data.get('unrealized_pnl') else 0
+                for a in hour_activity
+            ])
+            
+            pnl_history.append({
+                'timestamp': timestamp.isoformat(),
+                'pnl': hour_pnl
+            })
+        
+        return {
+            'total_instances': total_instances,
+            'active_instances': active_instances,
+            'instances_with_errors': instances_with_errors,
+            'pnl_24h': pnl_24h,
+            'total_volume': total_volume,
+            'total_trades': total_trades,
+            'active_positions': active_positions,
+            'strategy_distribution': strategy_distribution,
+            'pnl_history': pnl_history,
+            'instances': [
+                {
+                    'id': i.id,
+                    'name': i.name,
+                    'exchange': i.exchange,
+                    'strategies': i.strategies or [],
+                    'is_active': i.is_active,
+                    'last_poll': i.last_poll.isoformat() if i.last_poll else None,
+                    'last_error': i.last_error,
+                    'trading_pair': i.trading_pair,
+                    'polling_interval': i.polling_interval
+                } for i in instances
+            ]
+        }
+    except Exception as e:
+        logger.error(f"Error getting trading bots data: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/dashboard/dex-arbitrage")
-async def get_dex_arbitrage_summary(current_user: dict = Depends(get_current_user)):
-    """Get DEX arbitrage summary for dashboard"""
-    return strategy_monitor.get_dex_arbitrage_summary()
+async def get_dex_arbitrage_data(current_user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Get DEX arbitrage monitoring data"""
+    try:
+        from dex_arbitrage_model import DEXArbitrageInstance, DEXOpportunity
+        
+        # Get all DEX arbitrage instances
+        instances = db.query(DEXArbitrageInstance).all()
+        
+        # Calculate statistics
+        total_instances = len(instances)
+        active_instances = len([i for i in instances if i.is_active])
+        
+        # Get recent opportunities
+        yesterday = datetime.utcnow() - timedelta(days=1)
+        recent_opportunities = db.query(DEXOpportunity).filter(
+            DEXOpportunity.detected_at >= yesterday
+        ).order_by(desc(DEXOpportunity.detected_at)).limit(10).all()
+        
+        # Calculate profit metrics
+        total_profit_24h = sum([
+            float(opp.profit_amount or 0) for opp in recent_opportunities 
+            if opp.was_executed
+        ])
+        
+        opportunities_count = len(recent_opportunities)
+        executed_count = len([opp for opp in recent_opportunities if opp.was_executed])
+        
+        # Chain distribution
+        chain_distribution = {}
+        for instance in instances:
+            chain = instance.chain
+            chain_distribution[chain] = chain_distribution.get(chain, 0) + 1
+        
+        return {
+            'total_instances': total_instances,
+            'active_instances': active_instances,
+            'opportunities_24h': opportunities_count,
+            'executed_opportunities': executed_count,
+            'total_profit_24h': total_profit_24h,
+            'chain_distribution': chain_distribution,
+            'recent_opportunities': [
+                {
+                    'id': opp.id,
+                    'dex_pair': opp.dex_pair,
+                    'primary_dex': opp.primary_dex,
+                    'secondary_dex': opp.secondary_dex,
+                    'profit_percentage': float(opp.profit_percentage or 0),
+                    'profit_amount': float(opp.profit_amount or 0),
+                    'was_executed': opp.was_executed,
+                    'detected_at': opp.detected_at.isoformat() if opp.detected_at else None
+                } for opp in recent_opportunities
+            ],
+            'instances': [
+                {
+                    'id': i.id,
+                    'name': i.name,
+                    'chain': i.chain,
+                    'dex_pair': i.dex_pair,
+                    'primary_dex': i.primary_dex,
+                    'secondary_dex': i.secondary_dex,
+                    'is_active': i.is_active,
+                    'auto_execute': i.auto_execute,
+                    'min_profit_threshold': float(i.min_profit_threshold or 0),
+                    'last_check': i.last_check.isoformat() if i.last_check else None
+                } for i in instances
+            ]
+        }
+    except Exception as e:
+        logger.error(f"Error getting DEX arbitrage data: {e}")
+        # Return empty data if tables don't exist yet
+        return {
+            'total_instances': 0,
+            'active_instances': 0,
+            'opportunities_24h': 0,
+            'executed_opportunities': 0,
+            'total_profit_24h': 0.0,
+            'chain_distribution': {},
+            'recent_opportunities': [],
+            'instances': []
+        }
 
 @app.get("/api/dashboard/validators")
-async def get_validators_summary(current_user: dict = Depends(get_current_user)):
-    """Get validator nodes summary for dashboard"""
-    return strategy_monitor.get_validator_nodes_summary()
+async def get_validator_nodes_data(current_user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Get validator nodes monitoring data"""
+    try:
+        from validator_node_model import ValidatorNode, ValidatorReward
+        
+        # Get all validator nodes
+        validators = db.query(ValidatorNode).all()
+        
+        # Calculate statistics
+        total_validators = len(validators)
+        active_validators = len([v for v in validators if v.is_active and v.node_status == 'active'])
+        
+        # Calculate total stake and rewards
+        total_stake = sum([float(v.total_stake or 0) for v in validators])
+        total_rewards_24h = sum([float(v.current_rewards or 0) for v in validators])
+        
+        # Calculate average uptime
+        avg_uptime = sum([float(v.uptime_percentage or 0) for v in validators]) / max(total_validators, 1)
+        
+        # Blockchain distribution
+        blockchain_distribution = {}
+        for validator in validators:
+            chain = validator.blockchain
+            blockchain_distribution[chain] = blockchain_distribution.get(chain, 0) + 1
+        
+        # Get recent rewards
+        yesterday = datetime.utcnow() - timedelta(days=1)
+        recent_rewards = db.query(ValidatorReward).filter(
+            ValidatorReward.earned_at >= yesterday
+        ).order_by(desc(ValidatorReward.earned_at)).limit(10).all()
+        
+        return {
+            'total_validators': total_validators,
+            'active_validators': active_validators,
+            'total_stake': total_stake,
+            'total_rewards_24h': total_rewards_24h,
+            'average_uptime': avg_uptime,
+            'blockchain_distribution': blockchain_distribution,
+            'recent_rewards': [
+                {
+                    'id': r.id,
+                    'validator_name': r.validator.name if r.validator else 'Unknown',
+                    'blockchain': r.validator.blockchain if r.validator else 'Unknown',
+                    'reward_amount': float(r.reward_amount or 0),
+                    'earned_at': r.earned_at.isoformat() if r.earned_at else None
+                } for r in recent_rewards
+            ],
+            'validators': [
+                {
+                    'id': v.id,
+                    'name': v.name,
+                    'blockchain': v.blockchain,
+                    'strategy_name': v.strategy_name,
+                    'node_address': v.node_address,
+                    'total_stake': float(v.total_stake or 0),
+                    'current_rewards': float(v.current_rewards or 0),
+                    'uptime_percentage': float(v.uptime_percentage or 0),
+                    'node_status': v.node_status,
+                    'current_apy': float(v.current_apy or 0),
+                    'is_active': v.is_active
+                } for v in validators
+            ]
+        }
+    except Exception as e:
+        logger.error(f"Error getting validator nodes data: {e}")
+        # Return empty data if tables don't exist yet
+        return {
+            'total_validators': 0,
+            'active_validators': 0,
+            'total_stake': 0.0,
+            'total_rewards_24h': 0.0,
+            'average_uptime': 0.0,
+            'blockchain_distribution': {},
+            'recent_rewards': [],
+            'validators': []
+        }
 
-@app.get("/api/dashboard/overview")
-async def get_dashboard_overview(current_user: dict = Depends(get_current_user)):
-    """Get complete dashboard overview data"""
-    return {
-        "trading_bots": strategy_monitor.get_trading_bots_summary(),
-        "dex_arbitrage": strategy_monitor.get_dex_arbitrage_summary(),
-        "validators": strategy_monitor.get_validator_nodes_summary(),
-        "system_overview": strategy_monitor.get_system_overview()
-    }
+@app.get("/api/dashboard/system-overview")
+async def get_system_overview_data(current_user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Get system overview data"""
+    try:
+        # System health metrics
+        total_bots = db.query(BotInstance).count()
+        active_bots = db.query(BotInstance).filter(BotInstance.is_active == True).count()
+        
+        # Get recent errors
+        yesterday = datetime.utcnow() - timedelta(days=1)
+        recent_errors = db.query(ErrorLog).filter(
+            ErrorLog.timestamp >= yesterday
+        ).count()
+        
+        # Get recent activity
+        recent_activity_count = db.query(ActivityLog).filter(
+            ActivityLog.timestamp >= yesterday
+        ).count()
+        
+        # Calculate system uptime (simplified)
+        uptime_percentage = max(0, 100 - (recent_errors / max(recent_activity_count, 1)) * 100)
+        
+        # API Library statistics
+        total_api_credentials = db.query(ApiCredential).count()
+        active_api_credentials = db.query(ApiCredential).filter(
+            ApiCredential.is_active == True
+        ).count()
+        
+        # Get resource usage (simplified metrics)
+        resource_metrics = {
+            'cpu_usage': 45.2,  # Placeholder - implement actual monitoring
+            'memory_usage': 62.8,
+            'disk_usage': 34.1,
+            'network_io': 12.5
+        }
+        
+        return {
+            'system_health': {
+                'total_bots': total_bots,
+                'active_bots': active_bots,
+                'recent_errors': recent_errors,
+                'uptime_percentage': uptime_percentage,
+                'total_api_credentials': total_api_credentials,
+                'active_api_credentials': active_api_credentials
+            },
+            'resource_usage': resource_metrics,
+            'recent_activity': recent_activity_count
+        }
+    except Exception as e:
+        logger.error(f"Error getting system overview: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/api/dashboard/activity")
-async def get_recent_activity(current_user: dict = Depends(get_current_user)):
-    """Get recent activity for dashboard"""
-    return strategy_monitor.get_recent_activity()
+@app.get("/api/dashboard/recent-activity")
+async def get_recent_activity(
+    limit: int = 20,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get recent system activity"""
+    try:
+        recent_logs = db.query(ActivityLog).order_by(
+            desc(ActivityLog.timestamp)
+        ).limit(limit).all()
+        
+        return [
+            {
+                'id': log.id,
+                'instance_id': log.instance_id,
+                'event_type': log.event_type,
+                'symbol': log.symbol,
+                'message': log.message,
+                'timestamp': log.timestamp.isoformat() if log.timestamp else None,
+                'data': log.data
+            } for log in recent_logs
+        ]
+    except Exception as e:
+        logger.error(f"Error getting recent activity: {e}")
+        return []
 
 @app.websocket("/ws/{user_id}")
 async def websocket_endpoint(websocket: WebSocket, user_id: int, db: Session = Depends(get_db)):
@@ -333,28 +645,73 @@ async def stream_dashboard_data(websocket: WebSocket, user_id: int, db: Session)
     """Stream real-time dashboard data to connected client"""
     try:
         while True:
-            from strategic_monitors import strategy_monitor
-            
+            # Get comprehensive dashboard data
             update_data = {
                 "type": "dashboard_update",
                 "timestamp": datetime.utcnow().isoformat(),
-                "data": {
-                    "trading_bots": strategy_monitor.get_trading_bots_summary(),
-                    "dex_arbitrage": strategy_monitor.get_dex_arbitrage_summary(),
-                    "validators": strategy_monitor.get_validator_nodes_summary(),
-                    "system_overview": strategy_monitor.get_system_overview(),
-                    "recent_activity": strategy_monitor.get_recent_activity(limit=5)
-                }
+                "data": {}
             }
+            
+            try:
+                # Get trading bots data
+                trading_bots_data = await get_trading_bots_data(
+                    current_user={'user_id': user_id}, 
+                    db=db
+                )
+                update_data["data"]["trading_bots"] = trading_bots_data
+            except Exception as e:
+                logger.error(f"Error getting trading bots data for WebSocket: {e}")
+                
+            try:
+                # Get DEX arbitrage data  
+                dex_data = await get_dex_arbitrage_data(
+                    current_user={'user_id': user_id}, 
+                    db=db
+                )
+                update_data["data"]["dex_arbitrage"] = dex_data
+            except Exception as e:
+                logger.error(f"Error getting DEX arbitrage data for WebSocket: {e}")
+                
+            try:
+                # Get validator data
+                validator_data = await get_validator_nodes_data(
+                    current_user={'user_id': user_id}, 
+                    db=db
+                )
+                update_data["data"]["validators"] = validator_data
+            except Exception as e:
+                logger.error(f"Error getting validator data for WebSocket: {e}")
+                
+            try:
+                # Get system overview
+                system_data = await get_system_overview_data(
+                    current_user={'user_id': user_id}, 
+                    db=db
+                )
+                update_data["data"]["system_overview"] = system_data
+            except Exception as e:
+                logger.error(f"Error getting system overview for WebSocket: {e}")
+                
+            try:
+                # Get recent activity
+                activity_data = await get_recent_activity(
+                    limit=10,
+                    current_user={'user_id': user_id}, 
+                    db=db
+                )
+                update_data["data"]["recent_activity"] = activity_data
+            except Exception as e:
+                logger.error(f"Error getting recent activity for WebSocket: {e}")
             
             await manager.send_personal_message(json.dumps(update_data), websocket)
             
+            # Stream every 10 seconds
             await asyncio.sleep(10)
             
     except WebSocketDisconnect:
         manager.disconnect(websocket, user_id)
     except Exception as e:
-        print(f"Error in data streaming for user {user_id}: {e}")
+        logger.error(f"Error in data streaming for user {user_id}: {e}")
         manager.disconnect(websocket, user_id)
 
 @app.post("/api/broadcast")

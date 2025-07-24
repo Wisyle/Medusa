@@ -399,100 +399,178 @@
         <!-- DEX Arbitrage Stats Cards -->
         <div class="row mb-4">
             <div class="col-xl-3 col-md-6 mb-4">
-                <div class="card border-left-success shadow h-100 py-2">
+                <div class="card bg-info text-white shadow h-100 py-2">
                     <div class="card-body">
                         <div class="row no-gutters align-items-center">
                             <div class="col mr-2">
-                                <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
-                                    Active Arbitrage
+                                <div class="text-xs font-weight-bold text-uppercase mb-1">
+                                    Total DEX Instances
                                 </div>
-                                <div class="h5 mb-0 font-weight-bold text-gray-800" id="active-arbitrage">
+                                <div class="h5 mb-0 font-weight-bold" id="total-dex-instances">
                                     <i class="fas fa-spinner fa-spin"></i>
                                 </div>
                             </div>
                             <div class="col-auto">
-                                <i class="fas fa-exchange-alt fa-2x text-gray-300"></i>
+                                <i class="fas fa-exchange-alt fa-2x text-white-50"></i>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-
+            
             <div class="col-xl-3 col-md-6 mb-4">
-                <div class="card border-left-info shadow h-100 py-2">
+                <div class="card bg-success text-white shadow h-100 py-2">
                     <div class="card-body">
                         <div class="row no-gutters align-items-center">
                             <div class="col mr-2">
-                                <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
-                                    Opportunities
+                                <div class="text-xs font-weight-bold text-uppercase mb-1">
+                                    Active Monitors
                                 </div>
-                                <div class="h5 mb-0 font-weight-bold text-gray-800" id="arbitrage-opportunities">
+                                <div class="h5 mb-0 font-weight-bold" id="active-dex-instances">
                                     <i class="fas fa-spinner fa-spin"></i>
                                 </div>
                             </div>
                             <div class="col-auto">
-                                <i class="fas fa-search-dollar fa-2x text-gray-300"></i>
+                                <i class="fas fa-play fa-2x text-white-50"></i>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-
+            
             <div class="col-xl-3 col-md-6 mb-4">
-                <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card bg-warning text-white shadow h-100 py-2">
                     <div class="card-body">
                         <div class="row no-gutters align-items-center">
                             <div class="col mr-2">
-                                <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
-                                    BNB/SOL/USDT Pairs
+                                <div class="text-xs font-weight-bold text-uppercase mb-1">
+                                    Opportunities (24h)
                                 </div>
-                                <div class="h5 mb-0 font-weight-bold text-gray-800" id="trading-pairs">
+                                <div class="h5 mb-0 font-weight-bold" id="dex-opportunities-24h">
                                     <i class="fas fa-spinner fa-spin"></i>
                                 </div>
                             </div>
                             <div class="col-auto">
-                                <i class="fab fa-bitcoin fa-2x text-gray-300"></i>
+                                <i class="fas fa-chart-line fa-2x text-white-50"></i>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-
+            
             <div class="col-xl-3 col-md-6 mb-4">
-                <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card bg-primary text-white shadow h-100 py-2">
                     <div class="card-body">
                         <div class="row no-gutters align-items-center">
                             <div class="col mr-2">
-                                <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
-                                    Arbitrage P&L
+                                <div class="text-xs font-weight-bold text-uppercase mb-1">
+                                    Profit (24h)
                                 </div>
-                                <div class="h5 mb-0 font-weight-bold text-gray-800" id="arbitrage-pnl">
+                                <div class="h5 mb-0 font-weight-bold" id="dex-profit-24h">
                                     <i class="fas fa-spinner fa-spin"></i>
                                 </div>
                             </div>
                             <div class="col-auto">
-                                <i class="fas fa-chart-line fa-2x text-gray-300"></i>
+                                <i class="fas fa-dollar-sign fa-2x text-white-50"></i>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-
-        <!-- DEX Arbitrage Overview -->
-        <div class="card shadow mb-4">
-            <div class="card-header py-3">
-                <h6 class="m-0 font-weight-bold text-success">
-                    <i class="fas fa-exchange-alt me-2"></i>
-                    DEX Arbitrage Overview
-                </h6>
+        
+        <!-- DEX Arbitrage Charts -->
+        <div class="row mb-4">
+            <div class="col-lg-8 mb-3">
+                <div class="card shadow">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold text-primary">
+                            <i class="fas fa-chart-area me-2"></i>
+                            Recent Arbitrage Opportunities
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-bordered" id="dex-opportunities-table">
+                                <thead>
+                                    <tr>
+                                        <th>DEX Pair</th>
+                                        <th>Primary DEX</th>
+                                        <th>Secondary DEX</th>
+                                        <th>Profit %</th>
+                                        <th>Amount</th>
+                                        <th>Status</th>
+                                        <th>Detected</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td colspan="7" class="text-center">
+                                            <i class="fas fa-spinner fa-spin"></i> Loading opportunities...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="card-body">
-                <div class="text-center text-muted">
-                    <i class="fas fa-info-circle me-2"></i>No DEX arbitrage instances configured yet.
-                    <a href="/dex-arbitrage" class="btn btn-sm btn-success ms-2">
-                        <i class="fas fa-plus"></i> Configure Arbitrage
-                    </a>
+            <div class="col-lg-4 mb-3">
+                <div class="card shadow">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold text-primary">
+                            <i class="fas fa-chart-pie me-2"></i>
+                            Chain Distribution
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="chain-distribution-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- DEX Instances Table -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card shadow">
+                    <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                        <h6 class="m-0 font-weight-bold text-primary">
+                            <i class="fas fa-exchange-alt me-2"></i>
+                            DEX Arbitrage Instances
+                        </h6>
+                        <a href="/dex-arbitrage/new" class="btn btn-primary btn-sm">
+                            <i class="fas fa-plus"></i> New Instance
+                        </a>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-bordered" id="dex-instances-table">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Chain</th>
+                                        <th>DEX Pair</th>
+                                        <th>Primary DEX</th>
+                                        <th>Secondary DEX</th>
+                                        <th>Min Profit %</th>
+                                        <th>Status</th>
+                                        <th>Last Check</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td colspan="9" class="text-center">
+                                            <i class="fas fa-spinner fa-spin"></i> Loading instances...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -503,100 +581,194 @@
         <!-- Validator Stats Cards -->
         <div class="row mb-4">
             <div class="col-xl-3 col-md-6 mb-4">
-                <div class="card border-left-info shadow h-100 py-2">
+                <div class="card bg-success text-white shadow h-100 py-2">
                     <div class="card-body">
                         <div class="row no-gutters align-items-center">
                             <div class="col mr-2">
-                                <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
-                                    TON Validators
+                                <div class="text-xs font-weight-bold text-uppercase mb-1">
+                                    Total Validators
                                 </div>
-                                <div class="h5 mb-0 font-weight-bold text-gray-800" id="ton-validators">
+                                <div class="h5 mb-0 font-weight-bold" id="total-validators">
                                     <i class="fas fa-spinner fa-spin"></i>
                                 </div>
                             </div>
                             <div class="col-auto">
-                                <i class="fas fa-cube fa-2x text-gray-300"></i>
+                                <i class="fas fa-shield-alt fa-2x text-white-50"></i>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-
+            
             <div class="col-xl-3 col-md-6 mb-4">
-                <div class="card border-left-success shadow h-100 py-2">
+                <div class="card bg-info text-white shadow h-100 py-2">
                     <div class="card-body">
                         <div class="row no-gutters align-items-center">
                             <div class="col mr-2">
-                                <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
-                                    Solana Alpha
+                                <div class="text-xs font-weight-bold text-uppercase mb-1">
+                                    Active Validators
                                 </div>
-                                <div class="h5 mb-0 font-weight-bold text-gray-800" id="solana-alpha">
+                                <div class="h5 mb-0 font-weight-bold" id="active-validators">
                                     <i class="fas fa-spinner fa-spin"></i>
                                 </div>
                             </div>
                             <div class="col-auto">
-                                <i class="fas fa-sun fa-2x text-gray-300"></i>
+                                <i class="fas fa-check-circle fa-2x text-white-50"></i>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-
+            
             <div class="col-xl-3 col-md-6 mb-4">
-                <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card bg-warning text-white shadow h-100 py-2">
                     <div class="card-body">
                         <div class="row no-gutters align-items-center">
                             <div class="col mr-2">
-                                <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
-                                    Ethereum Epsilon
+                                <div class="text-xs font-weight-bold text-uppercase mb-1">
+                                    Total Staked
                                 </div>
-                                <div class="h5 mb-0 font-weight-bold text-gray-800" id="ethereum-epsilon">
+                                <div class="h5 mb-0 font-weight-bold" id="total-staked">
                                     <i class="fas fa-spinner fa-spin"></i>
                                 </div>
                             </div>
                             <div class="col-auto">
-                                <i class="fab fa-ethereum fa-2x text-gray-300"></i>
+                                <i class="fas fa-coins fa-2x text-white-50"></i>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-
+            
             <div class="col-xl-3 col-md-6 mb-4">
-                <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card bg-primary text-white shadow h-100 py-2">
                     <div class="card-body">
                         <div class="row no-gutters align-items-center">
                             <div class="col mr-2">
-                                <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
-                                    Total Rewards
+                                <div class="text-xs font-weight-bold text-uppercase mb-1">
+                                    Rewards (24h)
                                 </div>
-                                <div class="h5 mb-0 font-weight-bold text-gray-800" id="validator-rewards">
+                                <div class="h5 mb-0 font-weight-bold" id="validator-rewards-24h">
                                     <i class="fas fa-spinner fa-spin"></i>
                                 </div>
                             </div>
                             <div class="col-auto">
-                                <i class="fas fa-coins fa-2x text-gray-300"></i>
+                                <i class="fas fa-gift fa-2x text-white-50"></i>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-
-        <!-- Validator Nodes Overview -->
-        <div class="card shadow mb-4">
-            <div class="card-header py-3">
-                <h6 class="m-0 font-weight-bold text-info">
-                    <i class="fas fa-shield-alt me-2"></i>
-                    Validator Nodes Overview
-                </h6>
+        
+        <!-- Validator Charts -->
+        <div class="row mb-4">
+            <div class="col-lg-6 mb-3">
+                <div class="card shadow">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold text-primary">
+                            <i class="fas fa-chart-pie me-2"></i>
+                            Blockchain Distribution
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="blockchain-distribution-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="card-body">
-                <div class="text-center text-muted">
-                    <i class="fas fa-info-circle me-2"></i>No validator nodes configured yet.
-                    <a href="/validators" class="btn btn-sm btn-info ms-2">
-                        <i class="fas fa-plus"></i> Configure Validators
-                    </a>
+            <div class="col-lg-6 mb-3">
+                <div class="card shadow">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold text-primary">
+                            <i class="fas fa-chart-bar me-2"></i>
+                            Validator Performance
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="validator-performance-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Recent Rewards Table -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card shadow">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold text-primary">
+                            <i class="fas fa-gift me-2"></i>
+                            Recent Validator Rewards
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-bordered" id="validator-rewards-table">
+                                <thead>
+                                    <tr>
+                                        <th>Validator</th>
+                                        <th>Blockchain</th>
+                                        <th>Reward Amount</th>
+                                        <th>Earned At</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td colspan="4" class="text-center">
+                                            <i class="fas fa-spinner fa-spin"></i> Loading rewards...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Validator Nodes Table -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card shadow">
+                    <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                        <h6 class="m-0 font-weight-bold text-primary">
+                            <i class="fas fa-shield-alt me-2"></i>
+                            Validator Nodes
+                        </h6>
+                        <a href="/validators/new" class="btn btn-primary btn-sm">
+                            <i class="fas fa-plus"></i> New Validator
+                        </a>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-bordered" id="validators-table">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Blockchain</th>
+                                        <th>Strategy</th>
+                                        <th>Stake</th>
+                                        <th>Rewards</th>
+                                        <th>Uptime</th>
+                                        <th>APY</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td colspan="9" class="text-center">
+                                            <i class="fas fa-spinner fa-spin"></i> Loading validators...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -604,102 +776,212 @@
 
     <!-- System Overview Tab -->
     <div class="tab-pane fade" id="overview" role="tabpanel">
-        <!-- System Overview Stats -->
+        <!-- System Health Cards -->
         <div class="row mb-4">
             <div class="col-xl-3 col-md-6 mb-4">
-                <div class="card border-left-success shadow h-100 py-2">
+                <div class="card bg-primary text-white shadow h-100 py-2">
                     <div class="card-body">
                         <div class="row no-gutters align-items-center">
                             <div class="col mr-2">
-                                <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
-                                    System Status
+                                <div class="text-xs font-weight-bold text-uppercase mb-1">
+                                    System Uptime
                                 </div>
-                                <div class="h5 mb-0 font-weight-bold text-gray-800" id="system-health">
+                                <div class="h5 mb-0 font-weight-bold" id="system-uptime">
                                     <i class="fas fa-spinner fa-spin"></i>
                                 </div>
                             </div>
                             <div class="col-auto">
-                                <i class="fas fa-heartbeat fa-2x text-gray-300"></i>
+                                <i class="fas fa-server fa-2x text-white-50"></i>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-
+            
             <div class="col-xl-3 col-md-6 mb-4">
-                <div class="card border-left-info shadow h-100 py-2">
+                <div class="card bg-success text-white shadow h-100 py-2">
                     <div class="card-body">
                         <div class="row no-gutters align-items-center">
                             <div class="col mr-2">
-                                <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
-                                    API Connections
+                                <div class="text-xs font-weight-bold text-uppercase mb-1">
+                                    Active Services
                                 </div>
-                                <div class="h5 mb-0 font-weight-bold text-gray-800" id="api-connections">
+                                <div class="h5 mb-0 font-weight-bold" id="active-services">
                                     <i class="fas fa-spinner fa-spin"></i>
                                 </div>
                             </div>
                             <div class="col-auto">
-                                <i class="fas fa-plug fa-2x text-gray-300"></i>
+                                <i class="fas fa-cogs fa-2x text-white-50"></i>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-
+            
             <div class="col-xl-3 col-md-6 mb-4">
-                <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card bg-warning text-white shadow h-100 py-2">
                     <div class="card-body">
                         <div class="row no-gutters align-items-center">
                             <div class="col mr-2">
-                                <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
-                                    Active Users
+                                <div class="text-xs font-weight-bold text-uppercase mb-1">
+                                    Errors (24h)
                                 </div>
-                                <div class="h5 mb-0 font-weight-bold text-gray-800" id="active-users">
+                                <div class="h5 mb-0 font-weight-bold" id="system-errors-24h">
                                     <i class="fas fa-spinner fa-spin"></i>
                                 </div>
                             </div>
                             <div class="col-auto">
-                                <i class="fas fa-users fa-2x text-gray-300"></i>
+                                <i class="fas fa-exclamation-triangle fa-2x text-white-50"></i>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-
+            
             <div class="col-xl-3 col-md-6 mb-4">
-                <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card bg-info text-white shadow h-100 py-2">
                     <div class="card-body">
                         <div class="row no-gutters align-items-center">
                             <div class="col mr-2">
-                                <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
-                                    Total P&L
+                                <div class="text-xs font-weight-bold text-uppercase mb-1">
+                                    API Credentials
                                 </div>
-                                <div class="h5 mb-0 font-weight-bold text-gray-800" id="system-total-pnl">
+                                <div class="h5 mb-0 font-weight-bold" id="total-api-credentials">
                                     <i class="fas fa-spinner fa-spin"></i>
                                 </div>
                             </div>
                             <div class="col-auto">
-                                <i class="fas fa-chart-line fa-2x text-gray-300"></i>
+                                <i class="fas fa-key fa-2x text-white-50"></i>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-
-        <!-- Recent Activity -->
-        <div class="card shadow mb-4">
-            <div class="card-header py-3">
-                <h6 class="m-0 font-weight-bold text-primary">
-                    <i class="fas fa-clock me-2"></i>
-                    Recent Activity
-                </h6>
+        
+        <!-- Resource Usage Charts -->
+        <div class="row mb-4">
+            <div class="col-lg-8 mb-3">
+                <div class="card shadow">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold text-primary">
+                            <i class="fas fa-chart-area me-2"></i>
+                            System Resource Usage
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <div class="d-flex justify-content-between">
+                                        <span>CPU Usage</span>
+                                        <span id="cpu-usage-text">0%</span>
+                                    </div>
+                                    <div class="progress">
+                                        <div class="progress-bar bg-primary" id="cpu-usage-bar" style="width: 0%"></div>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <div class="d-flex justify-content-between">
+                                        <span>Memory Usage</span>
+                                        <span id="memory-usage-text">0%</span>
+                                    </div>
+                                    <div class="progress">
+                                        <div class="progress-bar bg-success" id="memory-usage-bar" style="width: 0%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <div class="d-flex justify-content-between">
+                                        <span>Disk Usage</span>
+                                        <span id="disk-usage-text">0%</span>
+                                    </div>
+                                    <div class="progress">
+                                        <div class="progress-bar bg-warning" id="disk-usage-bar" style="width: 0%"></div>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <div class="d-flex justify-content-between">
+                                        <span>Network I/O</span>
+                                        <span id="network-usage-text">0 MB/s</span>
+                                    </div>
+                                    <div class="progress">
+                                        <div class="progress-bar bg-info" id="network-usage-bar" style="width: 0%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="card-body">
-                <div id="recent-activity">
-                    <div class="text-center">
-                        <i class="fas fa-spinner fa-spin"></i>
-                        Loading activity...
+            <div class="col-lg-4 mb-3">
+                <div class="card shadow">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold text-primary">
+                            <i class="fas fa-chart-pie me-2"></i>
+                            Service Status
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="service-status-list">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span>Trading Bots</span>
+                                <span class="badge bg-success">Online</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span>DEX Arbitrage</span>
+                                <span class="badge bg-success">Online</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span>Validators</span>
+                                <span class="badge bg-success">Online</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span>API Library</span>
+                                <span class="badge bg-success">Online</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span>WebSocket</span>
+                                <span class="badge bg-success">Online</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Recent Activity -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card shadow">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold text-primary">
+                            <i class="fas fa-history me-2"></i>
+                            Recent System Activity
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-bordered" id="recent-activity-table">
+                                <thead>
+                                    <tr>
+                                        <th>Timestamp</th>
+                                        <th>Instance</th>
+                                        <th>Event</th>
+                                        <th>Symbol</th>
+                                        <th>Message</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td colspan="5" class="text-center">
+                                            <i class="fas fa-spinner fa-spin"></i> Loading activity...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -922,7 +1204,431 @@ async function loadDashboardData() {
     }
 }
 
-// Load data for specific tab
+// Update trading bots statistics
+function updateTradingBotsStats(data) {
+    document.getElementById('total-instances').textContent = data.total_instances || 0;
+    document.getElementById('active-instances').textContent = data.active_instances || 0;
+    document.getElementById('error-instances').textContent = data.error_instances || 0;
+    document.getElementById('total-pnl').textContent = `$${(data.total_pnl || 0).toFixed(2)}`;
+}
+
+// Update system overview statistics
+function updateSystemOverviewStats(data) {
+    if (data.system_health) {
+        document.getElementById('system-uptime').textContent = `${(data.system_health.uptime_percentage || 0).toFixed(1)}%`;
+        document.getElementById('active-services').textContent = `${data.system_health.active_bots || 0}/${data.system_health.total_bots || 0}`;
+        document.getElementById('system-errors-24h').textContent = data.system_health.recent_errors || 0;
+        document.getElementById('total-api-credentials').textContent = `${data.system_health.active_api_credentials || 0}/${data.system_health.total_api_credentials || 0}`;
+    }
+    
+    // Update resource usage bars
+    if (data.resource_usage) {
+        updateResourceUsage(data.resource_usage);
+    }
+}
+
+// Update resource usage bars
+function updateResourceUsage(resourceData) {
+    const resources = [
+        { key: 'cpu_usage', element: 'cpu-usage', unit: '%' },
+        { key: 'memory_usage', element: 'memory-usage', unit: '%' },
+        { key: 'disk_usage', element: 'disk-usage', unit: '%' },
+        { key: 'network_io', element: 'network-usage', unit: ' MB/s' }
+    ];
+    
+    resources.forEach(resource => {
+        const value = resourceData[resource.key] || 0;
+        const textElement = document.getElementById(`${resource.element}-text`);
+        const barElement = document.getElementById(`${resource.element}-bar`);
+        
+        if (textElement && barElement) {
+            textElement.textContent = value + resource.unit;
+            barElement.style.width = `${Math.min(value, 100)}%`;
+            
+            // Update bar color based on usage level
+            barElement.classList.remove('bg-success', 'bg-warning', 'bg-danger');
+            if (value < 60) {
+                barElement.classList.add('bg-success');
+            } else if (value < 80) {
+                barElement.classList.add('bg-warning');
+            } else {
+                barElement.classList.add('bg-danger');
+            }
+        }
+    });
+}
+
+// Update recent activity table
+function updateRecentActivity(activities) {
+    const tbody = document.querySelector('#recent-activity-table tbody');
+    if (!tbody) return;
+    
+    if (!activities || activities.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="5" class="text-center text-muted">
+                    <i class="fas fa-info-circle"></i> No recent activity found.
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    tbody.innerHTML = activities.map(activity => `
+        <tr>
+            <td>${new Date(activity.timestamp).toLocaleString()}</td>
+            <td>Instance ${activity.instance_id}</td>
+            <td>
+                <span class="badge bg-primary">${activity.event_type}</span>
+            </td>
+            <td>${activity.symbol || 'N/A'}</td>
+            <td>${activity.message || 'N/A'}</td>
+        </tr>
+    `).join('');
+}
+
+// Update DEX arbitrage data
+function updateDEXArbitrageData(data) {
+    // Update stats
+    document.getElementById('total-dex-instances').textContent = data.total_instances || 0;
+    document.getElementById('active-dex-instances').textContent = data.active_instances || 0;
+    document.getElementById('dex-opportunities-24h').textContent = data.opportunities_24h || 0;
+    document.getElementById('dex-profit-24h').textContent = `$${(data.total_profit_24h || 0).toFixed(2)}`;
+    
+    // Update opportunities table
+    updateDEXOpportunitiesTable(data.recent_opportunities || []);
+    
+    // Update instances table
+    updateDEXInstancesTable(data.instances || []);
+    
+    // Update chain distribution chart
+    if (data.chain_distribution && charts.chainDistributionChart) {
+        const chains = Object.keys(data.chain_distribution);
+        const counts = Object.values(data.chain_distribution);
+        
+        charts.chainDistributionChart.data.labels = chains;
+        charts.chainDistributionChart.data.datasets[0].data = counts;
+        charts.chainDistributionChart.update('none');
+    }
+}
+
+// Update DEX opportunities table
+function updateDEXOpportunitiesTable(opportunities) {
+    const tbody = document.querySelector('#dex-opportunities-table tbody');
+    if (!tbody) return;
+    
+    if (opportunities.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="7" class="text-center text-muted">
+                    <i class="fas fa-info-circle"></i> No recent opportunities found.
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    tbody.innerHTML = opportunities.map(opp => `
+        <tr>
+            <td>${opp.dex_pair}</td>
+            <td>${opp.primary_dex}</td>
+            <td>${opp.secondary_dex}</td>
+            <td>
+                <span class="badge ${opp.profit_percentage > 0 ? 'bg-success' : 'bg-danger'}">
+                    ${opp.profit_percentage.toFixed(2)}%
+                </span>
+            </td>
+            <td>$${opp.profit_amount.toFixed(2)}</td>
+            <td>
+                <span class="badge ${opp.was_executed ? 'bg-success' : 'bg-warning'}">
+                    ${opp.was_executed ? 'Executed' : 'Missed'}
+                </span>
+            </td>
+            <td>${new Date(opp.detected_at).toLocaleString()}</td>
+        </tr>
+    `).join('');
+}
+
+// Update DEX instances table
+function updateDEXInstancesTable(instances) {
+    const tbody = document.querySelector('#dex-instances-table tbody');
+    if (!tbody) return;
+    
+    if (instances.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="9" class="text-center text-muted">
+                    <i class="fas fa-exchange-alt"></i> No DEX arbitrage instances configured yet.
+                    <a href="/dex-arbitrage/new" class="btn btn-sm btn-primary ms-2">
+                        <i class="fas fa-plus"></i> Create First Instance
+                    </a>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    tbody.innerHTML = instances.map(instance => `
+        <tr>
+            <td><strong>${instance.name}</strong></td>
+            <td>
+                <span class="badge bg-info">${instance.chain.toUpperCase()}</span>
+            </td>
+            <td>${instance.dex_pair}</td>
+            <td>${instance.primary_dex}</td>
+            <td>${instance.secondary_dex}</td>
+            <td>${instance.min_profit_threshold.toFixed(2)}%</td>
+            <td>
+                <span class="badge ${instance.is_active ? 'bg-success' : 'bg-secondary'}">
+                    ${instance.is_active ? 'Active' : 'Stopped'}
+                </span>
+                ${instance.auto_execute ? '<span class="badge bg-primary ms-1">Auto</span>' : ''}
+            </td>
+            <td>${instance.last_check ? new Date(instance.last_check).toLocaleString() : 'Never'}</td>
+            <td>
+                <div class="btn-group btn-group-sm">
+                    <button class="btn btn-outline-primary" onclick="toggleDEXInstance(${instance.id})">
+                        <i class="fas fa-${instance.is_active ? 'pause' : 'play'}"></i>
+                    </button>
+                    <button class="btn btn-outline-secondary" onclick="editDEXInstance(${instance.id})">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+// Update validator nodes data
+function updateValidatorNodesData(data) {
+    // Update stats
+    document.getElementById('total-validators').textContent = data.total_validators || 0;
+    document.getElementById('active-validators').textContent = data.active_validators || 0;
+    document.getElementById('total-staked').textContent = `$${(data.total_stake || 0).toLocaleString()}`;
+    document.getElementById('validator-rewards-24h').textContent = `$${(data.total_rewards_24h || 0).toFixed(2)}`;
+    
+    // Update rewards table
+    updateValidatorRewardsTable(data.recent_rewards || []);
+    
+    // Update validators table
+    updateValidatorsTable(data.validators || []);
+    
+    // Update blockchain distribution chart
+    if (data.blockchain_distribution && charts.blockchainDistributionChart) {
+        const blockchains = Object.keys(data.blockchain_distribution);
+        const counts = Object.values(data.blockchain_distribution);
+        
+        charts.blockchainDistributionChart.data.labels = blockchains;
+        charts.blockchainDistributionChart.data.datasets[0].data = counts;
+        charts.blockchainDistributionChart.update('none');
+    }
+    
+    // Update validator performance chart
+    if (data.validators && charts.validatorPerformanceChart) {
+        const validatorNames = data.validators.map(v => v.name);
+        const uptimes = data.validators.map(v => v.uptime_percentage);
+        
+        charts.validatorPerformanceChart.data.labels = validatorNames;
+        charts.validatorPerformanceChart.data.datasets[0].data = uptimes;
+        charts.validatorPerformanceChart.update('none');
+    }
+}
+
+// Update validator rewards table
+function updateValidatorRewardsTable(rewards) {
+    const tbody = document.querySelector('#validator-rewards-table tbody');
+    if (!tbody) return;
+    
+    if (rewards.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="4" class="text-center text-muted">
+                    <i class="fas fa-info-circle"></i> No recent rewards found.
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    tbody.innerHTML = rewards.map(reward => `
+        <tr>
+            <td><strong>${reward.validator_name}</strong></td>
+            <td>
+                <span class="badge bg-info">${reward.blockchain.toUpperCase()}</span>
+            </td>
+            <td>$${reward.reward_amount.toFixed(4)}</td>
+            <td>${new Date(reward.earned_at).toLocaleString()}</td>
+        </tr>
+    `).join('');
+}
+
+// Update validators table
+function updateValidatorsTable(validators) {
+    const tbody = document.querySelector('#validators-table tbody');
+    if (!tbody) return;
+    
+    if (validators.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="9" class="text-center text-muted">
+                    <i class="fas fa-shield-alt"></i> No validator nodes configured yet.
+                    <a href="/validators/new" class="btn btn-sm btn-primary ms-2">
+                        <i class="fas fa-plus"></i> Create First Validator
+                    </a>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    tbody.innerHTML = validators.map(validator => `
+        <tr>
+            <td><strong>${validator.name}</strong></td>
+            <td>
+                <span class="badge bg-info">${validator.blockchain.toUpperCase()}</span>
+            </td>
+            <td>${validator.strategy_name}</td>
+            <td>$${validator.total_stake.toLocaleString()}</td>
+            <td>$${validator.current_rewards.toFixed(4)}</td>
+            <td>
+                <span class="badge ${validator.uptime_percentage >= 95 ? 'bg-success' : validator.uptime_percentage >= 90 ? 'bg-warning' : 'bg-danger'}">
+                    ${validator.uptime_percentage.toFixed(1)}%
+                </span>
+            </td>
+            <td>${validator.current_apy.toFixed(2)}%</td>
+            <td>
+                <span class="badge ${getValidatorStatusClass(validator.node_status)}">
+                    ${validator.node_status.charAt(0).toUpperCase() + validator.node_status.slice(1)}
+                </span>
+            </td>
+            <td>
+                <div class="btn-group btn-group-sm">
+                    <button class="btn btn-outline-primary" onclick="toggleValidator(${validator.id})">
+                        <i class="fas fa-${validator.is_active ? 'pause' : 'play'}"></i>
+                    </button>
+                    <button class="btn btn-outline-secondary" onclick="editValidator(${validator.id})">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+// Helper function to get validator status class
+function getValidatorStatusClass(status) {
+    switch(status) {
+        case 'active': return 'bg-success';
+        case 'inactive': return 'bg-secondary';
+        case 'jailed': return 'bg-warning';
+        case 'slashed': return 'bg-danger';
+        default: return 'bg-secondary';
+    }
+}
+
+// Initialize additional charts for new sections
+function initializeAdditionalCharts() {
+    // Chain Distribution Chart (DEX Arbitrage)
+    const chainCtx = document.getElementById('chain-distribution-chart');
+    if (chainCtx) {
+        charts.chainDistributionChart = new Chart(chainCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['BNB', 'Solana', 'Ethereum'],
+                datasets: [{
+                    data: [0, 0, 0],
+                    backgroundColor: ['#f1c40f', '#9b59b6', '#3498db'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: '#ffffff',
+                            padding: 15,
+                            usePointStyle: true
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Blockchain Distribution Chart (Validators)
+    const blockchainCtx = document.getElementById('blockchain-distribution-chart');
+    if (blockchainCtx) {
+        charts.blockchainDistributionChart = new Chart(blockchainCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['TON', 'Solana', 'Ethereum'],
+                datasets: [{
+                    data: [0, 0, 0],
+                    backgroundColor: ['#0088cc', '#9b59b6', '#3498db'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: '#ffffff',
+                            padding: 15,
+                            usePointStyle: true
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Validator Performance Chart
+    const validatorPerformanceCtx = document.getElementById('validator-performance-chart');
+    if (validatorPerformanceCtx) {
+        charts.validatorPerformanceChart = new Chart(validatorPerformanceCtx, {
+            type: 'bar',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Uptime %',
+                    data: [],
+                    backgroundColor: '#667eea',
+                    borderColor: '#667eea',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: { color: '#ffffff' },
+                        grid: { color: 'rgba(255,255,255,0.1)' }
+                    },
+                    x: {
+                        ticks: { color: '#ffffff' },
+                        grid: { color: 'rgba(255,255,255,0.1)' }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        labels: { color: '#ffffff' }
+                    }
+                }
+            }
+        });
+    }
+}
+
+// Load data for specific tab with proper error handling
 async function loadTabData(tabId) {
     const token = localStorage.getItem('access_token');
     const headers = { 'Authorization': `Bearer ${token}` };
@@ -930,16 +1636,56 @@ async function loadTabData(tabId) {
     try {
         switch(tabId) {
             case 'trading-bots':
-                await loadTradingBotsData(headers);
+                const tradingBotsResponse = await fetch('/api/dashboard/trading-bots', { headers });
+                if (tradingBotsResponse.ok) {
+                    const data = await tradingBotsResponse.json();
+                    updateTradingBotsStats(data);
+                    updateInstancesTable(data.instances);
+                    
+                    if (data.pnl_history) {
+                        updateChartData('pnlChart', {
+                            labels: data.pnl_history.map(item => new Date(item.timestamp)),
+                            data: data.pnl_history.map(item => item.pnl)
+                        });
+                    }
+                    
+                    if (data.strategy_distribution) {
+                        updateChartData('strategyChart', {
+                            data: Object.values(data.strategy_distribution)
+                        });
+                    }
+                }
                 break;
+                
             case 'dex-arbitrage':
-                await loadDEXArbitrageData(headers);
+                const dexResponse = await fetch('/api/dashboard/dex-arbitrage', { headers });
+                if (dexResponse.ok) {
+                    const data = await dexResponse.json();
+                    updateDEXArbitrageData(data);
+                }
                 break;
+                
             case 'validators':
-                await loadValidatorNodesData(headers);
+                const validatorsResponse = await fetch('/api/dashboard/validators', { headers });
+                if (validatorsResponse.ok) {
+                    const data = await validatorsResponse.json();
+                    updateValidatorNodesData(data);
+                }
                 break;
+                
             case 'overview':
-                await loadSystemOverviewData(headers);
+                const overviewResponse = await fetch('/api/dashboard/system-overview', { headers });
+                const activityResponse = await fetch('/api/dashboard/recent-activity?limit=20', { headers });
+                
+                if (overviewResponse.ok) {
+                    const overviewData = await overviewResponse.json();
+                    updateSystemOverviewStats(overviewData);
+                }
+                
+                if (activityResponse.ok) {
+                    const activityData = await activityResponse.json();
+                    updateRecentActivity(activityData);
+                }
                 break;
         }
     } catch (error) {
@@ -952,356 +1698,25 @@ async function loadTabData(tabId) {
     }
 }
 
-// Load trading bots data
-async function loadTradingBotsData(headers) {
-    try {
-        const [botsResponse, instancesResponse] = await Promise.all([
-            fetch('/api/dashboard/trading-bots', { headers }),
-            fetch('/api/instances', { headers })
-        ]);
-
-        if (botsResponse.ok && instancesResponse.ok) {
-            const botsData = await botsResponse.json();
-            const instances = await instancesResponse.json();
-            
-            updateTradingBotsStats(botsData);
-            updateInstancesTable(instances);
-            
-            // Update charts with new data
-            if (botsData.pnl_history) {
-                updateChartData('pnlChart', {
-                    labels: botsData.pnl_history.map(item => new Date(item.timestamp)),
-                    data: botsData.pnl_history.map(item => item.pnl)
-                });
-            }
-            
-            if (botsData.strategy_distribution) {
-                updateChartData('strategyChart', {
-                    data: Object.values(botsData.strategy_distribution)
-                });
-            }
-        }
-    } catch (error) {
-        console.error('Error loading trading bots data:', error);
-    }
+// Utility functions for managing instances
+function toggleDEXInstance(instanceId) {
+    // Implement DEX instance toggle logic
+    console.log('Toggle DEX instance:', instanceId);
 }
 
-// Load DEX arbitrage data
-async function loadDEXArbitrageData(headers) {
-    try {
-        const response = await fetch('/api/dashboard/dex-arbitrage', { headers });
-        if (response.ok) {
-            const data = await response.json();
-            updateDEXArbitrageStats(data);
-        }
-    } catch (error) {
-        console.error('Error loading DEX arbitrage data:', error);
-    }
+function editDEXInstance(instanceId) {
+    // Implement DEX instance edit logic
+    window.location.href = `/dex-arbitrage/${instanceId}/edit`;
 }
 
-// Load validator nodes data
-async function loadValidatorNodesData(headers) {
-    try {
-        const response = await fetch('/api/dashboard/validators', { headers });
-        if (response.ok) {
-            const data = await response.json();
-            updateValidatorNodesStats(data);
-        }
-    } catch (error) {
-        console.error('Error loading validator nodes data:', error);
-    }
+function toggleValidator(validatorId) {
+    // Implement validator toggle logic
+    console.log('Toggle validator:', validatorId);
 }
 
-// Load system overview data
-async function loadSystemOverviewData(headers) {
-    try {
-        const [overviewResponse, activityResponse] = await Promise.all([
-            fetch('/api/dashboard/overview', { headers }),
-            fetch('/api/dashboard/activity', { headers })
-        ]);
-
-        if (overviewResponse.ok && activityResponse.ok) {
-            const overviewData = await overviewResponse.json();
-            const activityData = await activityResponse.json();
-            
-            updateSystemOverviewStats(overviewData);
-            updateRecentActivity(activityData);
-        }
-    } catch (error) {
-        console.error('Error loading system overview data:', error);
-    }
-}
-
-function loadHealth() {
-    const token = localStorage.getItem('access_token');
-    if (!token) {
-        document.getElementById('system-health').innerHTML = 
-            `<span class="text-danger"><i class="fas fa-times"></i> No Auth</span>`;
-        return;
-    }
-    
-    fetch('/api/health', {
-        headers: {
-            'Authorization': 'Bearer ' + token
-        }
-    })
-        .then(response => {
-            if (response.status === 401) {
-                localStorage.removeItem('access_token');
-                window.location.href = '/login';
-                return;
-            }
-            return response.json();
-        })
-        .then(data => {
-            if (data) {
-                document.getElementById('system-health').innerHTML = 
-                    `<span class="text-success"><i class="fas fa-check"></i> ${data.status}</span>`;
-            }
-        })
-        .catch(error => {
-            console.error('Health check error:', error);
-            document.getElementById('system-health').innerHTML = 
-                `<span class="text-danger"><i class="fas fa-times"></i> Error</span>`;
-        });
-}
-
-function loadInstances() {
-    const token = localStorage.getItem('access_token');
-    if (!token) {
-        console.error('No access token available');
-        return;
-    }
-    
-    fetch('/api/instances', {
-        headers: {
-            'Authorization': 'Bearer ' + token
-        }
-    })
-        .then(response => {
-            if (response.status === 401) {
-                console.log('Unauthorized, redirecting to login');
-                localStorage.removeItem('access_token');
-                window.location.href = '/login';
-                return;
-            }
-            return response.json();
-        })
-        .then(data => {
-            if (data) {
-                instances = data;
-                updateStats();
-                updateInstancesTable();
-            }
-        })
-        .catch(error => {
-            console.error('Error loading instances:', error);
-            // Show error in UI
-            const tbody = document.querySelector('#instances-table tbody');
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="6" class="text-center text-danger">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        Error loading instances: ${error.message}
-                    </td>
-                </tr>
-            `;
-        });
-}
-
-// Update trading bots statistics
-function updateTradingBotsStats(data) {
-    document.getElementById('total-instances').textContent = data.total_instances || 0;
-    document.getElementById('active-instances').textContent = data.active_instances || 0;
-    document.getElementById('error-instances').textContent = data.error_instances || 0;
-    document.getElementById('total-pnl').textContent = `$${(data.total_pnl || 0).toFixed(2)}`;
-}
-
-// Update DEX arbitrage statistics
-function updateDEXArbitrageStats(data) {
-    document.getElementById('active-arbitrage').textContent = data.active_arbitrage || 0;
-    document.getElementById('opportunities').textContent = data.opportunities || 0;
-    document.getElementById('trading-pairs').textContent = data.trading_pairs || 0;
-    document.getElementById('arbitrage-pnl').textContent = `$${(data.arbitrage_pnl || 0).toFixed(2)}`;
-}
-
-// Update validator nodes statistics
-function updateValidatorNodesStats(data) {
-    document.getElementById('ton-validators').textContent = data.ton_validators || 0;
-    document.getElementById('solana-alpha').textContent = data.solana_alpha || 0;
-    document.getElementById('ethereum-epsilon').textContent = data.ethereum_epsilon || 0;
-    document.getElementById('validator-rewards').textContent = `$${(data.validator_rewards || 0).toFixed(2)}`;
-}
-
-// Update system overview statistics
-function updateSystemOverviewStats(data) {
-    const healthElement = document.getElementById('system-health');
-    const connectionsElement = document.getElementById('api-connections');
-    const usersElement = document.getElementById('active-users');
-    const pnlElement = document.getElementById('system-total-pnl');
-    
-    if (healthElement) {
-        healthElement.textContent = data.system_health || 'unknown';
-        healthElement.className = data.system_health === 'healthy' ? 'h5 mb-0 font-weight-bold text-success' : 'h5 mb-0 font-weight-bold text-warning';
-    }
-    if (connectionsElement) connectionsElement.textContent = data.api_connections || 0;
-    if (usersElement) usersElement.textContent = data.active_users || 0;
-    if (pnlElement) pnlElement.textContent = `$${(data.total_pnl || 0).toFixed(2)}`;
-}
-
-// Update recent activity
-function updateRecentActivity(activities) {
-    const activityContainer = document.getElementById('recent-activity');
-    if (!activityContainer) return;
-    
-    if (!activities || activities.length === 0) {
-        activityContainer.innerHTML = '<p class="text-muted">No recent activity</p>';
-        return;
-    }
-
-    const activityHTML = activities.map(activity => `
-        <div class="activity-item mb-2 p-2 border-start border-3 ${getSeverityClass(activity.severity)}">
-            <div class="d-flex justify-content-between">
-                <span class="fw-medium">${activity.message}</span>
-                <small class="text-muted">${formatTimestamp(activity.timestamp)}</small>
-            </div>
-            <small class="text-muted">${activity.type.toUpperCase()}</small>
-        </div>
-    `).join('');
-
-    activityContainer.innerHTML = activityHTML;
-}
-
-// Helper functions
-function getSeverityClass(severity) {
-    switch(severity) {
-        case 'error': return 'border-danger';
-        case 'warning': return 'border-warning';
-        case 'info': return 'border-info';
-        default: return 'border-secondary';
-    }
-}
-
-function formatTimestamp(timestamp) {
-    return new Date(timestamp).toLocaleString();
-}
-
-function updateStats() {
-    const total = instances.length;
-    const active = instances.filter(i => i.is_active).length;
-    const withErrors = instances.filter(i => i.last_error).length;
-    
-    document.getElementById('total-instances').textContent = total;
-    document.getElementById('active-instances').textContent = active;
-    document.getElementById('error-instances').textContent = withErrors;
-}
-
-function updateInstancesTable() {
-    const tbody = document.querySelector('#instances-table tbody');
-    
-    if (instances.length === 0) {
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="6" class="text-center text-muted">
-                    <i class="fas fa-robot"></i>
-                    No bot instances configured yet.
-                    <a href="/instances/new" class="btn btn-sm btn-primary ms-2">
-                        <i class="fas fa-plus"></i> Create First Instance
-                    </a>
-                </td>
-            </tr>
-        `;
-        return;
-    }
-    
-    tbody.innerHTML = instances.map(instance => `
-        <tr>
-            <td>
-                <strong>${instance.name}</strong>
-                <br>
-                <small class="text-muted">ID: ${instance.id}</small>
-            </td>
-            <td>
-                <span class="badge bg-info">${instance.exchange}</span>
-            </td>
-            <td>
-                ${instance.strategies.length > 0 ? 
-                    instance.strategies.map(s => `<span class="badge bg-secondary me-1">${s}</span>`).join('') :
-                    '<span class="text-muted">All strategies</span>'
-                }
-            </td>
-            <td>
-                ${instance.is_active ? 
-                    '<span class="badge bg-success">Active</span>' : 
-                    '<span class="badge bg-secondary">Stopped</span>'
-                }
-                ${instance.last_error ? 
-                    '<br><span class="badge bg-danger">Error</span>' : ''
-                }
-            </td>
-            <td>
-                ${instance.last_poll ? 
-                    new Date(instance.last_poll).toLocaleString() : 
-                    '<span class="text-muted">Never</span>'
-                }
-            </td>
-            <td>
-                <div class="btn-group btn-group-sm">
-                    <a href="/instances/${instance.id}" class="btn btn-outline-primary">
-                        <i class="fas fa-eye"></i>
-                    </a>
-                    ${instance.is_active ? 
-                        `<button class="btn btn-outline-warning" onclick="stopInstance(${instance.id})">
-                            <i class="fas fa-stop"></i>
-                        </button>` :
-                        `<button class="btn btn-outline-success" onclick="startInstance(${instance.id})">
-                            <i class="fas fa-play"></i>
-                        </button>`
-                    }
-                </div>
-            </td>
-        </tr>
-    `).join('');
-}
-
-function startInstance(instanceId) {
-    const token = localStorage.getItem('access_token');
-    fetch(`/api/instances/${instanceId}/start`, {
-        method: 'POST',
-        headers: {
-            'Authorization': 'Bearer ' + token
-        }
-    })
-        .then(response => response.json())
-        .then(data => {
-            if (data.message) {
-                alert(data.message);
-                refreshDashboard();
-            }
-        })
-        .catch(error => {
-            alert('Error starting instance: ' + error);
-        });
-}
-
-function stopInstance(instanceId) {
-    const token = localStorage.getItem('access_token');
-    fetch(`/api/instances/${instanceId}/stop`, {
-        method: 'POST',
-        headers: {
-            'Authorization': 'Bearer ' + token
-        }
-    })
-        .then(response => response.json())
-        .then(data => {
-            if (data.message) {
-                alert(data.message);
-                refreshDashboard();
-            }
-        })
-        .catch(error => {
-            alert('Error stopping instance: ' + error);
-        });
+function editValidator(validatorId) {
+    // Implement validator edit logic
+    window.location.href = `/validators/${validatorId}/edit`;
 }
 
 // Load data on page load
@@ -1314,7 +1729,11 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
     
-    // Verify token is still valid
+    // Initialize all charts
+    initializeCharts();
+    initializeAdditionalCharts();
+    
+    // Verify token is still valid and load initial data
     fetch('/api/health', {
         headers: {
             'Authorization': 'Bearer ' + token
@@ -1468,16 +1887,17 @@ function updateDashboardFromWebSocket(data) {
         case 'trading-bots':
             if (data.trading_bots) {
                 updateTradingBotsStats(data.trading_bots);
+                updateInstancesTable(data.trading_bots.instances);
             }
             break;
         case 'dex-arbitrage':
             if (data.dex_arbitrage) {
-                updateDEXArbitrageStats(data.dex_arbitrage);
+                updateDEXArbitrageData(data.dex_arbitrage);
             }
             break;
         case 'validators':
             if (data.validators) {
-                updateValidatorNodesStats(data.validators);
+                updateValidatorNodesData(data.validators);
             }
             break;
         case 'overview':
