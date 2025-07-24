@@ -194,6 +194,12 @@
                                 Account Settings
                             </a>
                         </li>
+                        <li class="nav-item admin-only" style="display: none;">
+                            <a class="nav-link" href="/admin/users">
+                                <i class="fas fa-users-cog"></i>
+                                User Management
+                            </a>
+                        </li>
                     </ul>
                     
                     <hr class="text-white-50">
@@ -452,6 +458,31 @@
                 setInterval(async function() {
                     await ensureValidToken();
                 }, 5 * 60 * 1000);
+                
+                // Show/hide admin-only navigation items based on user role
+                updateAdminNavigation();
+            }
+            
+            // Show/hide admin-only navigation items based on user role
+            function updateAdminNavigation() {
+                const { accessToken } = getStoredTokens();
+                if (accessToken) {
+                    try {
+                        const payload = JSON.parse(atob(accessToken.split('.')[1]));
+                        const isSuperuser = payload.is_superuser || false;
+                        
+                        if (isSuperuser) {
+                            $('.admin-only').show();
+                        } else {
+                            $('.admin-only').hide();
+                        }
+                    } catch (error) {
+                        console.error('Error parsing token for admin navigation:', error);
+                        $('.admin-only').hide();
+                    }
+                } else {
+                    $('.admin-only').hide();
+                }
             }
             
             // Add logout functionality

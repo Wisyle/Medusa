@@ -1063,6 +1063,194 @@ async def validators_page(request: Request, current_user: User = Depends(get_cur
         "user": current_user
     })
 
+
+@app.get("/admin/users", response_class=HTMLResponse)
+async def admin_users_page(request: Request, current_user: User = Depends(get_current_active_user)):
+    """Admin user management page - only accessible to superusers"""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Access denied. Superuser privileges required.")
+    
+    return templates.TemplateResponse("admin_users.html", {
+        "request": request,
+        "user": current_user
+    })
+
+@app.get("/api/admin/users")
+async def get_all_users(current_user: User = Depends(get_current_active_user), db: Session = Depends(get_db)):
+    """Get all users with their roles - only accessible to superusers"""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Access denied. Superuser privileges required.")
+    
+    users = db.query(User).all()
+    result = []
+    
+    for user in users:
+        user_data = {
+            "id": user.id,
+            "email": user.email,
+            "full_name": user.full_name,
+            "is_active": user.is_active,
+            "is_superuser": user.is_superuser,
+            "totp_enabled": user.totp_enabled,
+            "created_at": user.created_at.isoformat(),
+            "roles": []
+        }
+        
+        for user_role in user.roles:
+            role_data = {
+                "id": user_role.role.id,
+                "name": user_role.role.name,
+                "description": user_role.role.description
+            }
+            user_data["roles"].append(role_data)
+        
+        result.append(user_data)
+    
+    return result
+
+@app.get("/api/admin/roles")
+async def get_all_roles(current_user: User = Depends(get_current_active_user), db: Session = Depends(get_db)):
+    """Get all available roles - only accessible to superusers"""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Access denied. Superuser privileges required.")
+    
+    from database import Role, RolePermission, Permission
+    
+    roles = db.query(Role).all()
+    result = []
+    
+    for role in roles:
+        role_data = {
+            "id": role.id,
+            "name": role.name,
+            "description": role.description,
+            "permissions": []
+        }
+        
+        for role_permission in role.permissions:
+            perm_data = {
+                "id": role_permission.permission.id,
+                "name": role_permission.permission.name,
+                "description": role_permission.permission.description,
+                "resource": role_permission.permission.resource,
+                "action": role_permission.permission.action
+            }
+            role_data["permissions"].append(perm_data)
+        
+        result.append(role_data)
+    
+    return result
+
+@app.post("/api/admin/users")
+async def create_user_admin(
+    user_data: dict,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Create a new user - only accessible to superusers"""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Access denied. Superuser privileges required.")
+    
+    from database import Role, UserRole
+    from auth import get_password_hash
+    
+    # Check if user already exists
+    existing_user = db.query(User).filter(User.email == user_data["email"]).first()
+    if existing_user:
+        raise HTTPException(status_code=400, detail="User with this email already exists")
+    
+    new_user = User(
+        email=user_data["email"],
+        full_name=user_data.get("full_name"),
+        hashed_password=get_password_hash(user_data["password"]),
+        is_active=user_data.get("is_active", True),
+        is_superuser=False  # Only existing superusers can create other superusers via edit
+    )
+    
+    db.add(new_user)
+    db.flush()  # Get the user ID
+    
+    role_ids = user_data.get("role_ids", [])
+    for role_id in role_ids:
+        role = db.query(Role).filter(Role.id == role_id).first()
+        if role:
+            user_role = UserRole(
+                user_id=new_user.id,
+                role_id=role_id,
+                assigned_by=current_user.id
+            )
+            db.add(user_role)
+    
+    db.commit()
+    
+    return {"message": "User created successfully", "user_id": new_user.id}
+
+@app.put("/api/admin/users/{user_id}")
+async def update_user_admin(
+    user_id: int,
+    user_data: dict,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Update a user - only accessible to superusers"""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Access denied. Superuser privileges required.")
+    
+    from database import Role, UserRole
+    
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    user.email = user_data.get("email", user.email)
+    user.full_name = user_data.get("full_name", user.full_name)
+    user.is_active = user_data.get("is_active", user.is_active)
+    user.is_superuser = user_data.get("is_superuser", user.is_superuser)
+    
+    if "role_ids" in user_data:
+        db.query(UserRole).filter(UserRole.user_id == user_id).delete()
+        
+        role_ids = user_data["role_ids"]
+        for role_id in role_ids:
+            role = db.query(Role).filter(Role.id == role_id).first()
+            if role:
+                user_role = UserRole(
+                    user_id=user_id,
+                    role_id=role_id,
+                    assigned_by=current_user.id
+                )
+                db.add(user_role)
+    
+    db.commit()
+    
+    return {"message": "User updated successfully"}
+
+@app.delete("/api/admin/users/{user_id}")
+async def delete_user_admin(
+    user_id: int,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Delete a user - only accessible to superusers"""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Access denied. Superuser privileges required.")
+    
+    from database import UserRole
+    
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if user.is_superuser:
+        raise HTTPException(status_code=400, detail="Cannot delete superuser accounts")
+    
+    db.query(UserRole).filter(UserRole.user_id == user_id).delete()
+    
+    db.delete(user)
+    db.commit()
+    
+    return {"message": "User deleted successfully"}
+
 if __name__ == "__main__":
     uvicorn.run(
         "main:app",
