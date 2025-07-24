@@ -138,16 +138,29 @@
             margin-bottom: 20px;
         }
         
-        .lighthouse-logo {
-            width: 60px;
-            height: 60px;
-            filter: drop-shadow(0 0 10px var(--glow-blue));
-            transition: transform 0.3s ease;
-        }
-        
-        .lighthouse-logo:hover {
-            transform: scale(1.1);
-        }
+                 .lighthouse-logo-container {
+             position: relative;
+             display: inline-block;
+         }
+         
+         .lighthouse-logo {
+             width: 60px;
+             height: 60px;
+             filter: drop-shadow(0 0 10px var(--glow-blue));
+             transition: transform 0.3s ease;
+         }
+         
+         .lighthouse-logo:hover {
+             transform: scale(1.1);
+         }
+         
+         .gif-fallback {
+             transition: transform 0.3s ease;
+         }
+         
+         .gif-fallback:hover {
+             transform: scale(1.1);
+         }
         .main-content {
             background: transparent;
             min-height: 100vh;
@@ -314,7 +327,24 @@
             <nav class="col-md-3 col-lg-2 d-md-block sidebar collapse" id="main-sidebar" style="display: none;">
                 <div class="position-sticky pt-3">
                     <div class="logo-container">
-                        <lottie-player src="/static/lighthouse.json" background="transparent" speed="1" style="width: 60px; height: 60px; filter: drop-shadow(0 0 10px var(--glow-blue));" loop autoplay class="lighthouse-logo"></lottie-player>
+                        <div class="lighthouse-logo-container">
+                            <lottie-player 
+                                src="/static/lighthouse.json" 
+                                background="transparent" 
+                                speed="1" 
+                                style="width: 60px; height: 60px; filter: drop-shadow(0 0 10px var(--glow-blue));" 
+                                loop 
+                                autoplay 
+                                class="lighthouse-logo lottie-animation"
+                                onerror="handleLottieError(this, '/static/lighthouse.gif')"
+                                onload="handleLottieLoad(this)">
+                            </lottie-player>
+                            <img 
+                                src="/static/lighthouse.gif" 
+                                alt="Lighthouse Logo" 
+                                style="width: 60px; height: 60px; filter: drop-shadow(0 0 10px var(--glow-blue)); display: none;" 
+                                class="lighthouse-logo gif-fallback">
+                        </div>
                         <h4 class="text-white mt-3" style="font-family: 'Orbitron', monospace; font-weight: 700;">
                             LIGHTHOUSE
                         </h4>
@@ -739,37 +769,50 @@
             }
         }
         
-        // Show sidebar only when user is logged in
-        function toggleSidebarVisibility() {
-            const { accessToken } = getStoredTokens();
-            const sidebar = document.getElementById('main-sidebar');
-            const mainContent = document.querySelector('.main-content');
-            const isLoggedIn = accessToken && !isTokenExpired(accessToken);
-            const isLoginPage = window.location.pathname.includes('/login') || 
-                               window.location.pathname.includes('/register') ||
-                               window.location.pathname.includes('/security-setup');
-            
-            if (isLoggedIn && !isLoginPage) {
-                sidebar.style.display = 'block';
-                mainContent.classList.remove('col-12');
-                mainContent.classList.add('col-md-9', 'col-lg-10', 'ms-sm-auto');
-            } else {
-                sidebar.style.display = 'none';
-                mainContent.classList.remove('col-md-9', 'col-lg-10', 'ms-sm-auto');
-                mainContent.classList.add('col-12');
-            }
-        }
+                 // Show sidebar only when user is logged in
+         function toggleSidebarVisibility() {
+             const { accessToken } = getStoredTokens();
+             const sidebar = document.getElementById('main-sidebar');
+             const mainContent = document.querySelector('.main-content');
+             const isLoginPage = window.location.pathname.includes('/login') || 
+                                window.location.pathname.includes('/register') ||
+                                window.location.pathname.includes('/security-setup');
+             
+             // Always hide sidebar on login-related pages
+             if (isLoginPage) {
+                 sidebar.style.display = 'none';
+                 mainContent.classList.remove('col-md-9', 'col-lg-10', 'ms-sm-auto');
+                 mainContent.classList.add('col-12');
+                 return;
+             }
+             
+             // Check if user is actually logged in with valid token
+             const isLoggedIn = accessToken && !isTokenExpired(accessToken);
+             
+             if (isLoggedIn) {
+                 sidebar.style.display = 'block';
+                 mainContent.classList.remove('col-12');
+                 mainContent.classList.add('col-md-9', 'col-lg-10', 'ms-sm-auto');
+             } else {
+                 sidebar.style.display = 'none';
+                 mainContent.classList.remove('col-md-9', 'col-lg-10', 'ms-sm-auto');
+                 mainContent.classList.add('col-12');
+             }
+         }
         
-        // Initialize on DOM ready
-        $(document).ready(function() {
-            createParticles();
-            
-            // Save username for welcome messages
-            const user = getCurrentUser();
-            if (user && user.full_name) {
-                localStorage.setItem('user_display_name', user.full_name);
-            }
-        });
+                 // Initialize on DOM ready
+         $(document).ready(function() {
+             createParticles();
+             
+             // Immediately hide sidebar before any async checks
+             toggleSidebarVisibility();
+             
+             // Save username for welcome messages
+             const user = getCurrentUser();
+             if (user && user.full_name) {
+                 localStorage.setItem('user_display_name', user.full_name);
+             }
+         });
         
         // Get current user info from token
         function getCurrentUser() {
@@ -781,6 +824,27 @@
                 return payload;
             } catch (error) {
                 return null;
+            }
+        }
+
+        // Lottie error handling
+        function handleLottieError(lottiePlayer, fallbackSrc) {
+            const fallbackImage = lottiePlayer.nextElementSibling; // Get the next sibling (the GIF fallback)
+            if (fallbackImage && fallbackImage.tagName === 'IMG') {
+                fallbackImage.style.display = 'block';
+                lottiePlayer.style.display = 'none';
+                console.warn('Lottie animation failed to load, showing GIF fallback.');
+            } else {
+                console.error('Lottie player or fallback image not found.');
+            }
+        }
+
+        // Lottie load handling
+        function handleLottieLoad(lottiePlayer) {
+            const fallbackImage = lottiePlayer.nextElementSibling; // Get the next sibling (the GIF fallback)
+            if (fallbackImage && fallbackImage.tagName === 'IMG') {
+                fallbackImage.style.display = 'none';
+                lottiePlayer.style.display = 'block';
             }
         }
     </script>

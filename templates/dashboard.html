@@ -364,7 +364,24 @@
 <div class="welcome-section mb-4">
     <div class="welcome-card">
         <div class="lighthouse-brand">
-            <lottie-player src="/static/lighthouse.json" background="transparent" speed="1" style="width: 50px; height: 50px; filter: drop-shadow(0 0 15px var(--glow-blue));" loop autoplay class="welcome-logo"></lottie-player>
+            <div class="lighthouse-logo-container">
+                <lottie-player 
+                    src="/static/lighthouse.json" 
+                    background="transparent" 
+                    speed="1" 
+                    style="width: 50px; height: 50px; filter: drop-shadow(0 0 15px var(--glow-blue));" 
+                    loop 
+                    autoplay 
+                    class="welcome-logo lottie-animation"
+                    onerror="handleLottieError(this, '/static/lighthouse.gif')"
+                    onload="handleLottieLoad(this)">
+                </lottie-player>
+                <img 
+                    src="/static/lighthouse.gif" 
+                    alt="Lighthouse Logo" 
+                    style="width: 50px; height: 50px; filter: drop-shadow(0 0 15px var(--glow-blue)); display: none;" 
+                    class="welcome-logo gif-fallback">
+            </div>
             <div class="brand-info">
                 <h1 class="lighthouse-title">LIGHTHOUSE</h1>
                 <p class="brand-tagline">TAR Global Strategies</p>
@@ -2260,5 +2277,26 @@ window.addEventListener('beforeunload', function() {
         websocket.close(1000, 'Page unloading');
     }
 });
+
+// Lottie error handling for dashboard
+function handleLottieError(lottiePlayer, fallbackSrc) {
+    const fallbackImage = lottiePlayer.nextElementSibling;
+    if (fallbackImage && fallbackImage.tagName === 'IMG') {
+        fallbackImage.style.display = 'block';
+        lottiePlayer.style.display = 'none';
+        console.warn('Lottie animation failed to load, showing GIF fallback.');
+    } else {
+        console.error('Lottie player or fallback image not found.');
+    }
+}
+
+// Lottie load handling for dashboard
+function handleLottieLoad(lottiePlayer) {
+    const fallbackImage = lottiePlayer.nextElementSibling;
+    if (fallbackImage && fallbackImage.tagName === 'IMG') {
+        fallbackImage.style.display = 'none';
+        lottiePlayer.style.display = 'block';
+    }
+}
 </script>
 {% endblock %}

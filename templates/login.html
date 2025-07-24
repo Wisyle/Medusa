@@ -9,7 +9,24 @@
         <div class="login-card">
             <div class="login-card-header">
                 <div class="logo-section">
-                    <lottie-player src="/static/lighthouse.json" background="transparent" speed="1" style="width: 80px; height: 80px;" loop autoplay class="login-logo"></lottie-player>
+                    <div class="lighthouse-logo-container">
+                        <lottie-player 
+                            src="/static/lighthouse.json" 
+                            background="transparent" 
+                            speed="1" 
+                            style="width: 80px; height: 80px;" 
+                            loop 
+                            autoplay 
+                            class="login-logo lottie-animation"
+                            onerror="handleLottieError(this, '/static/lighthouse-login.gif')"
+                            onload="handleLottieLoad(this)">
+                        </lottie-player>
+                        <img 
+                            src="/static/lighthouse-login.gif" 
+                            alt="Lighthouse Logo" 
+                            style="width: 80px; height: 80px; display: none;" 
+                            class="login-logo gif-fallback">
+                    </div>
                     <h2 class="brand-title">LIGHTHOUSE</h2>
                     <p class="brand-subtitle">TAR Global Strategies</p>
                 </div>
@@ -659,5 +676,26 @@ style.textContent = `
     }
 `;
 document.head.appendChild(style);
+
+// Lottie error handling for login page
+function handleLottieError(lottiePlayer, fallbackSrc) {
+    const fallbackImage = lottiePlayer.nextElementSibling;
+    if (fallbackImage && fallbackImage.tagName === 'IMG') {
+        fallbackImage.style.display = 'block';
+        lottiePlayer.style.display = 'none';
+        console.warn('Lottie animation failed to load, showing GIF fallback.');
+    } else {
+        console.error('Lottie player or fallback image not found.');
+    }
+}
+
+// Lottie load handling for login page
+function handleLottieLoad(lottiePlayer) {
+    const fallbackImage = lottiePlayer.nextElementSibling;
+    if (fallbackImage && fallbackImage.tagName === 'IMG') {
+        fallbackImage.style.display = 'none';
+        lottiePlayer.style.display = 'block';
+    }
+}
 </script>
 {% endblock %}
