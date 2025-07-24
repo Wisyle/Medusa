@@ -484,7 +484,14 @@
 
         async function loadRoles() {
             try {
-                const response = await fetch('/api/admin/roles');
+                const token = localStorage.getItem('access_token');
+                const response = await fetch('/api/admin/roles', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    }
+                });
                 if (response.ok) {
                     availableRoles = await response.json();
                     populateRoleSelects();
@@ -533,7 +540,14 @@
             $('#usersTableContainer').hide();
             
             try {
-                const response = await fetch('/api/admin/users');
+                const token = localStorage.getItem('access_token');
+                const response = await fetch('/api/admin/users', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    }
+                });
                 if (response.ok) {
                     currentUsers = await response.json();
                     displayUsers();
@@ -616,9 +630,11 @@
             }
             
             try {
+                const token = localStorage.getItem('access_token');
                 const response = await fetch('/api/admin/users', {
                     method: 'POST',
                     headers: {
+                        'Authorization': 'Bearer ' + token,
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
@@ -675,9 +691,11 @@
             const isSuperuser = $('#editUserSuperuser').is(':checked');
             
             try {
+                const token = localStorage.getItem('access_token');
                 const response = await fetch(`/api/admin/users/${userId}`, {
                     method: 'PUT',
                     headers: {
+                        'Authorization': 'Bearer ' + token,
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
@@ -712,8 +730,13 @@
             }
             
             try {
+                const token = localStorage.getItem('access_token');
                 const response = await fetch(`/api/admin/users/${userId}`, {
-                    method: 'DELETE'
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    }
                 });
                 
                 if (response.ok) {
