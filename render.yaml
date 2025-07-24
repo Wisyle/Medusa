@@ -82,4 +82,3 @@ databases:
   - name: tar-dashboard-db
     databaseName: tar_dashboard
     user: tar_admin
-    plan: starter

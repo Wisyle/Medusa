@@ -35,7 +35,7 @@ git push origin master
 - **No Telegram prompts**: Telegram is configured per instance in dashboard
 - **4 Services Created**: Web, Worker, Strategy Monitor, Database
 - **Auto-Generated Secrets**: Render creates secure keys automatically
-- **⚠️ Plan Requirement**: Starter plan needed for worker services (~$7/month per service)
+- **⚠️ Plan Requirement**: Starter plan needed for worker services (~$7/month per service), database is free
 
 ### **Step 3: Services Created Automatically**
 
@@ -62,7 +62,7 @@ Render will create these services from your `render.yaml`:
 
 #### 🗄️ **tar-dashboard-db**
 - **Type**: PostgreSQL Database
-- **Plan**: Starter
+- **Plan**: Free tier (default for new databases)
 - **Database**: `tar_dashboard`
 - **User**: `tar_admin`
 
@@ -303,8 +303,8 @@ Your **TAR Global Strategies Dashboard** is now running as a **multi-service arc
 - **Web Service**: $7/month (Starter plan)
 - **Worker Service**: $7/month (Starter plan) 
 - **Strategy Monitor**: $7/month (Starter plan)
-- **PostgreSQL Database**: $7/month (Starter plan)
-- **Total**: ~$28/month for full separation of concerns
+- **PostgreSQL Database**: Free (default plan)
+- **Total**: ~$21/month for full separation of concerns
 
 ### **Cost-Optimized Alternative:**
 If you want to reduce costs, you can run everything in the web service:
