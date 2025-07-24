@@ -4,21 +4,12 @@
 
 {% block content %}
 <div class="login-container">
-    <!-- Lighthouse Animation Container -->
-    <div class="lighthouse-scene">
-        <div class="lighthouse-tower">
-            <div class="lighthouse-light">
-                <div class="light-beam"></div>
-            </div>
-        </div>
-    </div>
-    
     <!-- Main Login Card -->
     <div class="login-card-container">
         <div class="login-card">
             <div class="login-card-header">
                 <div class="logo-section">
-                    <img src="/static/lighthouse-logo.svg" alt="Lighthouse Logo" class="login-logo">
+                    <lottie-player src="/static/lighthouse.json" background="transparent" speed="1" style="width: 80px; height: 80px;" loop autoplay class="login-logo"></lottie-player>
                     <h2 class="brand-title">LIGHTHOUSE</h2>
                     <p class="brand-subtitle">TAR Global Strategies</p>
                 </div>
@@ -129,78 +120,6 @@
     padding: 20px;
     position: relative;
     overflow: hidden;
-}
-
-/* Lighthouse Animation */
-.lighthouse-scene {
-    position: absolute;
-    top: 10%;
-    right: 10%;
-    width: 120px;
-    height: 200px;
-    z-index: 1;
-}
-
-.lighthouse-tower {
-    width: 30px;
-    height: 120px;
-    background: linear-gradient(180deg, #ffffff 0%, #cccccc 100%);
-    position: relative;
-    margin: 0 auto;
-    border-radius: 2px;
-}
-
-.lighthouse-tower::before {
-    content: '';
-    position: absolute;
-    top: -10px;
-    left: -5px;
-    width: 40px;
-    height: 15px;
-    background: linear-gradient(145deg, #333333, #666666);
-    border-radius: 2px;
-}
-
-.lighthouse-tower::after {
-    content: '';
-    position: absolute;
-    bottom: -20px;
-    left: -10px;
-    width: 50px;
-    height: 25px;
-    background: linear-gradient(145deg, #ffffff, #cccccc);
-    border-radius: 2px;
-}
-
-.lighthouse-light {
-    position: absolute;
-    top: -10px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 20px;
-    height: 20px;
-    background: radial-gradient(circle, #ffd700, #ffed4e);
-    border-radius: 50%;
-    box-shadow: 0 0 20px #ffd700;
-}
-
-.light-beam {
-    position: absolute;
-    top: 50%;
-    left: 100%;
-    width: 0;
-    height: 0;
-    border-top: 30px solid transparent;
-    border-bottom: 30px solid transparent;
-    border-left: 80px solid rgba(255, 215, 0, 0.3);
-    transform-origin: 0 50%;
-    animation: lighthouse-sweep 4s ease-in-out infinite;
-    filter: blur(2px);
-}
-
-@keyframes lighthouse-sweep {
-    0%, 100% { transform: rotate(-30deg); }
-    50% { transform: rotate(30deg); }
 }
 
 /* Login Card */
