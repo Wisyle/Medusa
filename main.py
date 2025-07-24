@@ -205,6 +205,18 @@ async def refresh_token(refresh_request: RefreshTokenRequest, db: Session = Depe
     })
     return {"access_token": access_token, "refresh_token": new_refresh_token, "token_type": "bearer"}
 
+@app.post("/auth/logout")
+async def logout(request: Request):
+    """Logout user by redirecting to login page"""
+    # Clear any server-side session data if needed
+    response = RedirectResponse(url="/login", status_code=302)
+    
+    # Clear any cookies if using cookie-based auth
+    response.delete_cookie(key="access_token")
+    response.delete_cookie(key="refresh_token")
+    
+    return response
+
 @app.post("/auth/setup-security")
 async def setup_security(
     security_setup: SecuritySetup, 
@@ -1134,52 +1146,52 @@ async def get_instance_logs(
 @app.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request):
     """Login page"""
-    return templates.TemplateResponse("login.html", {"request": request})
+    return templates.TemplateResponse("login.html", {"request": request, "current_user": None})
 
 @app.get("/security-setup", response_class=HTMLResponse)
 async def security_setup_page(request: Request):
     """Security setup page"""
-    return templates.TemplateResponse("security_setup.html", {"request": request})
+    return templates.TemplateResponse("security_setup.html", {"request": request, "current_user": None})
 
 @app.get("/register", response_class=HTMLResponse)
 async def register_page(request: Request):
     """Registration page"""
-    return templates.TemplateResponse("register.html", {"request": request})
+    return templates.TemplateResponse("register.html", {"request": request, "current_user": None})
 
 @app.get("/setup-2fa", response_class=HTMLResponse)
 async def setup_2fa_page(request: Request):
     """2FA setup page"""
-    return templates.TemplateResponse("setup_2fa.html", {"request": request})
+    return templates.TemplateResponse("setup_2fa.html", {"request": request, "current_user": None})
 
 @app.get("/", response_class=HTMLResponse)
 async def dashboard(request: Request, current_user: User = Depends(get_current_user_html)):
     """Main dashboard"""
-    return templates.TemplateResponse("dashboard.html", {"request": request, "user": current_user})
+    return templates.TemplateResponse("dashboard.html", {"request": request, "current_user": current_user})
 
 @app.get("/instances", response_class=HTMLResponse)
 async def instances_page(request: Request, current_user: User = Depends(get_current_user_html)):
     """Instances management page"""
-    return templates.TemplateResponse("instances.html", {"request": request, "user": current_user})
+    return templates.TemplateResponse("instances.html", {"request": request, "current_user": current_user})
 
 @app.get("/instances/new", response_class=HTMLResponse)
 async def new_instance_page(request: Request, current_user: User = Depends(get_current_user_html)):
     """New instance form"""
-    return templates.TemplateResponse("new_instance.html", {"request": request, "user": current_user})
+    return templates.TemplateResponse("new_instance.html", {"request": request, "current_user": current_user})
 
 @app.get("/instances/{instance_id}", response_class=HTMLResponse)
 async def instance_detail(request: Request, instance_id: int, current_user: User = Depends(get_current_user_html)):
     """Instance detail page"""
-    return templates.TemplateResponse("instance_detail.html", {"request": request, "instance_id": instance_id, "user": current_user})
+    return templates.TemplateResponse("instance_detail.html", {"request": request, "instance_id": instance_id, "current_user": current_user})
 
 @app.get("/instances/{instance_id}/edit", response_class=HTMLResponse)
 async def edit_instance_page(request: Request, instance_id: int, current_user: User = Depends(get_current_user_html)):
     """Edit instance form"""
-    return templates.TemplateResponse("edit_instance.html", {"request": request, "instance_id": instance_id, "user": current_user})
+    return templates.TemplateResponse("edit_instance.html", {"request": request, "instance_id": instance_id, "current_user": current_user})
 
 @app.get("/account", response_class=HTMLResponse)
 async def account_page(request: Request, current_user: User = Depends(get_current_user_html)):
     """Account settings page"""
-    return templates.TemplateResponse("account.html", {"request": request, "user": current_user})
+    return templates.TemplateResponse("account.html", {"request": request, "current_user": current_user})
 
 # Account Settings API Routes
 @app.get("/api/user/profile")
@@ -1333,7 +1345,7 @@ async def disable_2fa(
 @app.get("/system-logs", response_class=HTMLResponse)
 async def system_logs_page(request: Request, current_user: User = Depends(get_current_user_html)):
     """System logs dashboard"""
-    return templates.TemplateResponse("system_logs.html", {"request": request, "user": current_user})
+    return templates.TemplateResponse("system_logs.html", {"request": request, "current_user": current_user})
 
 @app.get("/api/system-logs")
 async def get_system_logs(
@@ -1481,7 +1493,7 @@ async def monitor_instances():
 @app.get("/strategy-monitors", response_class=HTMLResponse)
 async def strategy_monitors_page(request: Request, current_user: User = Depends(get_current_user_html)):
     """Strategy monitors management page"""
-    return templates.TemplateResponse("strategy_monitors.html", {"request": request, "user": current_user})
+    return templates.TemplateResponse("strategy_monitors.html", {"request": request, "current_user": current_user})
 
 @app.post("/strategy-monitors")
 async def create_strategy_monitor(
@@ -1661,12 +1673,12 @@ async def get_strategy_monitors(db: Session = Depends(get_db)):
 @app.get("/dex-arbitrage", response_class=HTMLResponse)
 async def dex_arbitrage_page(request: Request, current_user: User = Depends(get_current_user_html)):
     """DEX arbitrage monitoring page"""
-    return templates.TemplateResponse("dex_arbitrage.html", {"request": request, "user": current_user})
+    return templates.TemplateResponse("dex_arbitrage.html", {"request": request, "current_user": current_user})
 
 @app.get("/validators", response_class=HTMLResponse)
 async def validators_page(request: Request, current_user: User = Depends(get_current_user_html)):
     """Validator nodes monitoring page"""
-    return templates.TemplateResponse("validators.html", {"request": request, "user": current_user})
+    return templates.TemplateResponse("validators.html", {"request": request, "current_user": current_user})
 
 
 @app.get("/admin/users", response_class=HTMLResponse)
@@ -1674,14 +1686,14 @@ async def admin_users_page(request: Request, current_user: User = Depends(get_cu
     """Admin user management page - only accessible to superusers"""
     if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Admin access required")
-    return templates.TemplateResponse("admin_users.html", {"request": request, "user": current_user})
+    return templates.TemplateResponse("admin_users.html", {"request": request, "current_user": current_user})
 
 @app.get("/admin/notifications", response_class=HTMLResponse)
 async def admin_notifications_page(request: Request, current_user: User = Depends(get_current_user_html)):
     """Admin notification management page - only accessible to superusers"""
     if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Admin access required")
-    return templates.TemplateResponse("admin_notifications.html", {"request": request, "user": current_user})
+    return templates.TemplateResponse("admin_notifications.html", {"request": request, "current_user": current_user})
 
 @app.get("/api/admin/users")
 async def get_all_users(current_user: User = Depends(get_current_active_user), db: Session = Depends(get_db)):

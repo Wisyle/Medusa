@@ -24,7 +24,7 @@ def add_api_library_routes(app: FastAPI):
         """API Library management page"""
         return templates.TemplateResponse("api_library.html", {
             "request": request,
-            "user": current_user
+            "current_user": current_user
         })
 
     @app.get("/api/api-credentials")

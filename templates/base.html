@@ -347,8 +347,9 @@
     
     <div class="container-fluid">
         <div class="row">
-            <!-- Sidebar - Hidden on login page -->
-            <nav class="col-md-3 col-lg-2 d-md-block sidebar collapse" id="main-sidebar" style="display: none;">
+            <!-- Sidebar - Only show when user is authenticated server-side -->
+            {% if current_user %}
+            <nav class="col-md-3 col-lg-2 d-md-block sidebar collapse" id="main-sidebar">
                 <div class="position-sticky pt-3">
                     <div class="logo-container">
                         <div class="lighthouse-logo-container">
@@ -430,18 +431,20 @@
                                 Account Settings
                             </a>
                         </li>
-                        <li class="nav-item admin-only" style="display: none;">
+                        {% if current_user.is_superuser %}
+                        <li class="nav-item">
                             <a class="nav-link" href="/admin/users">
                                 <i class="fas fa-users-cog"></i>
                                 User Management
                             </a>
                         </li>
-                        <li class="nav-item admin-only" style="display: none;">
+                        <li class="nav-item">
                             <a class="nav-link" href="/admin/notifications">
                                 <i class="fas fa-bell-concierge"></i>
                                 Notifications
                             </a>
                         </li>
+                        {% endif %}
                     </ul>
                     
                     <hr class="text-white-50">
@@ -454,16 +457,19 @@
                     </div>
                     
                     <div class="mt-3">
-                        <a href="#" class="btn btn-outline-secondary btn-sm logout-btn">
-                            <i class="fas fa-sign-out-alt"></i>
-                            Logout
-                        </a>
+                        <form action="/auth/logout" method="post" style="display: inline;">
+                            <button type="submit" class="btn btn-outline-secondary btn-sm">
+                                <i class="fas fa-sign-out-alt"></i>
+                                Logout
+                            </button>
+                        </form>
                     </div>
                 </div>
             </nav>
+            {% endif %}
 
             <!-- Main content -->
-            <main class="col-12 px-md-4 main-content">
+            <main class="{% if current_user %}col-md-9 col-lg-10 ms-sm-auto{% else %}col-12{% endif %} px-md-4 main-content">
                 <div class="pt-3 pb-2 mb-3">
                     {% block content %}{% endblock %}
                 </div>
@@ -474,7 +480,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
-        // Token management functions
+        // Simple token management for API calls only - no authentication logic
         function getStoredTokens() {
             return {
                 accessToken: localStorage.getItem('access_token'),
@@ -487,374 +493,26 @@
             localStorage.removeItem('refresh_token');
         }
         
-        function isTokenExpired(token) {
-            if (!token) return true;
-            
-            try {
-                const payload = JSON.parse(atob(token.split('.')[1]));
-                const expirationTime = payload.exp * 1000;
-                const currentTime = Date.now();
-                
-                return currentTime >= expirationTime;
-            } catch (error) {
-                console.error('Error parsing token:', error);
-                return true;
-            }
-        }
-        
-        function isTokenExpiringSoon(token, minutesThreshold = 5) {
-            if (!token) return true;
-            
-            try {
-                const payload = JSON.parse(atob(token.split('.')[1]));
-                const expirationTime = payload.exp * 1000;
-                const currentTime = Date.now();
-                const thresholdTime = minutesThreshold * 60 * 1000;
-                
-                return (expirationTime - currentTime) < thresholdTime;
-            } catch (error) {
-                console.error('Error parsing token:', error);
-                return true;
-            }
-        }
-        
-        async function refreshAccessToken() {
-            const { refreshToken } = getStoredTokens();
-            
-            if (!refreshToken || isTokenExpired(refreshToken)) {
-                console.log('No valid refresh token available');
-                clearTokens();
-                window.location.href = '/login';
-                return false;
-            }
-            
-            try {
-                const response = await fetch('/auth/refresh', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ refresh_token: refreshToken })
-                });
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    localStorage.setItem('access_token', data.access_token);
-                    localStorage.setItem('refresh_token', data.refresh_token);
-                    console.log('Token refreshed successfully');
-                    return true;
-                } else {
-                    console.error('Token refresh failed:', response.status);
-                    clearTokens();
-                    window.location.href = '/login';
-                    return false;
-                }
-            } catch (error) {
-                console.error('Token refresh error:', error);
-                clearTokens();
-                window.location.href = '/login';
-                return false;
-            }
-        }
-        
-        async function ensureValidToken() {
+        // Set up AJAX requests with tokens if available
+        $(document).ready(function() {
             const { accessToken } = getStoredTokens();
             
-            if (!accessToken) {
-                return false;
-            }
-            
-            if (isTokenExpired(accessToken)) {
-                console.log('Access token expired, attempting refresh...');
-                return await refreshAccessToken();
-            }
-            
-            if (isTokenExpiringSoon(accessToken)) {
-                console.log('Access token expiring soon, refreshing proactively...');
-                return await refreshAccessToken();
-            }
-            
-            return true;
-        }
-        
-        // Show sidebar only when user is logged in
-        function toggleSidebarVisibility() {
-            const { accessToken } = getStoredTokens();
-            const sidebar = document.getElementById('main-sidebar');
-            const mainContent = document.querySelector('.main-content');
-            const isLoginPage = window.location.pathname.includes('/login') || 
-                               window.location.pathname.includes('/register') ||
-                               window.location.pathname.includes('/security-setup');
-            
-            console.log('toggleSidebarVisibility called', { accessToken: !!accessToken, isLoginPage, pathname: window.location.pathname });
-            
-            // Always hide sidebar on login-related pages OR when no valid token
-            if (isLoginPage || !accessToken) {
-                if (sidebar) {
-                    sidebar.style.display = 'none';
-                }
-                if (mainContent) {
-                    mainContent.classList.remove('col-md-9', 'col-lg-10', 'ms-sm-auto');
-                    mainContent.classList.add('col-12');
-                }
-                return;
-            }
-            
-            // Check if user is actually logged in with valid token
-            const isLoggedIn = accessToken && !isTokenExpired(accessToken);
-            
-            if (isLoggedIn && sidebar && mainContent) {
-                sidebar.style.display = 'block';
-                mainContent.classList.remove('col-12');
-                mainContent.classList.add('col-md-9', 'col-lg-10', 'ms-sm-auto');
-            } else {
-                if (sidebar) {
-                    sidebar.style.display = 'none';
-                }
-                if (mainContent) {
-                    mainContent.classList.remove('col-md-9', 'col-lg-10', 'ms-sm-auto');
-                    mainContent.classList.add('col-12');
-                }
-                // Clear invalid tokens
-                if (accessToken && isTokenExpired(accessToken)) {
-                    clearTokens();
-                }
-            }
-        }
-        
-        // Show/hide admin-only navigation items based on user role
-        function updateAdminNavigation() {
-            const { accessToken } = getStoredTokens();
             if (accessToken) {
-                try {
-                    const payload = JSON.parse(atob(accessToken.split('.')[1]));
-                    const isSuperuser = payload.is_superuser || false;
-                    
-                    if (isSuperuser) {
-                        $('.admin-only').show();
-                    } else {
-                        $('.admin-only').hide();
-                    }
-                } catch (error) {
-                    console.error('Error parsing token for admin navigation:', error);
-                    $('.admin-only').hide();
-                }
-            } else {
-                $('.admin-only').hide();
-            }
-        }
-        
-        // Get current user info from token
-        function getCurrentUser() {
-            const { accessToken } = getStoredTokens();
-            if (!accessToken) return null;
-            
-            try {
-                const payload = JSON.parse(atob(accessToken.split('.')[1]));
-                return payload;
-            } catch (error) {
-                return null;
-            }
-        }
-        
-        // Check authentication on page load
-        $(document).ready(async function() {
-            console.log('Document ready - checking authentication');
-            
-            // Always hide sidebar immediately on page load
-            toggleSidebarVisibility();
-            
-            const { accessToken } = getStoredTokens();
-            const isLoginPage = window.location.pathname.includes('/login') || 
-                               window.location.pathname.includes('/register') ||
-                               window.location.pathname.includes('/security-setup');
-            
-            console.log('Initial auth check', { hasToken: !!accessToken, isLoginPage });
-            
-            // If no token, ensure sidebar stays hidden and redirect if needed
-            if (!accessToken) {
-                toggleSidebarVisibility(); // Ensure sidebar stays hidden
-                if (!isLoginPage) {
-                    console.log('No token, redirecting to login');
-                    setTimeout(() => {
-                        window.location.href = '/login';
-                    }, 500);
-                }
-                return;
-            }
-            
-            // If token exists, ensure it's valid and set up request interceptors
-            const tokenValid = await ensureValidToken();
-            if (!tokenValid) {
-                console.log('Invalid token, clearing and redirecting');
-                toggleSidebarVisibility(); // Hide sidebar if token invalid
-                clearTokens();
-                if (!isLoginPage) {
-                    setTimeout(() => {
-                        window.location.href = '/login';
-                    }, 500);
-                }
-                return;
-            }
-            
-            console.log('Valid token found, setting up auth');
-            
-            // Set up AJAX requests with token refresh
-            $.ajaxSetup({
-                beforeSend: async function(xhr) {
-                    const tokenValid = await ensureValidToken();
-                    if (tokenValid) {
-                        const { accessToken } = getStoredTokens();
+                $.ajaxSetup({
+                    beforeSend: function(xhr) {
                         xhr.setRequestHeader('Authorization', 'Bearer ' + accessToken);
                     }
-                },
-                error: function(xhr) {
-                    if (xhr.status === 401) {
-                        console.log('Received 401, attempting token refresh...');
-                        refreshAccessToken().then(success => {
-                            if (!success) {
-                                window.location.href = '/login';
-                            }
-                        });
-                    }
-                }
-            });
-            
-            // Enhanced fetch wrapper with token refresh
-            const originalFetch = window.fetch;
-            window.fetch = async function(...args) {
-                const tokenValid = await ensureValidToken();
-                if (!tokenValid) {
-                    throw new Error('Authentication failed');
-                }
-                
-                const { accessToken } = getStoredTokens();
-                
-                if (args[1]) {
-                    args[1].headers = args[1].headers || {};
-                    args[1].headers['Authorization'] = 'Bearer ' + accessToken;
-                } else {
-                    args[1] = {
-                        headers: {
-                            'Authorization': 'Bearer ' + accessToken
-                        }
-                    };
-                }
-                
-                const response = await originalFetch.apply(this, args);
-                
-                // Handle 401 responses by attempting token refresh
-                if (response.status === 401) {
-                    console.log('Received 401, attempting token refresh...');
-                    const refreshSuccess = await refreshAccessToken();
-                    if (refreshSuccess) {
-                        // Retry the request with new token
-                        const { accessToken: newToken } = getStoredTokens();
-                        args[1].headers['Authorization'] = 'Bearer ' + newToken;
-                        return originalFetch.apply(this, args);
-                    } else {
-                        window.location.href = '/login';
-                        throw new Error('Authentication failed');
-                    }
-                }
-                
-                return response;
-            };
-            
-            // Handle navigation with authentication
-            $('a[href^="/"]').on('click', async function(e) {
-                const href = $(this).attr('href');
-                if (href && !href.includes('/login') && !href.includes('/register') && !href.includes('logout')) {
-                    e.preventDefault();
-                    
-                    const tokenValid = await ensureValidToken();
-                    if (!tokenValid) {
-                        return;
-                    }
-                    
-                    const { accessToken } = getStoredTokens();
-                    
-                    // Navigate with auth header
-                    fetch(href, {
-                        method: 'GET',
-                        headers: {
-                            'Authorization': 'Bearer ' + accessToken,
-                            'Accept': 'text/html'
-                        }
-                    })
-                    .then(response => {
-                        if (response.ok) {
-                            window.location.href = href;
-                        } else if (response.status === 401) {
-                            console.log('Navigation failed with 401, redirecting to login');
-                            clearTokens();
-                            window.location.href = '/login';
-                        } else {
-                            console.error('Navigation failed:', response.status);
-                            window.location.href = href; // Fallback
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Navigation error:', error);
-                        window.location.href = href; // Fallback
-                    });
-                }
-            });
-            
-            // Set up periodic token refresh check (every 5 minutes)
-            setInterval(async function() {
-                await ensureValidToken();
-            }, 5 * 60 * 1000);
-            
-            // Show/hide admin-only navigation items based on user role
-            updateAdminNavigation();
-            
-            // Show sidebar after successful authentication
-            toggleSidebarVisibility();
-            
-            // Add logout functionality
-            $('.logout-btn').on('click', function(e) {
-                e.preventDefault();
-                clearTokens();
-                toggleSidebarVisibility(); // Hide sidebar immediately on logout
-                window.location.href = '/login';
-            });
-            
-            // Initialize particles and user data (non-auth related)
-            createParticles();
-            
-            // Save username for welcome messages
-            const user = getCurrentUser();
-            if (user && user.full_name) {
-                localStorage.setItem('user_display_name', user.full_name);
+                });
             }
+            
+            // Handle logout form submission
+            $('form[action="/auth/logout"]').on('submit', function() {
+                clearTokens();
+            });
+            
+            // Initialize particles
+            createParticles();
         });
-        
-        // Global error handler for styled alerts
-        function showAlert(type, message) {
-            // Remove existing alerts
-            $('.alert-container').remove();
-            
-            const alertHtml = `
-                <div class="alert-container position-fixed" style="top: 20px; right: 20px; z-index: 9999; max-width: 400px;">
-                    <div class="alert alert-${type} alert-dismissible fade show shadow" role="alert">
-                        <i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'danger' ? 'fa-exclamation-triangle' : 'fa-info-circle'}"></i>
-                        ${message}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                </div>
-            `;
-            
-            $('body').append(alertHtml);
-            
-            // Auto-dismiss after 5 seconds
-            setTimeout(function() {
-                $('.alert-container').fadeOut();
-            }, 5000);
-        }
-        
-        // Make showAlert globally available
-        window.showAlert = showAlert;
         
         // Create floating particles effect
         function createParticles() {
@@ -879,28 +537,26 @@
                 particlesContainer.appendChild(particle);
             }
         }
- 
-         // Lottie error handling
-         function handleLottieError(lottiePlayer, fallbackSrc) {
-             const fallbackImage = lottiePlayer.nextElementSibling; // Get the next sibling (the GIF fallback)
-             if (fallbackImage && fallbackImage.tagName === 'IMG') {
-                 fallbackImage.style.display = 'block';
-                 lottiePlayer.style.display = 'none';
-                 console.warn('Lottie animation failed to load, showing GIF fallback.');
-             } else {
-                 console.error('Lottie player or fallback image not found.');
-             }
-         }
- 
-         // Lottie load handling
-         function handleLottieLoad(lottiePlayer) {
-             const fallbackImage = lottiePlayer.nextElementSibling; // Get the next sibling (the GIF fallback)
-             if (fallbackImage && fallbackImage.tagName === 'IMG') {
-                 fallbackImage.style.display = 'none';
-                 lottiePlayer.style.display = 'block';
-             }
-         }
-     </script>
+
+        // Lottie error handling
+        function handleLottieError(lottiePlayer, fallbackSrc) {
+            const fallbackImage = lottiePlayer.nextElementSibling;
+            if (fallbackImage && fallbackImage.tagName === 'IMG') {
+                fallbackImage.style.display = 'block';
+                lottiePlayer.style.display = 'none';
+                console.warn('Lottie animation failed to load, showing GIF fallback.');
+            }
+        }
+
+        // Lottie load handling
+        function handleLottieLoad(lottiePlayer) {
+            const fallbackImage = lottiePlayer.nextElementSibling;
+            if (fallbackImage && fallbackImage.tagName === 'IMG') {
+                fallbackImage.style.display = 'none';
+                lottiePlayer.style.display = 'block';
+            }
+        }
+    </script>
     {% block scripts %}{% endblock %}
 </body>
 </html>
