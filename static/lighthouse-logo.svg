@@ -1,0 +1,61 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="lighthouseGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#cccccc;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="lightGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#ffd700;stop-opacity:0.8" />
+      <stop offset="50%" style="stop-color:#ffffff;stop-opacity:0.9" />
+      <stop offset="100%" style="stop-color:#ffd700;stop-opacity:0.8" />
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge> 
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Circle background -->
+  <circle cx="100" cy="100" r="95" fill="#000000" stroke="#333333" stroke-width="2"/>
+  
+  <!-- Ocean waves -->
+  <path d="M20 160 Q50 150 80 160 T140 160 T200 160 L200 180 Q170 170 140 180 T80 180 T20 180 Z" fill="#007bff" opacity="0.6"/>
+  <path d="M10 170 Q40 165 70 170 T130 170 T190 170 L190 185 Q160 180 130 185 T70 185 T10 185 Z" fill="#007bff" opacity="0.4"/>
+  
+  <!-- Lighthouse base/foundation -->
+  <rect x="85" y="150" width="30" height="25" fill="url(#lighthouseGrad)" rx="2"/>
+  
+  <!-- Lighthouse tower -->
+  <polygon points="90,150 110,150 108,50 92,50" fill="url(#lighthouseGrad)" stroke="#999999" stroke-width="1"/>
+  
+  <!-- Lighthouse stripes -->
+  <rect x="90" y="120" width="20" height="8" fill="#ff0000"/>
+  <rect x="90" y="100" width="20" height="8" fill="#ff0000"/>
+  <rect x="90" y="80" width="20" height="8" fill="#ff0000"/>
+  
+  <!-- Light house top -->
+  <rect x="88" y="45" width="24" height="10" fill="#333333" rx="2"/>
+  
+  <!-- Light beam (animated) -->
+  <g class="light-beam" transform-origin="100 50">
+    <path d="M100 50 L140 30 L140 70 Z" fill="url(#lightGrad)" opacity="0.6" filter="url(#glow)"/>
+  </g>
+  
+  <!-- Text -->
+  <text x="100" y="25" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#ffffff">TAR</text>
+  <text x="100" y="195" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#cccccc">GLOBAL</text>
+  
+  <style>
+    .light-beam {
+      animation: swing 4s ease-in-out infinite;
+    }
+    
+    @keyframes swing {
+      0%, 100% { transform: rotate(-20deg); }
+      50% { transform: rotate(20deg); }
+    }
+  </style>
+</svg> 

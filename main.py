@@ -1676,6 +1676,13 @@ async def admin_users_page(request: Request, current_user: User = Depends(get_cu
         raise HTTPException(status_code=403, detail="Admin access required")
     return templates.TemplateResponse("admin_users.html", {"request": request, "user": current_user})
 
+@app.get("/admin/notifications", response_class=HTMLResponse)
+async def admin_notifications_page(request: Request, current_user: User = Depends(get_current_user_html)):
+    """Admin notification management page - only accessible to superusers"""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    return templates.TemplateResponse("admin_notifications.html", {"request": request, "user": current_user})
+
 @app.get("/api/admin/users")
 async def get_all_users(current_user: User = Depends(get_current_active_user), db: Session = Depends(get_db)):
     """Get all users with their roles - only accessible to superusers"""
