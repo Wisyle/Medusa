@@ -40,6 +40,11 @@ def run_startup_migrations():
                     logger.error("❌ Failed to ensure users table")
                     return False
                 
+                # 2.5. Fix needs_security_setup column (CRITICAL FIX)
+                if not fix_needs_security_setup_column(conn, inspector, is_postgresql):
+                    logger.error("❌ Failed to fix needs_security_setup column")
+                    return False
+                
                 # 3. Check and fix api_credentials table (AFTER users table exists)
                 if not check_api_credentials_schema(conn, inspector, is_postgresql):
                     logger.error("❌ Failed to fix api_credentials schema")
@@ -67,6 +72,73 @@ def run_startup_migrations():
                 
     except Exception as e:
         logger.error(f"❌ Migration setup failed: {e}")
+        return False
+
+def fix_needs_security_setup_column(conn, inspector, is_postgresql):
+    """Fix missing needs_security_setup column that causes login failures"""
+    try:
+        logger.info("🔧 Fixing needs_security_setup column...")
+        
+        # Check if users table exists
+        tables = inspector.get_table_names()
+        if 'users' not in tables:
+            logger.error("❌ Users table doesn't exist!")
+            return False
+        
+        # Check current columns
+        columns = {col['name']: col for col in inspector.get_columns('users')}
+        logger.info(f"📊 Current users table columns: {list(columns.keys())}")
+        
+        # Check if needs_security_setup column exists
+        if 'needs_security_setup' not in columns:
+            logger.info("➕ Adding needs_security_setup column...")
+            
+            if is_postgresql:
+                # PostgreSQL - add BOOLEAN column
+                conn.execute(text("""
+                    ALTER TABLE users 
+                    ADD COLUMN needs_security_setup BOOLEAN DEFAULT FALSE;
+                """))
+            else:
+                # SQLite - add INTEGER column  
+                conn.execute(text("""
+                    ALTER TABLE users 
+                    ADD COLUMN needs_security_setup INTEGER DEFAULT 0;
+                """))
+            
+            logger.info("✅ Added needs_security_setup column")
+        else:
+            logger.info("✅ needs_security_setup column already exists")
+            
+            # Check if it's the correct type for PostgreSQL
+            if is_postgresql:
+                try:
+                    column_info = columns['needs_security_setup']
+                    column_type = str(column_info['type']).upper()
+                    logger.info(f"📊 Column type: {column_type}")
+                    
+                    if 'INTEGER' in column_type and 'BOOLEAN' not in column_type:
+                        logger.info("🔄 Converting INTEGER column to BOOLEAN...")
+                        conn.execute(text("""
+                            ALTER TABLE users 
+                            ALTER COLUMN needs_security_setup TYPE BOOLEAN 
+                            USING needs_security_setup::BOOLEAN;
+                        """))
+                        logger.info("✅ Converted column to BOOLEAN type")
+                except Exception as type_error:
+                    logger.warning(f"⚠️  Could not check/convert column type: {type_error}")
+        
+        # Verify the fix
+        updated_columns = {col['name']: col for col in inspector.get_columns('users')}
+        if 'needs_security_setup' in updated_columns:
+            logger.info("🎉 needs_security_setup column fix completed!")
+            return True
+        else:
+            logger.error("❌ Column still missing after fix attempt")
+            return False
+            
+    except Exception as e:
+        logger.error(f"❌ Failed to fix needs_security_setup column: {e}")
         return False
 
 def check_api_credentials_schema(conn, inspector, is_postgresql):
