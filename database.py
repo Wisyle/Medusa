@@ -115,6 +115,57 @@ class ErrorLog(Base):
     traceback = Column(Text, nullable=True)
     timestamp = Column(DateTime, default=datetime.utcnow)
 
+class Role(Base):
+    __tablename__ = "roles"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(50), unique=True, nullable=False)
+    description = Column(String(255), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    users = relationship("UserRole", back_populates="role")
+    permissions = relationship("RolePermission", back_populates="role")
+
+class Permission(Base):
+    __tablename__ = "permissions"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), unique=True, nullable=False)
+    description = Column(String(255), nullable=True)
+    resource = Column(String(100), nullable=False)  # e.g., 'bot_instances', 'api_library', 'users'
+    action = Column(String(50), nullable=False)  # e.g., 'read', 'write', 'delete', 'manage'
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    roles = relationship("RolePermission", back_populates="permission")
+
+class UserRole(Base):
+    __tablename__ = "user_roles"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    role_id = Column(Integer, ForeignKey('roles.id'), nullable=False)
+    assigned_by = Column(Integer, ForeignKey('users.id'), nullable=True)  # Who assigned this role
+    assigned_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    user = relationship("User", foreign_keys=[user_id], back_populates="roles")
+    role = relationship("Role", back_populates="users")
+    assigner = relationship("User", foreign_keys=[assigned_by])
+
+class RolePermission(Base):
+    __tablename__ = "role_permissions"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    role_id = Column(Integer, ForeignKey('roles.id'), nullable=False)
+    permission_id = Column(Integer, ForeignKey('permissions.id'), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    role = relationship("Role", back_populates="permissions")
+    permission = relationship("Permission", back_populates="roles")
+
 class User(Base):
     __tablename__ = "users"
     
@@ -128,6 +179,37 @@ class User(Base):
     totp_enabled = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    roles = relationship("UserRole", foreign_keys="UserRole.user_id", back_populates="user")
+    
+    def has_permission(self, resource: str, action: str) -> bool:
+        """Check if user has specific permission"""
+        if self.is_superuser:
+            return True
+            
+        for user_role in self.roles:
+            for role_permission in user_role.role.permissions:
+                perm = role_permission.permission
+                if perm.resource == resource and perm.action == action:
+                    return True
+        return False
+    
+    def has_role(self, role_name: str) -> bool:
+        """Check if user has specific role"""
+        return any(user_role.role.name == role_name for user_role in self.roles)
+    
+    def get_permissions(self) -> list:
+        """Get all permissions for this user"""
+        if self.is_superuser:
+            return ['*']  # Superuser has all permissions
+            
+        permissions = []
+        for user_role in self.roles:
+            for role_permission in user_role.role.permissions:
+                perm = role_permission.permission
+                permissions.append(f"{perm.resource}:{perm.action}")
+        return list(set(permissions))  # Remove duplicates
 
 def get_database_url():
     """Get database URL from environment or config"""
@@ -147,3 +229,9 @@ def init_db():
     from dex_arbitrage_model import DEXArbitrageInstance, DEXOpportunity
     from validator_node_model import ValidatorNode, ValidatorReward
     Base.metadata.create_all(bind=engine)
+    
+    try:
+        from role_migration import run_migration
+        run_migration()
+    except Exception as e:
+        print(f"Role migration failed: {e}")
