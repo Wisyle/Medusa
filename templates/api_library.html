@@ -55,46 +55,32 @@
     background-color: #6c757d;
 }
 
-/* Fix modal styling and ensure interactivity */
-.modal {
-    z-index: 1055 !important;
-}
-
-.modal-backdrop {
-    z-index: 1040 !important;
-}
-
-.modal-dialog {
-    z-index: 1060 !important;
-    position: relative;
-}
-
+/* Simple modal styling */
 .modal-content {
-    position: relative;
-    pointer-events: auto !important;
-    z-index: 1065 !important;
+    background-color: var(--secondary-black);
+    border: 1px solid var(--medium-gray);
+    color: var(--white);
 }
 
-/* Ensure form elements are visible and interactive */
+.modal-header {
+    border-bottom: 1px solid var(--medium-gray);
+}
+
+.modal-footer {
+    border-top: 1px solid var(--medium-gray);
+}
+
 .modal .form-control, .modal .form-select {
-    background-color: var(--secondary-black) !important;
-    border: 1px solid var(--medium-gray) !important;
-    color: var(--white) !important;
-    pointer-events: auto !important;
+    background-color: var(--secondary-black);
+    border: 1px solid var(--medium-gray);
+    color: var(--white);
 }
 
 .modal .form-control:focus, .modal .form-select:focus {
-    background-color: var(--secondary-black) !important;
-    color: var(--white) !important;
-    border-color: var(--accent-blue) !important;
-    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25) !important;
-}
-
-/* Ensure buttons and inputs are clickable */
-.modal button, .modal input, .modal select, .modal textarea {
-    pointer-events: auto !important;
-    z-index: 1070 !important;
-    position: relative;
+    background-color: var(--secondary-black);
+    color: var(--white);
+    border-color: var(--accent-blue);
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
 }
 </style>
 
@@ -106,7 +92,7 @@
                     <h2><i class="fas fa-key"></i> API Library</h2>
                     <p class="text-muted">Manage reusable API credentials for your bot instances</p>
                 </div>
-                <button class="btn btn-primary" onclick="showCreateModal()">
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createCredentialModal">
                     <i class="fas fa-plus"></i> Add API Credential
                 </button>
             </div>
@@ -199,7 +185,7 @@
                                 <tr>
                                     <td colspan="8" class="text-center text-muted">
                                         <i class="fas fa-info-circle"></i>
-                                        No API credentials found. <a href="#" onclick="showCreateModal()">Create one now</a>.
+                                        No API credentials found. <a href="#" data-bs-toggle="modal" data-bs-target="#createCredentialModal">Create one now</a>.
                                     </td>
                                 </tr>
                                 {% endif %}
@@ -213,11 +199,11 @@
 </div>
 
 <!-- Create API Credential Modal -->
-<div class="modal fade" id="createCredentialModal" tabindex="-1" role="dialog">
-    <div class="modal-dialog modal-lg" role="document">
+<div class="modal fade" id="createCredentialModal" tabindex="-1" aria-labelledby="createCredentialModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Add API Credential</h5>
+                <h5 class="modal-title" id="createCredentialModalLabel">Add API Credential</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form id="createCredentialForm">
@@ -301,11 +287,11 @@
 </div>
 
 <!-- Edit API Credential Modal -->
-<div class="modal fade" id="editCredentialModal" tabindex="-1" role="dialog">
-    <div class="modal-dialog" role="document">
+<div class="modal fade" id="editCredentialModal" tabindex="-1" aria-labelledby="editCredentialModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Edit API Credential</h5>
+                <h5 class="modal-title" id="editCredentialModalLabel">Edit API Credential</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form id="editCredentialForm">
@@ -346,29 +332,6 @@
 </div>
 
 <script>
-function showCreateModal() {
-    console.log('Opening create modal...');
-    
-    // Clear any previous form data
-    document.getElementById('createCredentialForm').reset();
-    
-    // Ensure modal element exists
-    const modalElement = document.getElementById('createCredentialModal');
-    if (!modalElement) {
-        console.error('Modal element not found');
-        return;
-    }
-    
-    // Use Bootstrap's standard modal API
-    const modal = new bootstrap.Modal(modalElement, {
-        backdrop: true,
-        keyboard: true,
-        focus: true
-    });
-    modal.show();
-    console.log('Modal opened successfully');
-}
-
 document.getElementById('createCredentialForm').addEventListener('submit', function(e) {
     e.preventDefault();
     
@@ -541,7 +504,7 @@ function loadCredentials() {
                 <tr>
                     <td colspan="8" class="text-center text-muted">
                         <i class="fas fa-key"></i>
-                        No API credentials found. <a href="#" onclick="showCreateModal()">Create one now</a>.
+                                                 No API credentials found. <a href="#" data-bs-toggle="modal" data-bs-target="#createCredentialModal">Create one now</a>.
                     </td>
                 </tr>
             `;
@@ -619,9 +582,15 @@ function loadCredentials() {
     });
 }
 
-// Load credentials on page load
+// Load credentials on page load and handle modal events
 document.addEventListener('DOMContentLoaded', function() {
     loadCredentials();
+    
+    // Reset form when modal is shown
+    const createModal = document.getElementById('createCredentialModal');
+    createModal.addEventListener('show.bs.modal', function () {
+        document.getElementById('createCredentialForm').reset();
+    });
 });
 </script>
 {% endblock %}
