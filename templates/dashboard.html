@@ -17,7 +17,7 @@
     background: linear-gradient(145deg, var(--secondary-black), var(--dark-gray));
     border: 1px solid var(--medium-gray);
     border-radius: 20px;
-    padding: 30px;
+    padding: 25px;
     box-shadow: 
         0 10px 40px rgba(0, 0, 0, 0.3),
         0 0 0 1px rgba(255, 255, 255, 0.05),
@@ -25,7 +25,7 @@
     backdrop-filter: blur(15px);
     display: grid;
     grid-template-columns: auto 1fr auto;
-    gap: 30px;
+    gap: 25px;
     align-items: center;
     position: relative;
     overflow: hidden;
@@ -46,6 +46,69 @@
     display: flex;
     align-items: center;
     gap: 15px;
+}
+
+.lighthouse-brand-horizontal {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.lighthouse-logo-container-circular {
+    position: relative;
+}
+
+.welcome-logo-circular {
+    border-radius: 50% !important;
+    background: linear-gradient(135deg, rgba(0, 150, 255, 0.1), rgba(0, 255, 200, 0.1));
+    padding: 5px;
+    animation: circular-glow-pulse 3s ease-in-out infinite;
+}
+
+@keyframes circular-glow-pulse {
+    0%, 100% { 
+        box-shadow: 0 0 20px rgba(0, 150, 255, 0.6), 0 0 40px rgba(0, 150, 255, 0.3);
+        transform: scale(1);
+    }
+    50% { 
+        box-shadow: 0 0 30px rgba(0, 150, 255, 0.8), 0 0 60px rgba(0, 150, 255, 0.4);
+        transform: scale(1.05);
+    }
+}
+
+.brand-info-horizontal {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.lighthouse-title-horizontal {
+    font-family: 'Orbitron', monospace;
+    font-weight: 900;
+    font-size: 2rem;
+    color: var(--white);
+    margin: 0;
+    letter-spacing: 1px;
+    background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.brand-tagline-horizontal {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    font-size: 1rem;
+    opacity: 0.9;
+    color: var(--off-white);
+}
+
+.tar-logo-inline-horizontal {
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
 }
 
 .welcome-logo {
@@ -117,6 +180,52 @@
 .dashboard-stats-preview {
     display: flex;
     gap: 20px;
+}
+
+.dashboard-stats-preview-compact {
+    display: flex;
+    gap: 15px;
+}
+
+.stat-preview-compact {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 15px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    border: 1px solid var(--medium-gray);
+    min-width: 120px;
+    transition: all 0.3s ease;
+}
+
+.stat-preview-compact:hover {
+    background: rgba(255, 255, 255, 0.08);
+    transform: translateY(-1px);
+}
+
+.stat-icon-compact {
+    color: var(--accent-blue);
+    font-size: 1.2rem;
+    min-width: 20px;
+}
+
+.stat-info-compact {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.stat-label-compact {
+    color: var(--off-white);
+    font-size: 0.75rem;
+    opacity: 0.8;
+}
+
+.stat-value-compact {
+    color: var(--white);
+    font-weight: 600;
+    font-size: 0.95rem;
 }
 
 .stat-preview {
@@ -356,6 +465,75 @@
         display: none;
     }
 }
+
+/* Recent Activity Styles */
+.recent-activity-card {
+    background: linear-gradient(145deg, var(--secondary-black), var(--dark-gray));
+    border: 1px solid var(--medium-gray);
+    max-height: 200px;
+}
+
+.recent-activity-scroll {
+    max-height: 140px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.recent-activity-scroll::-webkit-scrollbar {
+    width: 4px;
+}
+
+.recent-activity-scroll::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 2px;
+}
+
+.recent-activity-scroll::-webkit-scrollbar-thumb {
+    background: var(--accent-blue);
+    border-radius: 2px;
+}
+
+.activity-item-compact {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 6px;
+    padding: 8px 12px;
+    margin-bottom: 6px;
+    border-left: 3px solid var(--accent-blue);
+    transition: all 0.2s ease;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.activity-item-compact:hover {
+    background: rgba(255, 255, 255, 0.06);
+    transform: translateX(3px);
+}
+
+.activity-item-compact.success {
+    border-left-color: #38ef7d;
+}
+
+.activity-item-compact.error {
+    border-left-color: #fc466b;
+}
+
+.activity-item-compact.warning {
+    border-left-color: #fdbb2d;
+}
+
+.activity-timestamp {
+    color: var(--off-white);
+    opacity: 0.7;
+    font-size: 0.75rem;
+    min-width: 80px;
+}
+
+.activity-content {
+    flex: 1;
+    color: var(--white);
+}
 </style>
 {% endblock %}
 
@@ -363,32 +541,32 @@
 <!-- Welcome Section with Typewriter Effect -->
 <div class="welcome-section mb-4">
     <div class="welcome-card">
-        <div class="lighthouse-brand">
-            <div class="lighthouse-logo-container">
+        <div class="lighthouse-brand-horizontal">
+            <div class="lighthouse-logo-container-circular">
                 <lottie-player 
-                    src="/static/lighthouse.json" 
+                    src="/static/lighthouse1.json" 
                     background="transparent" 
                     speed="1" 
-                    style="width: 50px; height: 50px; filter: drop-shadow(0 0 15px var(--glow-blue));" 
+                    style="width: 80px; height: 80px; border-radius: 50%; overflow: hidden; box-shadow: 0 0 20px rgba(0, 150, 255, 0.6);" 
                     loop 
                     autoplay 
-                    class="welcome-logo lottie-animation"
+                    class="welcome-logo-circular lottie-animation"
                     onerror="handleLottieError(this, '/static/lighthouse.gif')"
                     onload="handleLottieLoad(this)">
                 </lottie-player>
                 <img 
                     src="/static/lighthouse.gif" 
                     alt="Lighthouse Logo" 
-                    style="width: 50px; height: 50px; filter: drop-shadow(0 0 15px var(--glow-blue)); display: none;" 
-                    class="welcome-logo gif-fallback">
+                    style="width: 80px; height: 80px; border-radius: 50%; overflow: hidden; box-shadow: 0 0 20px rgba(0, 150, 255, 0.6); display: none;" 
+                    class="welcome-logo-circular gif-fallback">
             </div>
-            <div class="brand-info">
-                <h1 class="lighthouse-title" style="text-align: center; margin-bottom: 5px;">
+            <div class="brand-info-horizontal">
+                <h1 class="lighthouse-title-horizontal">
                     LIGHTHOUSE
                 </h1>
-                <p class="brand-tagline" style="display: flex; align-items: center; justify-content: center; gap: 8px; margin: 0; font-size: 1rem; opacity: 0.9;">
-                    <img src="/static/tar-logo.jpg" alt="TAR Logo" class="tar-logo-inline" style="width: 28px; height: 28px; border-radius: 6px;">
-                                         TAR <span style="font-style: italic; color: var(--accent-gold); font-weight: 400;">for</span> GLOBAL STRATEGIES
+                <p class="brand-tagline-horizontal">
+                    <img src="/static/tar-logo.jpg" alt="TAR Logo" class="tar-logo-inline-horizontal">
+                    TAR <span style="font-style: italic; color: var(--accent-gold); font-weight: 400;">for</span> GLOBAL STRATEGIES
                 </p>
             </div>
         </div>
@@ -399,26 +577,51 @@
                 <span class="cursor-dashboard">|</span>
             </div>
         </div>
-        <div class="dashboard-stats-preview">
-            <div class="stat-preview">
-                <div class="stat-icon"><i class="fas fa-chart-line"></i></div>
-                <div class="stat-info">
-                    <span class="stat-label">Active Monitors</span>
-                    <span class="stat-value" id="preview-monitors">-</span>
+        <div class="dashboard-stats-preview-compact">
+            <div class="stat-preview-compact">
+                <div class="stat-icon-compact"><i class="fas fa-chart-line"></i></div>
+                <div class="stat-info-compact">
+                    <span class="stat-label-compact">Active Monitors</span>
+                    <span class="stat-value-compact" id="preview-monitors">-</span>
                 </div>
             </div>
-            <div class="stat-preview">
-                <div class="stat-icon"><i class="fas fa-dollar-sign"></i></div>
-                <div class="stat-info">
-                    <span class="stat-label">Portfolio Value</span>
-                    <span class="stat-value" id="preview-portfolio">-</span>
+            <div class="stat-preview-compact">
+                <div class="stat-icon-compact"><i class="fas fa-dollar-sign"></i></div>
+                <div class="stat-info-compact">
+                    <span class="stat-label-compact">Portfolio Value</span>
+                    <span class="stat-value-compact" id="preview-portfolio">-</span>
                 </div>
             </div>
-            <div class="stat-preview">
-                <div class="stat-icon"><i class="fas fa-bolt"></i></div>
-                <div class="stat-info">
-                    <span class="stat-label">System Health</span>
-                    <span class="stat-value" id="preview-health">-</span>
+            <div class="stat-preview-compact">
+                <div class="stat-icon-compact"><i class="fas fa-bolt"></i></div>
+                <div class="stat-info-compact">
+                    <span class="stat-label-compact">System Health</span>
+                    <span class="stat-value-compact" id="preview-health">-</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Activity Section -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow recent-activity-card">
+            <div class="card-header py-2 d-flex justify-content-between align-items-center">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-clock me-2"></i>Recent Activity
+                </h6>
+                <button class="btn btn-sm btn-outline-primary" onclick="refreshRecentActivity()">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+            </div>
+            <div class="card-body p-2">
+                <div class="recent-activity-scroll">
+                    <div id="recent-activity-feed">
+                        <div class="activity-item-compact">
+                            <i class="fas fa-spinner fa-spin"></i> Loading recent activity...
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1240,17 +1443,106 @@
 let instances = [];
 let charts = {}; // Store chart instances
 
+// Get user display name from API
+async function getUserDisplayName() {
+    try {
+        const token = localStorage.getItem('access_token');
+        if (!token) return 'User';
+        
+        const response = await fetch('/api/auth/me', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (response.ok) {
+            const userData = await response.json();
+            return userData.full_name || userData.email || 'User';
+        }
+        
+        return 'User';
+    } catch (error) {
+        console.error('Error fetching user display name:', error);
+        return 'User';
+    }
+}
+
+// Refresh recent activity
+function refreshRecentActivity() {
+    loadRecentActivityFeed();
+}
+
+// Load recent activity feed
+async function loadRecentActivityFeed() {
+    try {
+        const token = localStorage.getItem('access_token');
+        if (!token) return;
+        
+        const activityFeed = document.getElementById('recent-activity-feed');
+        activityFeed.innerHTML = '<div class="activity-item-compact"><i class="fas fa-spinner fa-spin"></i> Loading recent activity...</div>';
+        
+        const response = await fetch('/api/dashboard/recent-activity?limit=10', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (response.ok) {
+            const activities = await response.json();
+            updateRecentActivityFeed(activities);
+        } else {
+            activityFeed.innerHTML = '<div class="activity-item-compact error"><i class="fas fa-exclamation-triangle"></i> Failed to load recent activity</div>';
+        }
+    } catch (error) {
+        console.error('Error loading recent activity:', error);
+        const activityFeed = document.getElementById('recent-activity-feed');
+        activityFeed.innerHTML = '<div class="activity-item-compact error"><i class="fas fa-exclamation-triangle"></i> Error loading activity</div>';
+    }
+}
+
+// Update recent activity feed
+function updateRecentActivityFeed(activities) {
+    const activityFeed = document.getElementById('recent-activity-feed');
+    
+    if (!activities || activities.length === 0) {
+        activityFeed.innerHTML = '<div class="activity-item-compact"><i class="fas fa-info-circle"></i> No recent activity found</div>';
+        return;
+    }
+    
+    activityFeed.innerHTML = activities.map(activity => {
+        const timestamp = new Date(activity.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        const typeClass = activity.event_type === 'error' ? 'error' : activity.event_type === 'warning' ? 'warning' : 'success';
+        const icon = activity.event_type === 'error' ? 'fas fa-exclamation-circle' : 
+                    activity.event_type === 'warning' ? 'fas fa-exclamation-triangle' : 
+                    'fas fa-check-circle';
+        
+        return `
+            <div class="activity-item-compact ${typeClass}">
+                <span class="activity-timestamp">${timestamp}</span>
+                <i class="${icon}"></i>
+                <div class="activity-content">
+                    <strong>Instance ${activity.instance_id || 'System'}:</strong> ${activity.message || activity.event_type}
+                    ${activity.symbol ? ` (${activity.symbol})` : ''}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
 // Welcome Message and Typewriter Effect for Dashboard
 function initializeWelcomeMessage() {
-    const userDisplayName = localStorage.getItem('user_display_name') || localStorage.getItem('last_login_email') || 'User';
-    const greetingElement = document.getElementById('welcome-greeting');
-    const typewriterElement = document.getElementById('typewriter-dashboard');
+    // Get user info from token or fetch from API
+    getUserDisplayName().then(displayName => {
+        const greetingElement = document.getElementById('welcome-greeting');
+        
+        // Update greeting with user name
+        if (displayName && displayName !== 'User') {
+            const firstName = displayName.split(' ')[0] || displayName.split('@')[0];
+            greetingElement.textContent = `Welcome back, ${firstName}`;
+        }
+    });
     
-    // Update greeting with user name
-    if (userDisplayName && userDisplayName !== 'User') {
-        const firstName = userDisplayName.split(' ')[0] || userDisplayName.split('@')[0];
-        greetingElement.textContent = `Welcome back, ${firstName}`;
-    }
+    const typewriterElement = document.getElementById('typewriter-dashboard');
     
     // Dashboard typewriter messages
     const dashboardMessages = [
@@ -2058,6 +2350,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize all charts
     initializeCharts();
     initializeAdditionalCharts();
+    
+    // Load recent activity
+    loadRecentActivityFeed();
     
     // Verify token is still valid and load initial data
     fetch('/api/health', {

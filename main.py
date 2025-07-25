@@ -1712,7 +1712,7 @@ async def get_all_users(current_user: User = Depends(get_current_active_user), d
             "is_active": user.is_active,
             "is_superuser": user.is_superuser,
             "totp_enabled": user.totp_enabled,
-            "created_at": user.created_at.isoformat(),
+            "created_at": user.created_at.isoformat() if user.created_at else None,
             "roles": []
         }
         
