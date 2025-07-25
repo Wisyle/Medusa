@@ -19,7 +19,6 @@ services:
       - key: DATABASE_URL
         fromDatabase:
           name: tar-dashboard-db
-          property: connectionString
       - key: SECRET_KEY
         generateValue: true
       - key: JWT_SECRET
@@ -57,7 +56,6 @@ services:
       - key: DATABASE_URL
         fromDatabase:
           name: tar-dashboard-db
-          property: connectionString
       - key: SECRET_KEY
         generateValue: true
       - key: ALGORITHM
@@ -85,7 +83,6 @@ services:
       - key: DATABASE_URL
         fromDatabase:
           name: tar-dashboard-db
-          property: connectionString
       - key: SECRET_KEY
         generateValue: true
       - key: ALGORITHM
