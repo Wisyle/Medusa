@@ -434,6 +434,11 @@ def run_startup_migrations():
                     logger.error("❌ Failed to fix needs_security_setup column")
                     return False
                 
+                # 2.6. Fix NULL boolean fields in users table (CRITICAL FIX)
+                if not fix_null_boolean_fields(conn, is_postgresql):
+                    logger.error("❌ Failed to fix NULL boolean fields")
+                    return False
+                
                 # 3. Check and fix api_credentials table (AFTER users table exists)
                 if not check_api_credentials_schema(conn, inspector, is_postgresql):
                     logger.error("❌ Failed to fix api_credentials schema")
@@ -468,6 +473,37 @@ def run_startup_migrations():
     except Exception as e:
         logger.error(f"❌ Migration setup failed: {e}")
         return False
+
+def fix_null_boolean_fields(conn, is_postgresql):
+    """Fix NULL boolean fields in users table that cause validation errors"""
+    try:
+        logger.info("🔧 Fixing NULL boolean fields in users table...")
+        
+        # Update NULL totp_enabled to False
+        result = conn.execute(text("UPDATE users SET totp_enabled = %s WHERE totp_enabled IS NULL" if is_postgresql else "UPDATE users SET totp_enabled = ? WHERE totp_enabled IS NULL"), 
+                            (False,) if is_postgresql else (0,))
+        if result.rowcount > 0:
+            logger.info(f"✅ Fixed {result.rowcount} NULL totp_enabled values")
+        
+        # Update NULL is_active to True (safer default for existing users)
+        result = conn.execute(text("UPDATE users SET is_active = %s WHERE is_active IS NULL" if is_postgresql else "UPDATE users SET is_active = ? WHERE is_active IS NULL"), 
+                            (True,) if is_postgresql else (1,))
+        if result.rowcount > 0:
+            logger.info(f"✅ Fixed {result.rowcount} NULL is_active values")
+        
+        # Update NULL is_superuser to False
+        result = conn.execute(text("UPDATE users SET is_superuser = %s WHERE is_superuser IS NULL" if is_postgresql else "UPDATE users SET is_superuser = ? WHERE is_superuser IS NULL"), 
+                            (False,) if is_postgresql else (0,))
+        if result.rowcount > 0:
+            logger.info(f"✅ Fixed {result.rowcount} NULL is_superuser values")
+        
+        logger.info("✅ Boolean fields fixed successfully")
+        return True
+        
+    except Exception as e:
+        logger.error(f"❌ Failed to fix NULL boolean fields: {e}")
+        return False
+
 
 def fix_needs_security_setup_column(conn, inspector, is_postgresql):
     """Fix missing needs_security_setup column that causes login failures"""
