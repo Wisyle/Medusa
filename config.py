@@ -38,7 +38,7 @@ class Settings(BaseSettings):
     app_description: str = "Advanced Cryptocurrency Bot Monitoring System"
     debug: bool = True
     host: str = "0.0.0.0"
-    port: int = 8000
+    port: int = int(os.getenv("PORT", "8000"))  # Use Render's PORT env var or default to 8000
     
     webhook_secret: str = "your-webhook-secret-change-in-production"
     
