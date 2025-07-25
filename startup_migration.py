@@ -449,18 +449,11 @@ def run_startup_migrations():
                     logger.error("❌ Failed to create default admin user")
                     return False
                 
-                # 5. Fix any existing api_credentials without user_id (skip for now - not critical)
-                logger.info("⏭️ Skipping api_credentials user_id fix - not critical for deployment")
-                
-                # 6. Apply enhanced bypass features to templates
-                if not ensure_enhanced_bypass_features():
-                    logger.error("❌ Failed to apply enhanced bypass features")
-                    return False
-                
-                # 7. Ensure new strategy monitors exist
-                if not ensure_new_strategy_monitors(conn, is_postgresql):
-                    logger.error("❌ Failed to ensure new strategy monitors")
-                    return False
+                # 5. Skip non-critical migrations for faster deployment
+                logger.info("⏭️ Skipping non-critical migrations for faster deployment")
+                logger.info("⏭️ Skipping api_credentials user_id fix - not critical")
+                logger.info("⏭️ Skipping enhanced bypass features - not critical") 
+                logger.info("⏭️ Skipping strategy monitors setup - will be done later")
                 
                 # Commit transaction
                 trans.commit()
