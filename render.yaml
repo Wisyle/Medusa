@@ -4,6 +4,7 @@ services:
     name: tar-dashboard-web
     env: python
     plan: starter
+    region: singapore
     buildCommand: "pip install -r requirements.txt && python startup_migration.py && python pre_deployment_validation.py"
     startCommand: "python main.py"
     autoDeploy: true
@@ -33,12 +34,17 @@ services:
         value: "10000"
       - key: AUTO_APPLY_ENHANCEMENTS
         value: "true"
+      - key: SERVER_REGION
+        value: "singapore"
+      - key: CLOUDFRONT_BYPASS_REGION
+        value: "sg"
 
   # Background Worker Service - Polling & Monitoring
   - type: worker
     name: tar-dashboard-worker
     env: python
     plan: starter
+    region: singapore
     buildCommand: "pip install -r requirements.txt"
     startCommand: "python worker.py"
     envVars:
@@ -56,12 +62,17 @@ services:
         value: "false"
       - key: ENVIRONMENT
         value: "production"
+      - key: SERVER_REGION
+        value: "singapore"
+      - key: CLOUDFRONT_BYPASS_REGION
+        value: "sg"
 
   # Strategy Monitor Service - Strategic Monitoring
   - type: worker
     name: tar-dashboard-strategy-monitor
     env: python
     plan: starter
+    region: singapore
     buildCommand: "pip install -r requirements.txt"
     startCommand: "python init_strategy_monitor.py && python strategy_monitor_worker.py"
     envVars:
@@ -79,8 +90,13 @@ services:
         value: "false"
       - key: ENVIRONMENT
         value: "production"
+      - key: SERVER_REGION
+        value: "singapore"
+      - key: CLOUDFRONT_BYPASS_REGION
+        value: "sg"
 
 databases:
   - name: tar-dashboard-db
     databaseName: tar_dashboard
     user: tar_admin
+    region: singapore
