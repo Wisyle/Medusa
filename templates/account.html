@@ -143,6 +143,149 @@
     </div>
 </div>
 
+<div class="row">
+    <!-- Enhanced Security Settings -->
+    <div class="col-md-12">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-shield-halved"></i>
+                    Enhanced Security Settings
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <!-- Private Key Section -->
+                        <div class="card bg-dark border-secondary mb-3">
+                            <div class="card-header">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-key"></i>
+                                    Private Key Authentication
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div id="private-key-status-loading" class="text-center">
+                                    <i class="fas fa-spinner fa-spin"></i> Loading status...
+                                </div>
+                                <div id="private-key-enabled" style="display: none;">
+                                    <div class="alert alert-success">
+                                        <i class="fas fa-check-circle"></i>
+                                        <strong>Private Key Configured</strong>
+                                    </div>
+                                    <button type="button" class="btn btn-outline-warning btn-sm" id="regeneratePrivateKeyBtn">
+                                        <i class="fas fa-sync-alt"></i>
+                                        Regenerate Private Key
+                                    </button>
+                                </div>
+                                <div id="private-key-disabled" style="display: none;">
+                                    <div class="alert alert-info">
+                                        <i class="fas fa-info-circle"></i>
+                                        <strong>No Private Key Set</strong>
+                                    </div>
+                                    <button type="button" class="btn btn-primary btn-sm" id="generatePrivateKeyBtn">
+                                        <i class="fas fa-plus"></i>
+                                        Generate Private Key
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <!-- Passphrase Section -->
+                        <div class="card bg-dark border-secondary mb-3">
+                            <div class="card-header">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-lock"></i>
+                                    Passphrase Authentication
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div id="passphrase-status-loading" class="text-center">
+                                    <i class="fas fa-spinner fa-spin"></i> Loading status...
+                                </div>
+                                <div id="passphrase-enabled" style="display: none;">
+                                    <div class="alert alert-success">
+                                        <i class="fas fa-check-circle"></i>
+                                        <strong>Passphrase Configured</strong>
+                                    </div>
+                                    <button type="button" class="btn btn-outline-warning btn-sm" id="changePassphraseBtn">
+                                        <i class="fas fa-edit"></i>
+                                        Change Passphrase
+                                    </button>
+                                </div>
+                                <div id="passphrase-disabled" style="display: none;">
+                                    <div class="alert alert-info">
+                                        <i class="fas fa-info-circle"></i>
+                                        <strong>No Passphrase Set</strong>
+                                    </div>
+                                    <button type="button" class="btn btn-primary btn-sm" id="setPassphraseBtn">
+                                        <i class="fas fa-plus"></i>
+                                        Set Passphrase
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Authentication Method Selection -->
+                <div class="card bg-dark border-secondary">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="fas fa-cogs"></i>
+                            Preferred Authentication Method
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-white-50 mb-3">Choose your preferred authentication method. You can use multiple factors for enhanced security.</p>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="auth-email-password" checked disabled>
+                                    <label class="form-check-label" for="auth-email-password">
+                                        <i class="fas fa-envelope"></i>
+                                        Email + Password (Always Required)
+                                    </label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="auth-2fa">
+                                    <label class="form-check-label" for="auth-2fa">
+                                        <i class="fas fa-shield-alt"></i>
+                                        Two-Factor Authentication (2FA)
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="auth-private-key">
+                                    <label class="form-check-label" for="auth-private-key">
+                                        <i class="fas fa-key"></i>
+                                        Private Key
+                                    </label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="auth-passphrase">
+                                    <label class="form-check-label" for="auth-passphrase">
+                                        <i class="fas fa-lock"></i>
+                                        Passphrase
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <hr>
+                        <button type="button" class="btn btn-success" id="saveAuthMethodsBtn">
+                            <i class="fas fa-save"></i>
+                            Save Authentication Preferences
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- 2FA Setup Modal -->
 <div class="modal fade" id="setup2FAModal" tabindex="-1" aria-labelledby="setup2FAModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
@@ -184,6 +327,90 @@
                         </div>
                     </form>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Private Key Generation Modal -->
+<div class="modal fade" id="privateKeyModal" tabindex="-1" aria-labelledby="privateKeyModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content bg-dark border-secondary">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title" id="privateKeyModalLabel">
+                    <i class="fas fa-key"></i>
+                    Generate Private Key
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>Important:</strong> Your private key will be generated securely. You must save it immediately as it cannot be recovered later.
+                </div>
+                <div id="private-key-generation">
+                    <button type="button" class="btn btn-primary btn-lg w-100" id="generateKeyBtn">
+                        <i class="fas fa-plus"></i>
+                        Generate Secure Private Key
+                    </button>
+                </div>
+                <div id="private-key-display" style="display: none;">
+                    <h6>Your Generated Private Key:</h6>
+                    <div class="alert alert-info">
+                        <code id="generated-private-key" class="text-dark bg-light p-3 rounded d-block" style="font-size: 1rem; word-break: break-all;"></code>
+                    </div>
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>Save this key immediately!</strong> You won't be able to see it again after closing this modal.
+                    </div>
+                    <form id="privateKeyForm">
+                        <div class="mb-3">
+                            <label for="confirm-private-key" class="form-label">Confirm Private Key (Type to confirm you've saved it):</label>
+                            <input type="text" class="form-control" id="confirm-private-key" placeholder="Type your private key here to confirm">
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-success btn-lg">
+                                <i class="fas fa-save"></i>
+                                Save Private Key
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Passphrase Setup Modal -->
+<div class="modal fade" id="passphraseModal" tabindex="-1" aria-labelledby="passphraseModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content bg-dark border-secondary">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title" id="passphraseModalLabel">
+                    <i class="fas fa-lock"></i>
+                    Set Security Passphrase
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-white-50">Set a strong passphrase that will be required along with your private key for authentication.</p>
+                <form id="passphraseForm">
+                    <div class="mb-3">
+                        <label for="new-passphrase" class="form-label">New Passphrase</label>
+                        <input type="password" class="form-control" id="new-passphrase" required minlength="8" placeholder="Enter a strong passphrase">
+                        <small class="text-white-50">Minimum 8 characters, use a combination of letters, numbers, and symbols</small>
+                    </div>
+                    <div class="mb-3">
+                        <label for="confirm-passphrase" class="form-label">Confirm Passphrase</label>
+                        <input type="password" class="form-control" id="confirm-passphrase" required placeholder="Confirm your passphrase">
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-save"></i>
+                            Set Passphrase
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -498,6 +725,214 @@ $(document).ready(function() {
             showAlert('danger', 'Failed to disable 2FA: ' + error.message);
         });
     });
+
+    // Load Enhanced Security Status
+    function loadSecurityStatus() {
+        fetch('/auth/security-status', {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            updateSecurityUI(data);
+        })
+        .catch(error => {
+            console.error('Error loading security status:', error);
+        });
+    }
+
+    // Update Security UI based on current status
+    function updateSecurityUI(securityData) {
+        // Private Key Status
+        $('#private-key-status-loading').hide();
+        if (securityData.security_features.private_key) {
+            $('#private-key-enabled').show();
+            $('#private-key-disabled').hide();
+            $('#auth-private-key').prop('checked', true);
+        } else {
+            $('#private-key-enabled').hide();
+            $('#private-key-disabled').show();
+            $('#auth-private-key').prop('checked', false);
+        }
+
+        // Passphrase Status
+        $('#passphrase-status-loading').hide();
+        if (securityData.security_features.passphrase) {
+            $('#passphrase-enabled').show();
+            $('#passphrase-disabled').hide();
+            $('#auth-passphrase').prop('checked', true);
+        } else {
+            $('#passphrase-enabled').hide();
+            $('#passphrase-disabled').show();
+            $('#auth-passphrase').prop('checked', false);
+        }
+
+        // 2FA Status
+        $('#auth-2fa').prop('checked', securityData.security_features.totp);
+    }
+
+    // Generate secure private key
+    function generatePrivateKey() {
+        const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-=[]{}|;:,.<>?';
+        let privateKey = '';
+        const crypto = window.crypto || window.msCrypto;
+        
+        if (crypto && crypto.getRandomValues) {
+            const array = new Uint8Array(64);
+            crypto.getRandomValues(array);
+            for (let i = 0; i < array.length; i++) {
+                privateKey += charset[array[i] % charset.length];
+            }
+        } else {
+            // Fallback for older browsers
+            for (let i = 0; i < 64; i++) {
+                privateKey += charset[Math.floor(Math.random() * charset.length)];
+            }
+        }
+        
+        return privateKey;
+    }
+
+    // Private Key Generation
+    $('#generatePrivateKeyBtn, #regeneratePrivateKeyBtn').on('click', function() {
+        $('#privateKeyModal').modal('show');
+    });
+
+    $('#generateKeyBtn').on('click', function() {
+        const privateKey = generatePrivateKey();
+        $('#generated-private-key').text(privateKey);
+        $('#private-key-generation').hide();
+        $('#private-key-display').show();
+    });
+
+    $('#privateKeyForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        const generatedKey = $('#generated-private-key').text();
+        const confirmedKey = $('#confirm-private-key').val();
+        
+        if (generatedKey !== confirmedKey) {
+            showAlert('danger', 'Private key confirmation does not match. Please type the exact private key.');
+            return;
+        }
+        
+        fetch('/auth/setup-security', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+            },
+            body: JSON.stringify({
+                setup_type: 'private_key',
+                private_key: generatedKey
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showAlert('success', 'Private key saved successfully!');
+                $('#privateKeyModal').modal('hide');
+                loadSecurityStatus();
+            } else {
+                showAlert('danger', data.message || 'Failed to save private key');
+            }
+        })
+        .catch(error => {
+            showAlert('danger', 'Error saving private key: ' + error.message);
+        });
+    });
+
+    // Passphrase Setup
+    $('#setPassphraseBtn, #changePassphraseBtn').on('click', function() {
+        $('#passphraseModal').modal('show');
+    });
+
+    $('#passphraseForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        const newPassphrase = $('#new-passphrase').val();
+        const confirmPassphrase = $('#confirm-passphrase').val();
+        
+        if (newPassphrase !== confirmPassphrase) {
+            showAlert('danger', 'Passphrases do not match');
+            return;
+        }
+        
+        if (newPassphrase.length < 8) {
+            showAlert('danger', 'Passphrase must be at least 8 characters long');
+            return;
+        }
+        
+        fetch('/auth/setup-security', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+            },
+            body: JSON.stringify({
+                setup_type: 'passphrase',
+                passphrase: newPassphrase
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showAlert('success', 'Passphrase saved successfully!');
+                $('#passphraseModal').modal('hide');
+                $('#passphraseForm')[0].reset();
+                loadSecurityStatus();
+            } else {
+                showAlert('danger', data.message || 'Failed to save passphrase');
+            }
+        })
+        .catch(error => {
+            showAlert('danger', 'Error saving passphrase: ' + error.message);
+        });
+    });
+
+    // Save Authentication Methods
+    $('#saveAuthMethodsBtn').on('click', function() {
+        const authMethods = {
+            email_password: true, // Always required
+            totp: $('#auth-2fa').is(':checked'),
+            private_key: $('#auth-private-key').is(':checked'),
+            passphrase: $('#auth-passphrase').is(':checked')
+        };
+        
+        // Validate that at least email+password is selected
+        if (!authMethods.totp && !authMethods.private_key && !authMethods.passphrase) {
+            showAlert('info', 'Authentication preferences saved. Email + Password will be used as the primary authentication method.');
+            return;
+        }
+        
+        fetch('/auth/setup-security', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+            },
+            body: JSON.stringify({
+                setup_type: 'complete',
+                enable_totp: authMethods.totp
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showAlert('success', 'Authentication preferences saved successfully!');
+                loadSecurityStatus();
+            } else {
+                showAlert('danger', data.message || 'Failed to save authentication preferences');
+            }
+        })
+        .catch(error => {
+            showAlert('danger', 'Error saving preferences: ' + error.message);
+        });
+    });
+
+    // Load security status on page load
+    loadSecurityStatus();
 });
 </script>
 {% endblock %}

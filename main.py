@@ -265,11 +265,47 @@ async def get_security_status(current_user: User = Depends(get_current_user)):
         "security_features": {
             "private_key": has_private_key,
             "passphrase": has_passphrase,
-            "totp_2fa": has_totp
+            "totp": has_totp
         },
         "needs_security_setup": getattr(current_user, 'needs_security_setup', False),
         "available_methods": get_user_auth_methods(current_user)
     }
+
+@app.get("/api/dashboard/recent-activity")
+async def get_recent_activity(
+    limit: int = 10,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Get recent activity feed for dashboard"""
+    try:
+        # Get recent bot instance activities
+        recent_instances = db.query(BotInstance).order_by(BotInstance.last_poll.desc()).limit(limit).all()
+        
+        activities = []
+        
+        for instance in recent_instances:
+            if instance.last_poll:
+                event_type = "error" if instance.last_error else "success"
+                message = instance.last_error if instance.last_error else "Polling successful"
+                
+                activities.append({
+                    "timestamp": instance.last_poll.isoformat(),
+                    "event_type": event_type,
+                    "instance_id": instance.id,
+                    "instance_name": instance.name,
+                    "message": message,
+                    "symbol": getattr(instance, 'trading_pair', None)
+                })
+        
+        # Sort by timestamp descending
+        activities.sort(key=lambda x: x['timestamp'], reverse=True)
+        
+        return activities[:limit]
+        
+    except Exception as e:
+        logger.error(f"Error getting recent activity: {e}")
+        return []
 
 @app.post("/auth/register", response_model=UserResponse)
 async def register(user_create: UserCreate, db: Session = Depends(get_db)):
