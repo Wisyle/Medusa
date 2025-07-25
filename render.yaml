@@ -12,7 +12,7 @@ services:
     plan: starter
     region: singapore
     buildCommand: "pip install -r requirements.txt"
-    startCommand: "sleep 30 && python startup_migration.py && python main.py"
+    startCommand: "python migration.py && uvicorn main:app --host 0.0.0.0 --port $PORT --timeout-keep-alive 120"
     autoDeploy: true
     healthCheckPath: /api/health
     envVars:
