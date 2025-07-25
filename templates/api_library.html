@@ -54,6 +54,77 @@
 .badge-inactive {
     background-color: #6c757d;
 }
+
+/* Fix modal z-index and visibility issues */
+.modal {
+    z-index: 1055 !important;
+    display: none;
+}
+
+.modal.show {
+    display: block !important;
+}
+
+.modal.fade {
+    transition: opacity 0.15s linear;
+}
+
+.modal.fade .modal-dialog {
+    transition: transform 0.3s ease-out;
+    transform: translate(0, -50px);
+}
+
+.modal.show .modal-dialog {
+    transform: none;
+}
+
+.modal-backdrop {
+    z-index: 1050 !important;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+.modal-dialog {
+    z-index: 1056 !important;
+    margin: 1.75rem auto;
+    position: relative;
+    width: auto;
+    max-width: 500px;
+    pointer-events: none;
+}
+
+.modal-dialog.modal-lg {
+    max-width: 800px;
+}
+
+.modal-content {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    pointer-events: auto;
+    background-clip: padding-box;
+    border-radius: 0.375rem;
+    outline: 0;
+}
+
+/* Ensure form elements are visible */
+.modal .form-control, .modal .form-select {
+    background-color: var(--secondary-black) !important;
+    border: 1px solid var(--medium-gray) !important;
+    color: var(--white) !important;
+}
+
+.modal .form-control:focus, .modal .form-select:focus {
+    background-color: var(--secondary-black) !important;
+    color: var(--white) !important;
+    border-color: var(--accent-blue) !important;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25) !important;
+}
 </style>
 
 <div class="container">
@@ -176,9 +247,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Add API Credential</h5>
-                <button type="button" class="close" data-bs-dismiss="modal">
-                    <span>&times;</span>
-                </button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form id="createCredentialForm">
                 <div class="modal-body">
@@ -194,7 +263,7 @@
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label for="exchange">Exchange *</label>
-                                <select class="form-control" id="exchange" name="exchange" required>
+                                <select class="form-select" id="exchange" name="exchange" required>
                                     <option value="">Select Exchange</option>
                                     <option value="binance">Binance Futures</option>
                                     <option value="bybit">Bybit</option>
@@ -266,9 +335,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Edit API Credential</h5>
-                <button type="button" class="close" data-bs-dismiss="modal">
-                    <span>&times;</span>
-                </button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form id="editCredentialForm">
                 <div class="modal-body">
@@ -309,11 +376,55 @@
 
 <script>
 function showCreateModal() {
+    console.log('Opening create modal...');
+    
     // Clear any previous form data
     document.getElementById('createCredentialForm').reset();
     
-    var modal = new bootstrap.Modal(document.getElementById('createCredentialModal'));
-    modal.show();
+    // Ensure modal element exists
+    const modalElement = document.getElementById('createCredentialModal');
+    if (!modalElement) {
+        console.error('Modal element not found');
+        return;
+    }
+    
+    // Hide any existing modals first
+    const existingModals = document.querySelectorAll('.modal.show');
+    existingModals.forEach(modal => {
+        const bsModal = bootstrap.Modal.getInstance(modal);
+        if (bsModal) bsModal.hide();
+    });
+    
+    setTimeout(() => {
+        try {
+            const modal = new bootstrap.Modal(modalElement, {
+                backdrop: true,
+                keyboard: true,
+                focus: true
+            });
+            modal.show();
+            console.log('Modal should be visible now');
+        } catch (error) {
+            console.error('Bootstrap modal error:', error);
+            // Fallback: manually show modal
+            modalElement.style.display = 'block';
+            modalElement.classList.add('show');
+            modalElement.setAttribute('aria-modal', 'true');
+            modalElement.setAttribute('role', 'dialog');
+            modalElement.removeAttribute('aria-hidden');
+            
+            // Create backdrop manually
+            const backdrop = document.createElement('div');
+            backdrop.className = 'modal-backdrop fade show';
+            backdrop.id = 'modal-backdrop-fallback';
+            document.body.appendChild(backdrop);
+            
+            // Add body class
+            document.body.classList.add('modal-open');
+            
+            console.log('Using fallback modal display');
+        }
+    }, 100);
 }
 
 document.getElementById('createCredentialForm').addEventListener('submit', function(e) {
@@ -566,7 +677,61 @@ function loadCredentials() {
     });
 }
 
-// Load credentials when page loads
-document.addEventListener('DOMContentLoaded', loadCredentials);
+// Function to close modal (fallback)
+function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.style.display = 'none';
+        modal.classList.remove('show');
+        modal.setAttribute('aria-hidden', 'true');
+        modal.removeAttribute('aria-modal');
+        modal.removeAttribute('role');
+        
+        // Remove backdrop
+        const backdrop = document.getElementById('modal-backdrop-fallback');
+        if (backdrop) {
+            backdrop.remove();
+        }
+        
+        // Remove body class
+        document.body.classList.remove('modal-open');
+    }
+}
+
+// Add event listeners for close buttons
+document.addEventListener('DOMContentLoaded', function() {
+    // Close button event listeners
+    document.querySelectorAll('[data-bs-dismiss="modal"]').forEach(button => {
+        button.addEventListener('click', function() {
+            const modal = this.closest('.modal');
+            if (modal) {
+                const bsModal = bootstrap.Modal.getInstance(modal);
+                if (bsModal) {
+                    bsModal.hide();
+                } else {
+                    closeModal(modal.id);
+                }
+            }
+        });
+    });
+    
+    // Escape key listener
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            const visibleModal = document.querySelector('.modal.show');
+            if (visibleModal) {
+                const bsModal = bootstrap.Modal.getInstance(visibleModal);
+                if (bsModal) {
+                    bsModal.hide();
+                } else {
+                    closeModal(visibleModal.id);
+                }
+            }
+        }
+    });
+    
+    // Load credentials
+    loadCredentials();
+});
 </script>
 {% endblock %}
