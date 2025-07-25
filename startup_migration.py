@@ -457,8 +457,10 @@ def run_startup_migrations():
                     logger.error("❌ Failed to apply enhanced bypass features")
                     return False
                 
-                # 7. Ensure new strategy monitors exist (skip for now - not critical)
-                logger.info("⏭️ Skipping automatic strategy monitor creation - can be done via UI")
+                # 7. Ensure new strategy monitors exist
+                if not ensure_new_strategy_monitors(conn, is_postgresql):
+                    logger.error("❌ Failed to ensure new strategy monitors")
+                    return False
                 
                 # Commit transaction
                 trans.commit()

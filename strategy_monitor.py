@@ -316,63 +316,121 @@ class StrategyMonitorService:
 async def run_strategy_monitor(strategy_name: str):
     """Run strategy monitor for a specific strategy"""
     monitor = None
-    try:
-        monitor = StrategyMonitorService(strategy_name)
-        
-        while True:
-            try:
-                if monitor.should_send_report():
-                    await monitor.send_report()
-                
-                # Dynamic sleep based on report interval
-                # For intervals <= 5 minutes, check every 30 seconds
-                # For intervals <= 15 minutes, check every 60 seconds  
-                # For longer intervals, check every 5 minutes
-                sleep_time = 60  # Default
-                if monitor.monitor_config:
-                    interval = monitor.monitor_config.report_interval
-                    if interval <= 300:  # 5 minutes or less
-                        sleep_time = 30
-                    elif interval <= 900:  # 15 minutes or less
-                        sleep_time = 60
-                    else:
-                        sleep_time = min(300, interval // 4)  # Check 4 times per interval, max 5 minutes
-                
-                await asyncio.sleep(sleep_time)
-                
-            except Exception as e:
-                logger.error(f"Strategy monitor error for {strategy_name}: {e}")
+    logger.info(f"🎯 Starting strategy monitor for: {strategy_name}")
+    
+    while True:  # Outer restart loop
+        try:
+            monitor = StrategyMonitorService(strategy_name)
+            
+            # Check if monitor is properly configured
+            if not monitor.monitor_config:
+                logger.warning(f"Strategy monitor for {strategy_name} not configured, retrying in 60 seconds...")
                 await asyncio.sleep(60)
+                continue
+            
+            logger.info(f"✅ Strategy monitor initialized for {strategy_name}, checking every {monitor.monitor_config.report_interval} seconds")
+            
+            while True:  # Inner monitoring loop
+                try:
+                    if monitor.should_send_report():
+                        logger.info(f"📊 Sending scheduled report for {strategy_name}")
+                        await monitor.send_report()
+                    
+                    # Dynamic sleep based on report interval
+                    # For intervals <= 5 minutes, check every 30 seconds
+                    # For intervals <= 15 minutes, check every 60 seconds  
+                    # For longer intervals, check every 5 minutes
+                    sleep_time = 60  # Default
+                    if monitor.monitor_config:
+                        interval = monitor.monitor_config.report_interval
+                        if interval <= 300:  # 5 minutes or less
+                            sleep_time = 30
+                        elif interval <= 900:  # 15 minutes or less
+                            sleep_time = 60
+                        else:
+                            sleep_time = min(300, interval // 4)  # Check 4 times per interval, max 5 minutes
+                    
+                    await asyncio.sleep(sleep_time)
+                    
+                except Exception as e:
+                    logger.error(f"Strategy monitor error for {strategy_name}: {e}")
+                    # Update error status in database
+                    if monitor and monitor.monitor_config:
+                        try:
+                            monitor.monitor_config.last_error = str(e)
+                            monitor.db.commit()
+                        except:
+                            pass
+                    await asyncio.sleep(60)  # Wait before retrying
                 
-    except Exception as e:
-        logger.error(f"Strategy monitor for {strategy_name} crashed: {e}")
-    finally:
-        if monitor:
-            monitor.close()
+        except Exception as e:
+            logger.error(f"Strategy monitor for {strategy_name} crashed, restarting in 60 seconds: {e}")
+            await asyncio.sleep(60)  # Wait before full restart
+        finally:
+            if monitor:
+                try:
+                    monitor.close()
+                except:
+                    pass
+                monitor = None
 
 async def run_all_strategy_monitors():
-    """Run monitors for all configured strategies"""
-    db = SessionLocal()
-    try:
-        active_monitors = db.query(StrategyMonitor).filter(StrategyMonitor.is_active == True).all()
-        
-        if not active_monitors:
-            logger.info("No active strategy monitors configured")
-            return
-        
-        tasks = []
-        for monitor in active_monitors:
-            task = asyncio.create_task(run_strategy_monitor(monitor.strategy_name))
-            tasks.append(task)
-            logger.info(f"Started strategy monitor for: {monitor.strategy_name}")
-        
-        # Run all monitors concurrently
-        await asyncio.gather(*tasks)
-        
-    except Exception as e:
-        logger.error(f"Failed to start strategy monitors: {e}")
-    finally:
-        db.close()
+    """Run monitors for all configured strategies with proper task management"""
+    logger.info("🚀 Starting all strategy monitors...")
+    running_tasks = {}
+    
+    while True:
+        try:
+            db = SessionLocal()
+            try:
+                active_monitors = db.query(StrategyMonitor).filter(StrategyMonitor.is_active == True).all()
+                
+                # Get currently configured strategy names
+                configured_strategies = {monitor.strategy_name for monitor in active_monitors}
+                
+                # Stop monitors that are no longer configured or active
+                for strategy_name in list(running_tasks.keys()):
+                    if strategy_name not in configured_strategies:
+                        logger.info(f"🛑 Stopping monitor for removed/deactivated strategy: {strategy_name}")
+                        running_tasks[strategy_name].cancel()
+                        del running_tasks[strategy_name]
+                
+                # Start monitors for new or restarted strategies
+                for monitor in active_monitors:
+                    strategy_name = monitor.strategy_name
+                    
+                    # Check if task is running
+                    if strategy_name not in running_tasks or running_tasks[strategy_name].done():
+                        if strategy_name in running_tasks:
+                            # Log why previous task stopped
+                            task = running_tasks[strategy_name]
+                            if task.exception():
+                                logger.error(f"🔄 Restarting monitor for {strategy_name} - previous task failed: {task.exception()}")
+                            else:
+                                logger.warning(f"🔄 Restarting monitor for {strategy_name} - previous task completed unexpectedly")
+                        else:
+                            logger.info(f"🎯 Starting new monitor for: {strategy_name}")
+                        
+                        # Start new task
+                        task = asyncio.create_task(run_strategy_monitor(strategy_name))
+                        running_tasks[strategy_name] = task
+                
+                # Log status
+                if not running_tasks:
+                    logger.info("💤 No active strategy monitors configured")
+                else:
+                    active_count = sum(1 for task in running_tasks.values() if not task.done())
+                    logger.info(f"📊 Running {active_count}/{len(running_tasks)} strategy monitors")
+                
+            finally:
+                db.close()
+            
+            # Check task status and wait
+            await asyncio.sleep(30)  # Check every 30 seconds for configuration changes
+            
+        except Exception as e:
+            logger.error(f"Failed to manage strategy monitors: {e}")
+            await asyncio.sleep(60)  # Wait before retrying
 
 if __name__ == "__main__":
     asyncio.run(run_all_strategy_monitors())
