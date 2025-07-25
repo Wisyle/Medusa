@@ -1833,7 +1833,7 @@ async def get_strategy_monitors(db: Session = Depends(get_db)):
             "max_recent_positions": monitor.max_recent_positions,
             "last_report": monitor.last_report.isoformat() if monitor.last_report else None,
             "last_error": monitor.last_error,
-            "created_at": monitor.created_at.isoformat(),
+            "created_at": monitor.created_at.isoformat() if monitor.created_at else None,
             "updated_at": monitor.updated_at.isoformat() if monitor.updated_at else None
         })
     
