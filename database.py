@@ -185,7 +185,7 @@ class User(Base):
     
     # Relationships
     roles = relationship("UserRole", foreign_keys="UserRole.user_id", back_populates="user")
-    api_credentials = relationship("ApiCredential", back_populates="user")
+    # api_credentials = relationship("ApiCredential", back_populates="user")  # Commented out to avoid circular import
     
     def has_permission(self, resource: str, action: str) -> bool:
         """Check if user has specific permission"""

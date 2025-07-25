@@ -295,7 +295,8 @@ def create_user(db: Session, user_create: UserCreate):
         full_name=user_create.full_name,
         is_active=True,
         is_superuser=False,
-        totp_enabled=False
+        totp_enabled=False,
+        needs_security_setup=True  # New users need to complete security setup
     )
     db.add(db_user)
     db.commit()

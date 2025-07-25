@@ -19,7 +19,8 @@ class ApiCredential(Base):
     api_secret = Column(String(255), nullable=False)
     api_passphrase = Column(String(255), nullable=True)  # For OKX, KuCoin
     
-    user = relationship("User", back_populates="api_credentials")
+    # Using string reference to avoid circular import
+    # user = relationship("User", back_populates="api_credentials")
     
     # Status and usage tracking
     is_active = Column(Boolean, default=True)

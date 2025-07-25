@@ -1838,7 +1838,8 @@ async def create_user_admin(
         full_name=user_data.get("full_name"),
         hashed_password=get_password_hash(user_data["password"]),
         is_active=user_data.get("is_active", True),
-        is_superuser=False  # Only existing superusers can create other superusers via edit
+        is_superuser=False,  # Only existing superusers can create other superusers via edit
+        needs_security_setup=True  # New users need to complete security setup
     )
     
     db.add(new_user)

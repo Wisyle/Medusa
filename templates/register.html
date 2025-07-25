@@ -15,31 +15,44 @@
                     <small class="text-muted">Join TGL MEDUSA</small>
                 </div>
                 <div class="card-body">
+                    <!-- Error/Success Messages -->
+                    <div id="messageContainer" style="display: none;">
+                        <div id="alertMessage" class="alert" role="alert">
+                            <span id="messageText"></span>
+                        </div>
+                    </div>
+                    
                     <form id="registerForm">
                         <div class="mb-3">
                             <label for="email" class="form-label">Email</label>
                             <input type="email" class="form-control" id="email" name="email" required>
+                            <div class="invalid-feedback" id="emailError"></div>
                         </div>
                         
                         <div class="mb-3">
                             <label for="full_name" class="form-label">Full Name</label>
                             <input type="text" class="form-control" id="full_name" name="full_name">
+                            <div class="invalid-feedback" id="fullNameError"></div>
                         </div>
                         
                         <div class="mb-3">
                             <label for="password" class="form-label">Password</label>
                             <input type="password" class="form-control" id="password" name="password" required>
+                            <div class="invalid-feedback" id="passwordError"></div>
+                            <small class="form-text text-muted">Password must be at least 8 characters long</small>
                         </div>
                         
                         <div class="mb-3">
                             <label for="confirm_password" class="form-label">Confirm Password</label>
                             <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
+                            <div class="invalid-feedback" id="confirmPasswordError"></div>
                         </div>
                         
                         <div class="d-grid">
-                            <button type="submit" class="btn btn-primary">
+                            <button type="submit" class="btn btn-primary" id="registerBtn">
                                 <i class="fas fa-user-plus"></i>
-                                Register
+                                <span id="btnText">Register</span>
+                                <span id="btnSpinner" class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
                             </button>
                         </div>
                     </form>
@@ -59,22 +72,117 @@
 
 {% block scripts %}
 <script>
+// Utility functions for better UX
+function showMessage(message, type = 'success') {
+    const container = document.getElementById('messageContainer');
+    const alertEl = document.getElementById('alertMessage');
+    const textEl = document.getElementById('messageText');
+    
+    alertEl.className = `alert alert-${type}`;
+    textEl.textContent = message;
+    container.style.display = 'block';
+    
+    // Auto-hide success messages
+    if (type === 'success') {
+        setTimeout(() => {
+            container.style.display = 'none';
+        }, 3000);
+    }
+}
+
+function hideMessage() {
+    document.getElementById('messageContainer').style.display = 'none';
+}
+
+function setFieldError(fieldId, message) {
+    const field = document.getElementById(fieldId);
+    const errorEl = document.getElementById(fieldId + 'Error');
+    
+    field.classList.add('is-invalid');
+    errorEl.textContent = message;
+}
+
+function clearFieldError(fieldId) {
+    const field = document.getElementById(fieldId);
+    const errorEl = document.getElementById(fieldId + 'Error');
+    
+    field.classList.remove('is-invalid');
+    errorEl.textContent = '';
+}
+
+function clearAllErrors() {
+    ['email', 'fullName', 'password', 'confirmPassword'].forEach(clearFieldError);
+}
+
+function setLoading(loading) {
+    const btn = document.getElementById('registerBtn');
+    const btnText = document.getElementById('btnText');
+    const spinner = document.getElementById('btnSpinner');
+    
+    if (loading) {
+        btn.disabled = true;
+        btnText.textContent = 'Creating Account...';
+        spinner.classList.remove('d-none');
+    } else {
+        btn.disabled = false;
+        btnText.textContent = 'Register';
+        spinner.classList.add('d-none');
+    }
+}
+
+function validateForm() {
+    clearAllErrors();
+    hideMessage();
+    
+    let isValid = true;
+    
+    // Email validation
+    const email = document.getElementById('email').value.trim();
+    if (!email) {
+        setFieldError('email', 'Email is required');
+        isValid = false;
+    } else if (!/\S+@\S+\.\S+/.test(email)) {
+        setFieldError('email', 'Please enter a valid email address');
+        isValid = false;
+    }
+    
+    // Password validation
+    const password = document.getElementById('password').value;
+    if (!password) {
+        setFieldError('password', 'Password is required');
+        isValid = false;
+    } else if (password.length < 8) {
+        setFieldError('password', 'Password must be at least 8 characters long');
+        isValid = false;
+    }
+    
+    // Confirm password validation
+    const confirmPassword = document.getElementById('confirm_password').value;
+    if (!confirmPassword) {
+        setFieldError('confirmPassword', 'Please confirm your password');
+        isValid = false;
+    } else if (password !== confirmPassword) {
+        setFieldError('confirmPassword', 'Passwords do not match');
+        isValid = false;
+    }
+    
+    return isValid;
+}
+
 document.getElementById('registerForm').addEventListener('submit', async function(e) {
     e.preventDefault();
     
-    const formData = new FormData(this);
-    const password = formData.get('password');
-    const confirmPassword = formData.get('confirm_password');
-    
-    if (password !== confirmPassword) {
-        alert('Passwords do not match');
+    if (!validateForm()) {
         return;
     }
     
+    setLoading(true);
+    
+    const formData = new FormData(this);
     const registerData = {
-        email: formData.get('email'),
-        full_name: formData.get('full_name'),
-        password: password
+        email: formData.get('email').trim(),
+        full_name: formData.get('full_name').trim() || null,
+        password: formData.get('password')
     };
     
     try {
@@ -86,16 +194,47 @@ document.getElementById('registerForm').addEventListener('submit', async functio
             body: JSON.stringify(registerData)
         });
         
+        const data = await response.json();
+        
         if (response.ok) {
-            alert('Registration successful! Please login.');
-            window.location.href = '/login';
+            showMessage('Registration successful! Redirecting to login...', 'success');
+            setTimeout(() => {
+                window.location.href = '/login';
+            }, 2000);
         } else {
-            const error = await response.json();
-            alert('Registration failed: ' + error.detail);
+            // Handle specific error cases
+            if (response.status === 400 && data.detail && data.detail.includes('Email already registered')) {
+                setFieldError('email', 'This email is already registered');
+                showMessage('Email already registered. Please use a different email or login.', 'danger');
+            } else {
+                showMessage(`Registration failed: ${data.detail || 'Unknown error'}`, 'danger');
+            }
         }
     } catch (error) {
-        alert('Registration error: ' + error.message);
+        console.error('Registration error:', error);
+        showMessage('Registration error: Unable to connect to server. Please try again.', 'danger');
+    } finally {
+        setLoading(false);
     }
+});
+
+// Real-time password confirmation validation
+document.getElementById('confirm_password').addEventListener('input', function() {
+    const password = document.getElementById('password').value;
+    const confirmPassword = this.value;
+    
+    if (confirmPassword && password !== confirmPassword) {
+        setFieldError('confirmPassword', 'Passwords do not match');
+    } else if (confirmPassword && password === confirmPassword) {
+        clearFieldError('confirmPassword');
+    }
+});
+
+// Clear field errors on input
+['email', 'password'].forEach(fieldId => {
+    document.getElementById(fieldId).addEventListener('input', function() {
+        clearFieldError(fieldId === 'password' ? 'password' : fieldId);
+    });
 });
 </script>
 {% endblock %}
