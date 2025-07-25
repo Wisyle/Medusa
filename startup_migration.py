@@ -491,7 +491,7 @@ def fix_null_boolean_fields(conn, is_postgresql):
         
         # Update NULL totp_enabled to False
         if is_postgresql:
-            result = conn.execute(text("UPDATE users SET totp_enabled = %s WHERE totp_enabled IS NULL"), (False,))
+            result = conn.execute(text("UPDATE users SET totp_enabled = :val WHERE totp_enabled IS NULL"), {"val": False})
         else:
             result = conn.execute(text("UPDATE users SET totp_enabled = ? WHERE totp_enabled IS NULL"), (0,))
         
@@ -500,7 +500,7 @@ def fix_null_boolean_fields(conn, is_postgresql):
         
         # Update NULL is_active to True (safer default for existing users)
         if is_postgresql:
-            result = conn.execute(text("UPDATE users SET is_active = %s WHERE is_active IS NULL"), (True,))
+            result = conn.execute(text("UPDATE users SET is_active = :val WHERE is_active IS NULL"), {"val": True})
         else:
             result = conn.execute(text("UPDATE users SET is_active = ? WHERE is_active IS NULL"), (1,))
         
@@ -509,7 +509,7 @@ def fix_null_boolean_fields(conn, is_postgresql):
         
         # Update NULL is_superuser to False
         if is_postgresql:
-            result = conn.execute(text("UPDATE users SET is_superuser = %s WHERE is_superuser IS NULL"), (False,))
+            result = conn.execute(text("UPDATE users SET is_superuser = :val WHERE is_superuser IS NULL"), {"val": False})
         else:
             result = conn.execute(text("UPDATE users SET is_superuser = ? WHERE is_superuser IS NULL"), (0,))
         
