@@ -37,16 +37,17 @@ logger = logging.getLogger(__name__)
 
 # Run automatic migrations before creating FastAPI app
 logger.info("🚀 Running automatic deployment migrations...")
-try:
-    migration_success = run_startup_migrations()
-    if not migration_success:
-        logger.error("❌ Database migrations failed! Application cannot start.")
-        exit(1)
-    logger.info("✅ Database migrations completed successfully!")
-except Exception as e:
-    logger.error(f"❌ Migration error: {e}")
-    logger.error("🛑 Application startup aborted due to migration failure")
-    exit(1)
+# Commenting out blocking migrations to allow fast startup
+# try:
+#     migration_success = run_startup_migrations()
+#     if not migration_success:
+#         logger.error("❌ Database migrations failed! Application cannot start.")
+#         exit(1)
+#     logger.info("✅ Database migrations completed successfully!")
+# except Exception as e:
+#     logger.error(f"❌ Migration error: {e}")
+#     logger.error("🛑 Application startup aborted due to migration failure")
+#     exit(1)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
