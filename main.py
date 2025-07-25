@@ -343,6 +343,24 @@ async def enable_2fa(totp_code: str = Form(...), current_user: User = Depends(ge
     
     return {"message": "2FA enabled successfully"}
 
+@app.get("/api/auth/me", response_model=UserResponse)
+async def get_current_user_info(current_user: User = Depends(get_current_active_user)):
+    """Get current authenticated user information"""
+    has_private_key = current_user.private_key_hash is not None and current_user.private_key_hash.strip() != ""
+    has_passphrase = current_user.passphrase_hash is not None and current_user.passphrase_hash.strip() != ""
+    
+    return UserResponse(
+        id=current_user.id,
+        email=current_user.email,
+        full_name=current_user.full_name,
+        is_active=current_user.is_active,
+        is_superuser=current_user.is_superuser,
+        totp_enabled=current_user.totp_enabled,
+        has_private_key=has_private_key,
+        has_passphrase=has_passphrase,
+        created_at=current_user.created_at
+    )
+
 @app.get("/api/health")
 async def health_check(db: Session = Depends(get_db)):
     """Health check endpoint with migration status"""

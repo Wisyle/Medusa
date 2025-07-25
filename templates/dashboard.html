@@ -85,7 +85,7 @@
 .lighthouse-title-horizontal {
     font-family: 'Orbitron', monospace;
     font-weight: 900;
-    font-size: 2rem;
+    font-size: 1.3rem;
     color: var(--white);
     margin: 0;
     letter-spacing: 1px;
@@ -100,7 +100,7 @@
     align-items: center;
     gap: 8px;
     margin: 0;
-    font-size: 1rem;
+    font-size: 0.8rem;
     opacity: 0.9;
     color: var(--off-white);
 }
@@ -534,6 +534,227 @@
     flex: 1;
     color: var(--white);
 }
+
+/* Compact Tabs Styles */
+.compact-tabs {
+    display: flex !important;
+    justify-content: center;
+    flex-wrap: nowrap;
+    gap: 8px;
+}
+
+.compact-tab-button {
+    display: flex !important;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 80px !important;
+    max-width: 100px !important;
+    height: 60px !important;
+    padding: 8px 12px !important;
+    margin: 1px !important;
+    border-radius: 6px !important;
+    background: rgba(255, 255, 255, 0.05) !important;
+    border: 1px solid var(--medium-gray) !important;
+    transition: all 0.3s ease !important;
+    font-size: 0.75rem !important;
+    font-weight: 500 !important;
+    color: var(--off-white) !important;
+}
+
+.compact-tab-button i {
+    font-size: 1.2rem !important;
+    margin-bottom: 4px !important;
+    color: var(--accent-blue) !important;
+}
+
+.compact-tab-button .tab-text {
+    font-size: 0.7rem !important;
+    font-weight: 600 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+}
+
+.compact-tab-button.active {
+    background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan)) !important;
+    border-color: var(--accent-cyan) !important;
+    color: var(--white) !important;
+    box-shadow: 0 4px 15px rgba(0, 102, 255, 0.3) !important;
+    transform: translateY(-1px) !important;
+}
+
+.compact-tab-button.active i {
+    color: var(--white) !important;
+}
+
+.compact-tab-button.active .tab-text {
+    color: var(--white) !important;
+}
+
+.compact-tab-button:hover:not(.active) {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border-color: var(--accent-blue) !important;
+    transform: translateY(-1px) !important;
+}
+
+@media (max-width: 768px) {
+    .compact-tab-button {
+        min-width: 70px !important;
+        max-width: 80px !important;
+        height: 50px !important;
+        padding: 6px 8px !important;
+    }
+    
+    .compact-tab-button i {
+        font-size: 1rem !important;
+    }
+    
+         .compact-tab-button .tab-text {
+         font-size: 0.65rem !important;
+     }
+ }
+
+/* Shell-like Terminal Window Styles */
+.shell-window {
+    background: linear-gradient(145deg, var(--primary-black), var(--secondary-black));
+    border: 1px solid var(--medium-gray);
+    border-radius: 12px;
+    box-shadow: 
+        0 8px 32px rgba(0, 0, 0, 0.3),
+        0 0 0 1px rgba(255, 255, 255, 0.05),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    overflow: hidden;
+    font-family: 'Consolas', 'Monaco', 'Lucida Console', monospace;
+}
+
+.shell-header {
+    background: linear-gradient(135deg, var(--dark-gray), var(--medium-gray));
+    border-bottom: 1px solid var(--medium-gray);
+    padding: 8px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 40px;
+}
+
+.shell-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.shell-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.shell-dot.close {
+    background: linear-gradient(135deg, #ff5f56, #ff3b30);
+}
+
+.shell-dot.minimize {
+    background: linear-gradient(135deg, #ffbd2e, #ff9500);
+}
+
+.shell-dot.maximize {
+    background: linear-gradient(135deg, #27c93f, #30d158);
+}
+
+.shell-title {
+    flex: 1;
+    text-align: center;
+    color: var(--white);
+    font-size: 0.85rem;
+    font-weight: 600;
+    opacity: 0.9;
+}
+
+.shell-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.shell-body {
+    background: var(--primary-black);
+    padding: 12px 16px;
+    min-height: 50px;
+    max-height: 80px;
+    overflow-y: auto;
+}
+
+.shell-prompt {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.85rem;
+    line-height: 1.4;
+}
+
+.shell-user {
+    color: #4ade80;
+    font-weight: 600;
+}
+
+.shell-separator {
+    color: var(--white);
+}
+
+.shell-path {
+    color: #60a5fa;
+    font-weight: 500;
+}
+
+.shell-symbol {
+    color: var(--white);
+    font-weight: bold;
+    margin-right: 8px;
+}
+
+.shell-command {
+    color: var(--accent-cyan);
+    font-weight: 500;
+}
+
+.shell-cursor {
+    color: var(--white);
+    animation: shell-blink 1s infinite;
+    font-weight: bold;
+    margin-left: 2px;
+}
+
+@keyframes shell-blink {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0; }
+}
+
+@media (max-width: 768px) {
+    .shell-header {
+        padding: 6px 12px;
+        height: 36px;
+    }
+    
+    .shell-title {
+        font-size: 0.75rem;
+    }
+    
+    .shell-body {
+        padding: 10px 12px;
+        min-height: 40px;
+        max-height: 60px;
+    }
+    
+    .shell-prompt {
+        font-size: 0.75rem;
+    }
+    
+    .shell-dot {
+        width: 10px;
+        height: 10px;
+    }
+}
 </style>
 {% endblock %}
 
@@ -547,7 +768,7 @@
                     src="/static/lighthouse1.json" 
                     background="transparent" 
                     speed="1" 
-                    style="width: 80px; height: 80px; border-radius: 50%; overflow: hidden; box-shadow: 0 0 20px rgba(0, 150, 255, 0.6);" 
+                    style="width: 40px; height: 40px; border-radius: 50%; overflow: hidden; box-shadow: 0 0 15px rgba(0, 150, 255, 0.5);" 
                     loop 
                     autoplay 
                     class="welcome-logo-circular lottie-animation"
@@ -557,7 +778,7 @@
                 <img 
                     src="/static/lighthouse.gif" 
                     alt="Lighthouse Logo" 
-                    style="width: 80px; height: 80px; border-radius: 50%; overflow: hidden; box-shadow: 0 0 20px rgba(0, 150, 255, 0.6); display: none;" 
+                    style="width: 40px; height: 40px; border-radius: 50%; overflow: hidden; box-shadow: 0 0 15px rgba(0, 150, 255, 0.5); display: none;" 
                     class="welcome-logo-circular gif-fallback">
             </div>
             <div class="brand-info-horizontal">
@@ -648,30 +869,68 @@
 </div>
 
 <!-- Strategy Overview Tabs -->
-<div class="row mb-4">
+<div class="row mb-3">
     <div class="col-12">
-        <ul class="nav nav-pills nav-fill shadow" id="strategy-tabs" role="tablist" style="background: linear-gradient(135deg, var(--secondary-black) 0%, var(--light-gray) 100%); border-radius: 12px; padding: 8px;">
+        <ul class="nav nav-pills compact-tabs shadow" id="strategy-tabs" role="tablist" style="background: linear-gradient(135deg, var(--secondary-black) 0%, var(--light-gray) 100%); border-radius: 8px; padding: 4px;">
             <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="trading-bots-tab" data-bs-toggle="pill" data-bs-target="#trading-bots" type="button" role="tab" style="border-radius: 8px; margin: 2px;">
-                    <i class="fas fa-robot me-2"></i>Trading Bots
+                <button class="nav-link active compact-tab-button" id="trading-bots-tab" data-bs-toggle="pill" data-bs-target="#trading-bots" type="button" role="tab">
+                    <i class="fas fa-robot"></i>
+                    <span class="tab-text">Bots</span>
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="dex-arbitrage-tab" data-bs-toggle="pill" data-bs-target="#dex-arbitrage" type="button" role="tab" style="border-radius: 8px; margin: 2px;">
-                    <i class="fas fa-exchange-alt me-2"></i>DEX Arbitrage
+                <button class="nav-link compact-tab-button" id="dex-arbitrage-tab" data-bs-toggle="pill" data-bs-target="#dex-arbitrage" type="button" role="tab">
+                    <i class="fas fa-exchange-alt"></i>
+                    <span class="tab-text">DEX</span>
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="validators-tab" data-bs-toggle="pill" data-bs-target="#validators" type="button" role="tab" style="border-radius: 8px; margin: 2px;">
-                    <i class="fas fa-shield-alt me-2"></i>Validator Nodes
+                <button class="nav-link compact-tab-button" id="validators-tab" data-bs-toggle="pill" data-bs-target="#validators" type="button" role="tab">
+                    <i class="fas fa-shield-alt"></i>
+                    <span class="tab-text">Validators</span>
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="overview-tab" data-bs-toggle="pill" data-bs-target="#overview" type="button" role="tab" style="border-radius: 8px; margin: 2px;">
-                    <i class="fas fa-chart-line me-2"></i>System Overview
+                <button class="nav-link compact-tab-button" id="overview-tab" data-bs-toggle="pill" data-bs-target="#overview" type="button" role="tab">
+                    <i class="fas fa-chart-line"></i>
+                    <span class="tab-text">System</span>
                 </button>
             </li>
         </ul>
+    </div>
+</div>
+
+<!-- Shell-like Terminal Window -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="shell-window">
+            <div class="shell-header">
+                <div class="shell-controls">
+                    <span class="shell-dot close"></span>
+                    <span class="shell-dot minimize"></span>
+                    <span class="shell-dot maximize"></span>
+                </div>
+                <div class="shell-title">
+                    <i class="fas fa-terminal me-2"></i>
+                    Lighthouse Terminal - <span id="active-module">Trading Bots</span>
+                </div>
+                <div class="shell-actions">
+                    <button class="btn btn-sm btn-outline-light" onclick="refreshDashboard()">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="shell-body">
+                <div class="shell-prompt">
+                    <span class="shell-user">lighthouse@tarc</span>
+                    <span class="shell-separator">:</span>
+                    <span class="shell-path">~/dashboard</span>
+                    <span class="shell-symbol">$</span>
+                    <span class="shell-command" id="shell-status">Monitoring active...</span>
+                    <span class="shell-cursor">_</span>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -1457,7 +1716,20 @@ async function getUserDisplayName() {
         
         if (response.ok) {
             const userData = await response.json();
-            return userData.full_name || userData.email || 'User';
+            // Use full_name if available, otherwise extract first name from email
+            if (userData.full_name && userData.full_name.trim()) {
+                return userData.full_name;
+            } else if (userData.email) {
+                // Extract name from email (before @ symbol)
+                const emailName = userData.email.split('@')[0];
+                // Capitalize first letter and replace underscores/dots with spaces
+                return emailName
+                    .replace(/[._]/g, ' ')
+                    .split(' ')
+                    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                    .join(' ');
+            }
+            return 'User';
         }
         
         return 'User';
@@ -1537,8 +1809,18 @@ function initializeWelcomeMessage() {
         
         // Update greeting with user name
         if (displayName && displayName !== 'User') {
-            const firstName = displayName.split(' ')[0] || displayName.split('@')[0];
+            // For display, use first name only for cleaner look
+            const firstName = displayName.split(' ')[0];
             greetingElement.textContent = `Welcome back, ${firstName}`;
+        } else {
+            greetingElement.textContent = 'Welcome back';
+        }
+    }).catch(error => {
+        console.error('Error setting welcome message:', error);
+        // Fallback to generic greeting
+        const greetingElement = document.getElementById('welcome-greeting');
+        if (greetingElement) {
+            greetingElement.textContent = 'Welcome back';
         }
     });
     
@@ -2378,6 +2660,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const tabButtons = document.querySelectorAll('.nav-pills .nav-link');
     tabButtons.forEach(button => {
         button.addEventListener('click', function() {
+            // Update shell window title based on active tab
+            updateShellTitle(this);
             setTimeout(() => {
                 refreshDashboard();
             }, 100); // Small delay to ensure tab is active
@@ -2569,6 +2853,34 @@ function showNotification(message, type = 'info') {
             notification.parentNode.removeChild(notification);
         }
     }, 5000);
+}
+
+// Update shell window title based on active tab
+function updateShellTitle(tabElement) {
+    const activeModuleElement = document.getElementById('active-module');
+    const shellStatusElement = document.getElementById('shell-status');
+    
+    if (activeModuleElement && shellStatusElement) {
+        let moduleName = '';
+        let statusText = '';
+        
+        if (tabElement.id === 'trading-bots-tab') {
+            moduleName = 'Trading Bots';
+            statusText = 'Monitoring bot instances...';
+        } else if (tabElement.id === 'dex-arbitrage-tab') {
+            moduleName = 'DEX Arbitrage';
+            statusText = 'Scanning opportunities...';
+        } else if (tabElement.id === 'validators-tab') {
+            moduleName = 'Validator Nodes';
+            statusText = 'Tracking rewards...';
+        } else if (tabElement.id === 'overview-tab') {
+            moduleName = 'System Overview';
+            statusText = 'System monitoring...';
+        }
+        
+        activeModuleElement.textContent = moduleName;
+        shellStatusElement.textContent = statusText;
+    }
 }
 
 // Close WebSocket when page unloads
