@@ -12,7 +12,7 @@ services:
     plan: starter
     region: singapore
     buildCommand: "pip install -r requirements.txt"
-    startCommand: "python startup_migration.py && python main.py"
+    startCommand: "sleep 30 && python startup_migration.py && python main.py"
     autoDeploy: true
     healthCheckPath: /api/health
     envVars:
@@ -52,7 +52,7 @@ services:
     plan: starter
     region: singapore
     buildCommand: "pip install -r requirements.txt"
-    startCommand: "python worker.py"
+    startCommand: "sleep 45 && python worker.py"
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -80,7 +80,7 @@ services:
     plan: starter
     region: singapore
     buildCommand: "pip install -r requirements.txt"
-    startCommand: "python init_strategy_monitor.py && python strategy_monitor_worker.py"
+    startCommand: "sleep 60 && python init_strategy_monitor.py && python strategy_monitor_worker.py"
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -100,3 +100,5 @@ services:
         value: "singapore"
       - key: CLOUDFRONT_BYPASS_REGION
         value: "sg"
+
+

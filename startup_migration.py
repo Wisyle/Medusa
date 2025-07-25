@@ -378,14 +378,41 @@ document.addEventListener('DOMContentLoaded', function() {
     
     return content
 
+def wait_for_database():
+    """Wait for database to be available with retries"""
+    max_retries = 10
+    retry_delay = 10
+    
+    for attempt in range(max_retries):
+        try:
+            logger.info(f"🔍 Attempting database connection (attempt {attempt + 1}/{max_retries})...")
+            engine = create_engine(settings.database_url, pool_timeout=30)
+            
+            # Test connection
+            with engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+            
+            logger.info("✅ Database connection successful!")
+            return engine
+            
+        except Exception as e:
+            logger.warning(f"⚠️ Database connection failed (attempt {attempt + 1}): {e}")
+            if attempt < max_retries - 1:
+                logger.info(f"⏳ Waiting {retry_delay} seconds before retry...")
+                import time
+                time.sleep(retry_delay)
+            else:
+                logger.error("❌ Max database connection retries exceeded!")
+                raise
+
 def run_startup_migrations():
     """Run all necessary migrations on application startup"""
     try:
         logger.info("🚀 Starting automatic deployment migrations...")
         logger.info("🔧 ADMIN LOGIN FIX - This migration will ensure admin@tarstrategies.com works")
         
-        # Create engine
-        engine = create_engine(settings.database_url)
+        # Wait for database to be available
+        engine = wait_for_database()
         inspector = inspect(engine)
         
         # Determine database type
