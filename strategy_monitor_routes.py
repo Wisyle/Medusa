@@ -4,7 +4,7 @@ Strategy Monitor Management API - Web interface for managing strategy monitors
 """
 
 from fastapi import HTTPException, Depends, Form
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 from datetime import datetime
 from typing import List, Optional
@@ -51,7 +51,12 @@ async def create_strategy_monitor(
     # Check if monitor already exists
     existing = db.query(StrategyMonitor).filter(StrategyMonitor.strategy_name == strategy_name).first()
     if existing:
-        raise HTTPException(status_code=400, detail=f"Monitor for strategy '{strategy_name}' already exists")
+        return templates.TemplateResponse("strategy_monitors.html", {
+            "request": request,
+            "monitors": db.query(StrategyMonitor).order_by(StrategyMonitor.strategy_name).all(),
+            "available_strategies": sorted(set(s for instance in db.query(BotInstance).filter(BotInstance.is_active == True).all() for s in (instance.strategies or []))),
+            "error": f"Monitor for strategy '{strategy_name}' already exists"
+        })
     
     # Validate strategy exists in active instances
     instances = db.query(BotInstance).filter(BotInstance.is_active == True).all()
@@ -62,27 +67,43 @@ async def create_strategy_monitor(
             break
     
     if not strategy_exists:
-        raise HTTPException(status_code=400, detail=f"Strategy '{strategy_name}' not found in any active instances")
+        return templates.TemplateResponse("strategy_monitors.html", {
+            "request": request,
+            "monitors": db.query(StrategyMonitor).order_by(StrategyMonitor.strategy_name).all(),
+            "available_strategies": sorted(set(s for instance in db.query(BotInstance).filter(BotInstance.is_active == True).all() for s in (instance.strategies or []))),
+            "error": f"Strategy '{strategy_name}' not found in any active instances"
+        })
     
-    monitor = StrategyMonitor(
-        strategy_name=strategy_name,
-        telegram_bot_token=telegram_bot_token,
-        telegram_chat_id=telegram_chat_id,
-        telegram_topic_id=telegram_topic_id if telegram_topic_id else None,
-        report_interval=report_interval,
-        include_positions=include_positions,
-        include_orders=include_orders,
-        include_trades=include_trades,
-        include_pnl=include_pnl,
-        max_recent_positions=max_recent_positions,
-        is_active=True
-    )
-    
-    db.add(monitor)
-    db.commit()
-    db.refresh(monitor)
-    
-    return {"message": f"Strategy monitor created for '{strategy_name}'", "id": monitor.id}
+    try:
+        monitor = StrategyMonitor(
+            strategy_name=strategy_name,
+            telegram_bot_token=telegram_bot_token,
+            telegram_chat_id=telegram_chat_id,
+            telegram_topic_id=telegram_topic_id if telegram_topic_id else None,
+            report_interval=report_interval,
+            include_positions=include_positions,
+            include_orders=include_orders,
+            include_trades=include_trades,
+            include_pnl=include_pnl,
+            max_recent_positions=max_recent_positions,
+            is_active=True
+        )
+        
+        db.add(monitor)
+        db.commit()
+        db.refresh(monitor)
+        
+        # Redirect to strategy monitors page with success message
+        return RedirectResponse(url="/strategy-monitors?success=created", status_code=303)
+        
+    except Exception as e:
+        db.rollback()
+        return templates.TemplateResponse("strategy_monitors.html", {
+            "request": request,
+            "monitors": db.query(StrategyMonitor).order_by(StrategyMonitor.strategy_name).all(),
+            "available_strategies": sorted(set(s for instance in db.query(BotInstance).filter(BotInstance.is_active == True).all() for s in (instance.strategies or []))),
+            "error": f"Failed to create monitor: {str(e)}"
+        })
 
 @app.put("/strategy-monitors/{monitor_id}")
 async def update_strategy_monitor(

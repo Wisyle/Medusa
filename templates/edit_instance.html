@@ -473,7 +473,7 @@ function loadInstanceData() {
         
         // Set strategies checkboxes
         const strategies = instance.strategies || [];
-        document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+        document.querySelectorAll('input[type="checkbox"][id^="strategy-"]').forEach(checkbox => {
             checkbox.checked = strategies.includes(checkbox.value);
         });
     })
@@ -502,15 +502,46 @@ document.addEventListener('DOMContentLoaded', function() {
 document.getElementById('instance-form').addEventListener('submit', function(e) {
     e.preventDefault();
     
-    // Collect selected strategies
+    // Validate required fields based on API source
+    const apiSource = document.querySelector('input[name="api_source"]:checked');
+    if (!apiSource) {
+        alert('Please select an API source (Library or Direct)');
+        return;
+    }
+    
+    if (apiSource.value === 'direct') {
+        const apiKey = document.getElementById('api_key').value.trim();
+        const apiSecret = document.getElementById('api_secret').value.trim();
+        if (!apiKey || !apiSecret) {
+            alert('API key and secret are required for direct mode');
+            return;
+        }
+    } else if (apiSource.value === 'library') {
+        const credentialId = document.getElementById('api_credential_id').value;
+        if (!credentialId) {
+            alert('Please select an API credential from the library');
+            return;
+        }
+    }
+    
+    // Collect selected strategies (only from strategy checkboxes)
     const strategies = [];
-    document.querySelectorAll('input[type="checkbox"]:checked').forEach(checkbox => {
+    document.querySelectorAll('input[type="checkbox"][id^="strategy-"]:checked').forEach(checkbox => {
         strategies.push(checkbox.value);
     });
     
     // Create form data
     const formData = new FormData(this);
     formData.set('strategies', strategies.join(','));
+    
+    // Ensure api_source is included
+    formData.set('api_source', apiSource.value);
+    
+    // Debug: Log form data
+    console.log('Form data being submitted:');
+    for (let [key, value] of formData.entries()) {
+        console.log(key + ': ' + value);
+    }
     
     // Submit form
     const token = localStorage.getItem('access_token');
@@ -521,8 +552,12 @@ document.getElementById('instance-form').addEventListener('submit', function(e) 
         },
         body: formData
     })
-    .then(response => response.json())
+    .then(response => {
+        console.log('Response status:', response.status);
+        return response.json();
+    })
     .then(data => {
+        console.log('Response data:', data);
         if (data.instance_id || data.message) {
             alert('Instance updated successfully!');
             window.location.href = '/instances';
@@ -534,6 +569,7 @@ document.getElementById('instance-form').addEventListener('submit', function(e) 
         }
     })
     .catch(error => {
+        console.error('Fetch error:', error);
         alert('Error updating instance: ' + error);
     });
 });

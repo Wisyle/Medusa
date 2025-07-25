@@ -68,6 +68,34 @@
             <h2>Strategy Monitor System</h2>
             <p class="text-muted">Aggregate and monitor strategy performance across multiple instances</p>
             
+            <!-- Success/Error Messages -->
+            <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    if (urlParams.get('success') === 'created') {
+                        const alert = document.createElement('div');
+                        alert.className = 'alert alert-success alert-dismissible fade show';
+                        alert.innerHTML = `
+                            <i class="fas fa-check-circle"></i>
+                            Strategy monitor created successfully!
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        `;
+                        document.querySelector('.container .col-md-12').insertBefore(alert, document.querySelector('.card'));
+                        
+                        // Clear URL parameter
+                        window.history.replaceState({}, document.title, window.location.pathname);
+                    }
+                });
+            </script>
+            
+            {% if error %}
+            <div class="alert alert-danger alert-dismissible fade show">
+                <i class="fas fa-exclamation-triangle"></i>
+                {{ error }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            {% endif %}
+            
             <!-- Create New Monitor -->
             <div class="card mb-4">
                 <div class="card-header">
