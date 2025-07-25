@@ -51,7 +51,7 @@ class UserResponse(BaseModel):
     totp_enabled: bool
     has_private_key: bool = False
     has_passphrase: bool = False
-    created_at: datetime
+    created_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
