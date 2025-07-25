@@ -6,7 +6,7 @@
 <style>
 /* System Logs Page Styles */
 .logs-container {
-    height: 70vh;
+    height: 40vh;
     overflow-y: auto;
     font-family: 'Consolas', 'Monaco', 'Lucida Console', monospace;
     background: var(--primary-black);
@@ -14,6 +14,7 @@
     padding: 15px;
     border-radius: 8px;
     border: 1px solid var(--medium-gray);
+    margin-bottom: 20px;
 }
 
 .logs-container::-webkit-scrollbar {
@@ -76,34 +77,103 @@
     display: flex;
     gap: 10px;
     flex-wrap: wrap;
+    padding: 15px;
+    background: linear-gradient(145deg, var(--dark-gray), var(--secondary-black));
+    border-radius: 8px;
+    border: 1px solid var(--medium-gray);
+    margin-bottom: 20px;
 }
 
-.filter-controls .form-select {
-    background-color: var(--dark-gray);
-    border-color: var(--medium-gray);
+.filter-controls .form-select,
+.filter-controls .form-control {
+    background-color: var(--primary-black);
+    border: 1px solid var(--medium-gray);
     color: var(--white);
-    min-width: 150px;
+    min-width: 120px;
+    border-radius: 6px;
+    font-size: 0.85rem;
 }
 
-.filter-controls .form-select:focus {
-    background-color: var(--dark-gray);
+.filter-controls .form-select:focus,
+.filter-controls .form-control:focus {
+    background-color: var(--primary-black);
     border-color: var(--accent-blue);
     color: var(--white);
     box-shadow: 0 0 0 0.2rem rgba(0, 102, 255, 0.25);
 }
 
+.filter-controls .btn {
+    border-radius: 6px;
+    font-size: 0.85rem;
+    padding: 6px 12px;
+    font-weight: 500;
+    border: 1px solid var(--medium-gray);
+    transition: all 0.2s ease;
+}
+
+.filter-controls .btn-primary {
+    background: linear-gradient(135deg, var(--accent-blue), #0056b3);
+    border-color: var(--accent-blue);
+}
+
+.filter-controls .btn-primary:hover {
+    background: linear-gradient(135deg, #0056b3, var(--accent-blue));
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 102, 255, 0.3);
+}
+
+.filter-controls .btn-secondary {
+    background: linear-gradient(135deg, var(--dark-gray), var(--medium-gray));
+    border-color: var(--medium-gray);
+    color: var(--white);
+}
+
+.filter-controls .btn-secondary:hover {
+    background: linear-gradient(135deg, var(--medium-gray), var(--dark-gray));
+    border-color: var(--accent-blue);
+    transform: translateY(-1px);
+}
+
+.filter-controls .btn-outline-secondary {
+    border-color: var(--medium-gray);
+    color: var(--off-white);
+    background: transparent;
+}
+
+.filter-controls .btn-outline-secondary:hover {
+    background: var(--dark-gray);
+    border-color: var(--accent-blue);
+    color: var(--white);
+    transform: translateY(-1px);
+}
+
+.filter-controls .btn-outline-danger {
+    border-color: #ff6b6b;
+    color: #ff6b6b;
+    background: transparent;
+}
+
+.filter-controls .btn-outline-danger:hover {
+    background: #ff6b6b;
+    border-color: #ff6b6b;
+    color: var(--white);
+    transform: translateY(-1px);
+}
+
 .log-stats {
     display: flex;
-    gap: 20px;
+    gap: 15px;
     margin-bottom: 15px;
+    flex-wrap: wrap;
 }
 
 .log-stat {
-    padding: 8px 15px;
-    background: var(--dark-gray);
-    border-radius: 6px;
+    padding: 10px 15px;
+    background: linear-gradient(145deg, var(--dark-gray), var(--secondary-black));
+    border-radius: 8px;
     border: 1px solid var(--medium-gray);
     font-size: 0.85rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .log-stat-label {
@@ -123,6 +193,75 @@
     color: var(--off-white);
     opacity: 0.6;
 }
+
+/* Critical Information Table */
+.critical-info-table {
+    background: linear-gradient(145deg, var(--secondary-black), var(--dark-gray));
+    border: 1px solid var(--medium-gray);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-top: 20px;
+}
+
+.critical-info-table .table {
+    margin-bottom: 0;
+    color: var(--white);
+}
+
+.critical-info-table .table thead th {
+    background: var(--dark-gray);
+    border-color: var(--medium-gray);
+    color: var(--accent-blue);
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.critical-info-table .table tbody td {
+    border-color: var(--medium-gray);
+    font-size: 0.85rem;
+    vertical-align: middle;
+}
+
+.critical-info-table .table tbody tr:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.status-badge {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.status-badge.error {
+    background: #ff6b6b;
+    color: var(--white);
+}
+
+.status-badge.warning {
+    background: #ffd93d;
+    color: var(--primary-black);
+}
+
+.status-badge.info {
+    background: #6bcf7f;
+    color: var(--primary-black);
+}
+
+.status-badge.critical {
+    background: #ff4757;
+    color: var(--white);
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.6; }
+    100% { opacity: 1; }
+}
 </style>
 {% endblock %}
 
@@ -131,10 +270,40 @@
     <div class="row">
         <div class="col-12">
             <div class="card shadow">
-                <div class="card-header d-flex justify-content-between align-items-center">
+                <div class="card-header">
                     <h3 class="card-title mb-0">
                         <i class="fas fa-terminal me-2"></i>System Logs
                     </h3>
+                </div>
+                <div class="card-body">
+                    <div class="log-stats" id="log-stats">
+                        <div class="log-stat">
+                            <span class="log-stat-label">Total Logs:</span>
+                            <span class="log-stat-value" id="total-logs">0</span>
+                        </div>
+                        <div class="log-stat">
+                            <span class="log-stat-label">Errors:</span>
+                            <span class="log-stat-value" id="error-count">0</span>
+                        </div>
+                        <div class="log-stat">
+                            <span class="log-stat-label">Warnings:</span>
+                            <span class="log-stat-value" id="warning-count">0</span>
+                        </div>
+                        <div class="log-stat">
+                            <span class="log-stat-label">Last Update:</span>
+                            <span class="log-stat-value" id="last-update">-</span>
+                        </div>
+                    </div>
+                    
+                    <div class="logs-container" id="logs-container">
+                        <div id="logs-content">
+                            <div class="text-center p-4">
+                                <i class="fas fa-spinner fa-spin fa-2x mb-3"></i>
+                                <p>Loading real-time logs from deployment services...</p>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="filter-controls">
                         <select class="form-select form-select-sm" id="service-filter">
                             <option value="all">All Services</option>
@@ -173,33 +342,37 @@
                         </button>
                     </div>
                 </div>
-                <div class="card-body">
-                    <div class="log-stats" id="log-stats">
-                        <div class="log-stat">
-                            <span class="log-stat-label">Total Logs:</span>
-                            <span class="log-stat-value" id="total-logs">0</span>
-                        </div>
-                        <div class="log-stat">
-                            <span class="log-stat-label">Errors:</span>
-                            <span class="log-stat-value" id="error-count">0</span>
-                        </div>
-                        <div class="log-stat">
-                            <span class="log-stat-label">Warnings:</span>
-                            <span class="log-stat-value" id="warning-count">0</span>
-                        </div>
-                        <div class="log-stat">
-                            <span class="log-stat-label">Last Update:</span>
-                            <span class="log-stat-value" id="last-update">-</span>
-                        </div>
-                    </div>
-                    
-                    <div class="logs-container" id="logs-container">
-                        <div id="logs-content">
-                            <div class="text-center p-4">
-                                <i class="fas fa-spinner fa-spin fa-2x mb-3"></i>
-                                <p>Loading logs from deployment services...</p>
-                            </div>
-                        </div>
+            </div>
+
+            <!-- Critical Information Table -->
+            <div class="card shadow mt-4">
+                <div class="card-header">
+                    <h4 class="card-title mb-0">
+                        <i class="fas fa-exclamation-triangle me-2"></i>Critical Information
+                    </h4>
+                </div>
+                <div class="card-body p-0">
+                    <div class="critical-info-table">
+                        <table class="table table-hover mb-0" id="critical-info-table">
+                            <thead>
+                                <tr>
+                                    <th>Service</th>
+                                    <th>Status</th>
+                                    <th>Last Error</th>
+                                    <th>Error Count (24h)</th>
+                                    <th>Last Warning</th>
+                                    <th>Uptime</th>
+                                    <th>Last Update</th>
+                                </tr>
+                            </thead>
+                            <tbody id="critical-info-body">
+                                <tr>
+                                    <td colspan="7" class="text-center p-4">
+                                        <i class="fas fa-spinner fa-spin me-2"></i>Loading critical information...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -216,6 +389,7 @@ let filteredLogs = [];
 // Initialize filters
 document.addEventListener('DOMContentLoaded', function() {
     loadLogs();
+    loadCriticalInfo();
     
     // Add event listeners for filters
     document.getElementById('service-filter').addEventListener('change', applyFilters);
@@ -226,164 +400,204 @@ document.addEventListener('DOMContentLoaded', function() {
 async function loadLogs() {
     try {
         const token = localStorage.getItem('access_token');
-        const response = await fetch('/api/system-logs?limit=500', {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
         
-        if (response.ok) {
-            const data = await response.json();
-            allLogs = data.logs || data || [];
-            
-            // If no real logs, generate sample logs for demonstration
-            if (allLogs.length === 0) {
-                allLogs = generateDemoLogs();
+        // Try multiple endpoints to get real logs
+        const endpoints = [
+            '/api/system-logs',
+            '/api/logs', 
+            '/api/monitoring/logs',
+            '/api/dashboard/logs'
+        ];
+        
+        let logsData = null;
+        
+        for (const endpoint of endpoints) {
+            try {
+                const response = await fetch(`${endpoint}?limit=100`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    logsData = data.logs || data || [];
+                    break;
+                }
+            } catch (error) {
+                console.error(`Failed to load from ${endpoint}:`, error);
             }
-            
-            applyFilters();
-            updateLastUpdate();
-        } else if (response.status === 404) {
-            // Try alternative endpoints
-            await loadAlternativeLogs();
-        } else {
-            showError('Failed to load logs from server');
         }
+        
+        if (logsData && logsData.length > 0) {
+            allLogs = logsData;
+        } else {
+            // If no real logs available, show message
+            showNoLogsMessage();
+            return;
+        }
+        
+        applyFilters();
+        updateLastUpdate();
+        
     } catch (error) {
         console.error('Error loading logs:', error);
-        showError('Error connecting to log service');
-        // Show demo logs as fallback
-        allLogs = generateDemoLogs();
-        applyFilters();
+        showError('Error connecting to log service. Please check if the deployment is running.');
     }
 }
 
-async function loadAlternativeLogs() {
-    // Try to load from different endpoints
-    const endpoints = [
-        '/api/logs',
-        '/api/dashboard/logs',
-        '/api/monitoring/logs',
-        '/api/system/logs'
-    ];
-    
-    const token = localStorage.getItem('access_token');
-    
-    for (const endpoint of endpoints) {
-        try {
-            const response = await fetch(endpoint, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-            
-            if (response.ok) {
-                const data = await response.json();
-                allLogs = data.logs || data || [];
-                applyFilters();
-                updateLastUpdate();
-                return;
-            }
-        } catch (error) {
-            console.error(`Failed to load from ${endpoint}:`, error);
-        }
-    }
-    
-    // If all endpoints fail, use demo logs
-    allLogs = generateDemoLogs();
-    applyFilters();
-}
-
-function generateDemoLogs() {
-    const services = ['api', 'web', 'worker', 'trading-bots', 'dex-arbitrage', 'validators', 'strategy-monitor', 'database', 'websocket'];
-    const levels = ['INFO', 'WARN', 'ERROR', 'DEBUG'];
-    const messages = {
-        'api': [
-            'API server started successfully on port 8000',
-            'Received request: GET /api/dashboard/trading-bots',
-            'Authentication successful for user: admin@tar.global',
-            'Rate limit check passed for IP: 192.168.1.100',
-            'Database connection pool initialized'
-        ],
-        'web': [
-            'Web server started on port 10000',
-            'Static files served from /static',
-            'Template rendered: dashboard.html',
-            'Session created for user: admin',
-            'CORS headers configured'
-        ],
-        'worker': [
-            'Background worker started',
-            'Processing queue: 15 pending tasks',
-            'Scheduled job: cleanup_old_logs completed',
-            'Memory usage: 245MB / 512MB',
-            'Cache refresh completed'
-        ],
-        'trading-bots': [
-            'Bot instance 1 connected to Binance',
-            'Order placed: BUY BTC/USDT @ 45,234.50',
-            'Strategy execution: DCA Futures triggered',
-            'Portfolio rebalance completed',
-            'Market data stream connected'
-        ],
-        'dex-arbitrage': [
-            'DEX monitor initialized for BNB Chain',
-            'Price discrepancy detected: CAKE/USDT 2.3%',
-            'Arbitrage opportunity executed',
-            'Gas estimation: 0.002 BNB',
-            'Profit realized: $23.45'
-        ],
-        'validators': [
-            'Validator connected to TON network',
-            'Block validation successful: #1234567',
-            'Rewards claimed: 2.345 TON',
-            'Node health check: OK',
-            'Uptime: 99.98%'
-        ],
-        'strategy-monitor': [
-            'Strategy monitor service started',
-            'Performance calculation completed',
-            'Risk assessment: Low',
-            'Alert: High volatility detected',
-            'Strategy optimization applied'
-        ],
-        'database': [
-            'PostgreSQL connection established',
-            'Migration 001_initial applied',
-            'Query execution time: 23ms',
-            'Backup completed successfully',
-            'Connection pool: 8/10 active'
-        ],
-        'websocket': [
-            'WebSocket server started on port 8001',
-            'Client connected: user_123',
-            'Broadcasting dashboard update',
-            'Heartbeat sent to 5 clients',
-            'Connection closed: user_456'
-        ]
-    };
-    
-    const logs = [];
-    const now = new Date();
-    
-    // Generate 200 sample logs
-    for (let i = 0; i < 200; i++) {
-        const service = services[Math.floor(Math.random() * services.length)];
-        const level = i % 20 === 0 ? 'ERROR' : i % 15 === 0 ? 'WARN' : i % 5 === 0 ? 'DEBUG' : 'INFO';
-        const serviceMessages = messages[service];
-        const message = serviceMessages[Math.floor(Math.random() * serviceMessages.length)];
+async function loadCriticalInfo() {
+    try {
+        const token = localStorage.getItem('access_token');
         
-        logs.push({
-            timestamp: new Date(now.getTime() - (i * 30000)).toISOString(), // 30 seconds apart
-            service: service,
-            level: level,
-            message: level === 'ERROR' ? `Error: ${message} - Connection timeout` : 
-                    level === 'WARN' ? `Warning: ${message} - Retry attempt 3/5` : 
-                    message
-        });
+        // Get service status from health endpoints
+        const services = [
+            { name: 'API', endpoint: '/api/health', type: 'api' },
+            { name: 'Web', endpoint: '/health', type: 'web' },
+            { name: 'Worker', endpoint: '/api/worker/status', type: 'worker' },
+            { name: 'Trading Bots', endpoint: '/api/trading-bots/status', type: 'trading-bots' },
+            { name: 'DEX Arbitrage', endpoint: '/api/dex-arbitrage/status', type: 'dex-arbitrage' },
+            { name: 'Validators', endpoint: '/api/validators/status', type: 'validators' },
+            { name: 'Strategy Monitor', endpoint: '/api/strategy-monitor/status', type: 'strategy-monitor' },
+            { name: 'Database', endpoint: '/api/database/status', type: 'database' }
+        ];
+        
+        const criticalData = [];
+        
+        for (const service of services) {
+            try {
+                const response = await fetch(service.endpoint, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
+                    timeout: 5000
+                });
+                
+                let status = 'Unknown';
+                let uptime = 'N/A';
+                
+                if (response.ok) {
+                    status = 'Online';
+                    const data = await response.json();
+                    uptime = data.uptime || 'N/A';
+                } else {
+                    status = 'Error';
+                }
+                
+                // Get error count from logs for this service
+                const serviceErrors = allLogs.filter(log => 
+                    log.service === service.type && 
+                    log.level === 'ERROR' &&
+                    new Date(log.timestamp) > new Date(Date.now() - 24 * 60 * 60 * 1000)
+                );
+                
+                const serviceWarnings = allLogs.filter(log => 
+                    log.service === service.type && 
+                    (log.level === 'WARN' || log.level === 'WARNING')
+                );
+                
+                const lastError = serviceErrors.length > 0 ? 
+                    serviceErrors[serviceErrors.length - 1].message.substring(0, 50) + '...' : 
+                    'None';
+                
+                const lastWarning = serviceWarnings.length > 0 ? 
+                    serviceWarnings[serviceWarnings.length - 1].message.substring(0, 50) + '...' : 
+                    'None';
+                
+                criticalData.push({
+                    service: service.name,
+                    status: status,
+                    lastError: lastError,
+                    errorCount: serviceErrors.length,
+                    lastWarning: lastWarning,
+                    uptime: uptime,
+                    lastUpdate: new Date().toLocaleTimeString()
+                });
+                
+            } catch (error) {
+                criticalData.push({
+                    service: service.name,
+                    status: 'Offline',
+                    lastError: 'Connection failed',
+                    errorCount: 0,
+                    lastWarning: 'Service unreachable',
+                    uptime: 'N/A',
+                    lastUpdate: new Date().toLocaleTimeString()
+                });
+            }
+        }
+        
+        displayCriticalInfo(criticalData);
+        
+    } catch (error) {
+        console.error('Error loading critical info:', error);
+        showCriticalInfoError();
     }
+}
+
+function displayCriticalInfo(data) {
+    const tbody = document.getElementById('critical-info-body');
     
-    return logs;
+    tbody.innerHTML = data.map(item => {
+        const statusBadge = getStatusBadge(item.status, item.errorCount);
+        
+        return `
+            <tr>
+                <td><strong>${item.service}</strong></td>
+                <td>${statusBadge}</td>
+                <td>${item.lastError}</td>
+                <td><span class="${item.errorCount > 0 ? 'text-danger' : 'text-success'}">${item.errorCount}</span></td>
+                <td>${item.lastWarning}</td>
+                <td>${item.uptime}</td>
+                <td>${item.lastUpdate}</td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function getStatusBadge(status, errorCount) {
+    if (status === 'Online' && errorCount === 0) {
+        return '<span class="status-badge info">Online</span>';
+    } else if (status === 'Online' && errorCount > 0) {
+        return '<span class="status-badge warning">Issues</span>';
+    } else if (status === 'Error') {
+        return '<span class="status-badge error">Error</span>';
+    } else if (status === 'Offline') {
+        return '<span class="status-badge critical">Offline</span>';
+    } else {
+        return '<span class="status-badge warning">Unknown</span>';
+    }
+}
+
+function showCriticalInfoError() {
+    const tbody = document.getElementById('critical-info-body');
+    tbody.innerHTML = `
+        <tr>
+            <td colspan="7" class="text-center p-4 text-danger">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                Unable to load critical information. Please check service connectivity.
+            </td>
+        </tr>
+    `;
+}
+
+function showNoLogsMessage() {
+    const container = document.getElementById('logs-content');
+    container.innerHTML = `
+        <div class="text-center p-4">
+            <i class="fas fa-info-circle fa-2x mb-3 text-warning"></i>
+            <p>No logs available from deployment services.</p>
+            <p class="small text-muted">This could mean:</p>
+            <ul class="small text-muted text-start" style="max-width: 400px; margin: 0 auto;">
+                <li>Services are running but not logging to accessible endpoints</li>
+                <li>Log aggregation service is not configured</li>
+                <li>Deployment platform logs are not exposed via API</li>
+            </ul>
+            <button class="btn btn-sm btn-primary mt-3" onclick="loadLogs()">
+                <i class="fas fa-sync-alt"></i> Retry
+            </button>
+        </div>
+    `;
 }
 
 function applyFilters() {
@@ -463,6 +677,7 @@ function showError(message) {
 
 function refreshLogs() {
     loadLogs();
+    loadCriticalInfo();
 }
 
 function toggleAutoRefresh() {
@@ -475,11 +690,15 @@ function toggleAutoRefresh() {
         text.textContent = 'Auto Refresh';
         isAutoRefresh = false;
     } else {
-        autoRefreshInterval = setInterval(loadLogs, 5000); // Refresh every 5 seconds
+        autoRefreshInterval = setInterval(() => {
+            loadLogs();
+            loadCriticalInfo();
+        }, 10000); // Refresh every 10 seconds
         icon.className = 'fas fa-pause';
         text.textContent = 'Stop Auto';
         isAutoRefresh = true;
         loadLogs(); // Load immediately
+        loadCriticalInfo();
     }
 }
 
