@@ -270,35 +270,13 @@
 }
 
 /* Responsive Design for Welcome Section */
-@media (max-width: 992px) {
-    .welcome-card {
-        grid-template-columns: 1fr;
-        gap: 20px;
-        text-align: center;
-    }
-    
-    .dashboard-stats-preview {
-        justify-content: center;
-        flex-wrap: wrap;
-    }
-}
-
 @media (max-width: 768px) {
     .welcome-card {
         padding: 20px;
     }
     
-    .lighthouse-title {
-        font-size: 1.5rem;
-    }
-    
-    .dashboard-stats-preview {
-        gap: 10px;
-    }
-    
-    .stat-preview {
-        min-width: auto;
-        flex: 1;
+    .welcome-message-container {
+        text-align: center;
     }
 }
 
@@ -614,147 +592,7 @@
      }
  }
 
-/* Shell-like Terminal Window Styles */
-.shell-window {
-    background: linear-gradient(145deg, var(--primary-black), var(--secondary-black));
-    border: 1px solid var(--medium-gray);
-    border-radius: 12px;
-    box-shadow: 
-        0 8px 32px rgba(0, 0, 0, 0.3),
-        0 0 0 1px rgba(255, 255, 255, 0.05),
-        inset 0 1px 0 rgba(255, 255, 255, 0.1);
-    overflow: hidden;
-    font-family: 'Consolas', 'Monaco', 'Lucida Console', monospace;
-}
 
-.shell-header {
-    background: linear-gradient(135deg, var(--dark-gray), var(--medium-gray));
-    border-bottom: 1px solid var(--medium-gray);
-    padding: 8px 16px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    height: 40px;
-}
-
-.shell-controls {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.shell-dot {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    display: inline-block;
-}
-
-.shell-dot.close {
-    background: linear-gradient(135deg, #ff5f56, #ff3b30);
-}
-
-.shell-dot.minimize {
-    background: linear-gradient(135deg, #ffbd2e, #ff9500);
-}
-
-.shell-dot.maximize {
-    background: linear-gradient(135deg, #27c93f, #30d158);
-}
-
-.shell-title {
-    flex: 1;
-    text-align: center;
-    color: var(--white);
-    font-size: 0.85rem;
-    font-weight: 600;
-    opacity: 0.9;
-}
-
-.shell-actions {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.shell-body {
-    background: var(--primary-black);
-    padding: 12px 16px;
-    min-height: 120px;
-    max-height: 180px;
-    overflow-y: auto;
-}
-
-.shell-prompt {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 0.85rem;
-    line-height: 1.4;
-}
-
-.shell-user {
-    color: #4ade80;
-    font-weight: 600;
-}
-
-.shell-separator {
-    color: var(--white);
-}
-
-.shell-path {
-    color: #60a5fa;
-    font-weight: 500;
-}
-
-.shell-symbol {
-    color: var(--white);
-    font-weight: bold;
-    margin-right: 8px;
-}
-
-.shell-command {
-    color: var(--accent-cyan);
-    font-weight: 500;
-}
-
-.shell-cursor {
-    color: var(--white);
-    animation: shell-blink 1s infinite;
-    font-weight: bold;
-    margin-left: 2px;
-}
-
-@keyframes shell-blink {
-    0%, 50% { opacity: 1; }
-    51%, 100% { opacity: 0; }
-}
-
-@media (max-width: 768px) {
-    .shell-header {
-        padding: 6px 12px;
-        height: 36px;
-    }
-    
-    .shell-title {
-        font-size: 0.75rem;
-    }
-    
-    .shell-body {
-        padding: 10px 12px;
-        min-height: 40px;
-        max-height: 60px;
-    }
-    
-    .shell-prompt {
-        font-size: 0.75rem;
-    }
-    
-    .shell-dot {
-        width: 10px;
-        height: 10px;
-    }
-}
 </style>
 {% endblock %}
 
@@ -767,29 +605,6 @@
             <div class="typewriter-dashboard">
                 <span class="typewriter-text-dashboard" id="typewriter-dashboard"></span>
                 <span class="cursor-dashboard">|</span>
-            </div>
-        </div>
-        <div class="dashboard-stats-preview-compact">
-            <div class="stat-preview-compact">
-                <div class="stat-icon-compact"><i class="fas fa-chart-line"></i></div>
-                <div class="stat-info-compact">
-                    <span class="stat-label-compact">Active Monitors</span>
-                    <span class="stat-value-compact" id="preview-monitors">-</span>
-                </div>
-            </div>
-            <div class="stat-preview-compact">
-                <div class="stat-icon-compact"><i class="fas fa-dollar-sign"></i></div>
-                <div class="stat-info-compact">
-                    <span class="stat-label-compact">Portfolio Value</span>
-                    <span class="stat-value-compact" id="preview-portfolio">-</span>
-                </div>
-            </div>
-            <div class="stat-preview-compact">
-                <div class="stat-icon-compact"><i class="fas fa-bolt"></i></div>
-                <div class="stat-info-compact">
-                    <span class="stat-label-compact">System Health</span>
-                    <span class="stat-value-compact" id="preview-health">-</span>
-                </div>
             </div>
         </div>
     </div>
@@ -846,60 +661,6 @@
                             <i class="fas fa-spinner fa-spin"></i> Loading recent activity...
                         </div>
                     </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Shell-like Terminal Window -->
-<div class="row mb-4">
-    <div class="col-12">
-        <div class="shell-window">
-            <div class="shell-header">
-                <div class="shell-controls">
-                    <span class="shell-dot close"></span>
-                    <span class="shell-dot minimize"></span>
-                    <span class="shell-dot maximize"></span>
-                </div>
-                <div class="shell-title">
-                    <i class="fas fa-terminal me-2"></i>
-                    Lighthouse Terminal - <span id="active-module">Trading Bots</span>
-                </div>
-                <div class="shell-actions">
-                    <button class="btn btn-sm btn-outline-light" onclick="refreshDashboard()">
-                        <i class="fas fa-sync-alt"></i>
-                    </button>
-                </div>
-            </div>
-            <div class="shell-body">
-                <div class="shell-prompt mb-2">
-                    <span class="shell-user">lighthouse@tarc</span>
-                    <span class="shell-separator">:</span>
-                    <span class="shell-path">~/dashboard</span>
-                    <span class="shell-symbol">$</span>
-                    <span class="shell-command">systemctl status trading-bots</span>
-                </div>
-                <div class="shell-output mb-2" style="color: #4ade80; margin-left: 20px;">
-                    ● trading-bots.service - Active
-                    Active: active (running) since 5min ago
-                </div>
-                <div class="shell-prompt mb-2">
-                    <span class="shell-user">lighthouse@tarc</span>
-                    <span class="shell-separator">:</span>
-                    <span class="shell-path">~/dashboard</span>
-                    <span class="shell-symbol">$</span>
-                    <span class="shell-command">tail -f /var/log/monitor.log</span>
-                </div>
-                <div class="shell-output mb-1" style="color: #60a5fa; margin-left: 20px;">
-                    [INFO] <span id="shell-timestamp">12:34:56</span> - <span id="shell-status">System monitoring active...</span>
-                </div>
-                <div class="shell-prompt">
-                    <span class="shell-user">lighthouse@tarc</span>
-                    <span class="shell-separator">:</span>
-                    <span class="shell-path">~/dashboard</span>
-                    <span class="shell-symbol">$</span>
-                    <span class="shell-cursor">_</span>
                 </div>
             </div>
         </div>
@@ -1867,22 +1628,10 @@ function initializeWelcomeMessage() {
     setTimeout(typeWriterDashboard, 1500);
 }
 
-// Update preview stats in welcome section
-function updateWelcomeStats() {
-    // These will be updated with actual data from the dashboard
-    const previewMonitors = document.getElementById('preview-monitors');
-    const previewPortfolio = document.getElementById('preview-portfolio');
-    const previewHealth = document.getElementById('preview-health');
-    
-    // Set loading state
-    if (previewMonitors) previewMonitors.textContent = '...';
-    if (previewPortfolio) previewPortfolio.textContent = '...';
-    if (previewHealth) previewHealth.textContent = '...';
-}
+
 
 function refreshDashboard() {
     loadDashboardData();
-    updateWelcomeStats();
 }
 
 // Initialize charts when page loads
@@ -2617,7 +2366,6 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Initialize welcome message and typewriter effect
     initializeWelcomeMessage();
-    updateWelcomeStats();
     
     // Initialize all charts
     initializeCharts();
@@ -2650,8 +2398,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const tabButtons = document.querySelectorAll('.nav-pills .nav-link');
     tabButtons.forEach(button => {
         button.addEventListener('click', function() {
-            // Update shell window title based on active tab
-            updateShellTitle(this);
             setTimeout(() => {
                 refreshDashboard();
             }, 100); // Small delay to ensure tab is active
@@ -2845,49 +2591,7 @@ function showNotification(message, type = 'info') {
     }, 5000);
 }
 
-// Update shell window title based on active tab
-function updateShellTitle(tabElement) {
-    const activeModuleElement = document.getElementById('active-module');
-    const shellStatusElement = document.getElementById('shell-status');
-    const shellTimestampElement = document.getElementById('shell-timestamp');
-    
-    if (activeModuleElement && shellStatusElement) {
-        let moduleName = '';
-        let statusText = '';
-        
-        if (tabElement.id === 'trading-bots-tab') {
-            moduleName = 'Trading Bots';
-            statusText = 'Bot instances monitoring active';
-        } else if (tabElement.id === 'dex-arbitrage-tab') {
-            moduleName = 'DEX Arbitrage';
-            statusText = 'Arbitrage opportunities scanning';
-        } else if (tabElement.id === 'validators-tab') {
-            moduleName = 'Validator Nodes';
-            statusText = 'Validator rewards tracking';
-        } else if (tabElement.id === 'overview-tab') {
-            moduleName = 'System Overview';
-            statusText = 'System health monitoring';
-        }
-        
-        activeModuleElement.textContent = moduleName;
-        shellStatusElement.textContent = statusText;
-        
-        // Update timestamp
-        if (shellTimestampElement) {
-            const now = new Date();
-            shellTimestampElement.textContent = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
-        }
-    }
-}
 
-// Update shell timestamp periodically
-setInterval(() => {
-    const shellTimestampElement = document.getElementById('shell-timestamp');
-    if (shellTimestampElement) {
-        const now = new Date();
-        shellTimestampElement.textContent = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
-    }
-}, 1000);
 
 // Close WebSocket when page unloads
 window.addEventListener('beforeunload', function() {
@@ -2918,3 +2622,4 @@ function handleLottieLoad(lottiePlayer) {
 }
 </script>
 {% endblock %}
+
