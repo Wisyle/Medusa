@@ -516,10 +516,7 @@ def fix_null_boolean_fields(conn, is_postgresql):
         if result.rowcount > 0:
             logger.info(f"✅ Fixed {result.rowcount} NULL is_superuser values")
         
-        # Commit the transaction
-        conn.commit()
-        
-        # Verify the fix
+        # Verify the fix (no commit here - let outer transaction handle it)
         verify_result = conn.execute(text("SELECT COUNT(*) FROM users WHERE totp_enabled IS NULL OR is_active IS NULL OR is_superuser IS NULL"))
         remaining_nulls = verify_result.scalar()
         
@@ -543,7 +540,6 @@ def fix_null_boolean_fields(conn, is_postgresql):
                 # But the default values in the model should prevent this
                 logger.info("SQLite detected - skipping column constraints (will rely on model defaults)")
             
-            conn.commit()
             logger.info("✅ Added NOT NULL constraints to boolean columns")
         except Exception as constraint_error:
             logger.warning(f"⚠️ Could not add NOT NULL constraints: {constraint_error}")
