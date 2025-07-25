@@ -9,9 +9,13 @@ services:
     startCommand: "python startup_migration.py && python main.py"
     autoDeploy: true
     healthCheckPath: /api/health
+    disk:
+      name: tar-shared-db
+      mountPath: /data
+      sizeGB: 1
     envVars:
       - key: DATABASE_URL
-        value: "sqlite:///./medusa.db"  # Use SQLite to avoid PostgreSQL database secret issues
+        value: "sqlite:///data/medusa.db"  # Use shared persistent disk
       - key: SECRET_KEY
         generateValue: true
       - key: JWT_SECRET
@@ -45,9 +49,13 @@ services:
     region: singapore
     buildCommand: "pip install -r requirements.txt"
     startCommand: "python worker.py"
+    disk:
+      name: tar-shared-db
+      mountPath: /data
+      sizeGB: 1
     envVars:
       - key: DATABASE_URL
-        value: "sqlite:///./medusa.db"  # Use same SQLite database
+        value: "sqlite:///data/medusa.db"  # Use shared persistent disk
       - key: SECRET_KEY
         generateValue: true
       - key: ALGORITHM
@@ -71,9 +79,13 @@ services:
     region: singapore
     buildCommand: "pip install -r requirements.txt"
     startCommand: "python init_strategy_monitor.py && python strategy_monitor_worker.py"
+    disk:
+      name: tar-shared-db
+      mountPath: /data
+      sizeGB: 1
     envVars:
       - key: DATABASE_URL
-        value: "sqlite:///./medusa.db"  # Use same SQLite database
+        value: "sqlite:///data/medusa.db"  # Use shared persistent disk
       - key: SECRET_KEY
         generateValue: true
       - key: ALGORITHM
