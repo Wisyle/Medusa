@@ -309,6 +309,9 @@
 
 <script>
 function showCreateModal() {
+    // Clear any previous form data
+    document.getElementById('createCredentialForm').reset();
+    
     var modal = new bootstrap.Modal(document.getElementById('createCredentialModal'));
     modal.show();
 }
@@ -316,18 +319,28 @@ function showCreateModal() {
 document.getElementById('createCredentialForm').addEventListener('submit', function(e) {
     e.preventDefault();
     
+    const submitBtn = this.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating...';
+    
     const formData = new FormData(this);
     
-    const token = localStorage.getItem('access_token');
     fetch('/api/api-credentials', {
         method: 'POST',
-        headers: {
-            'Authorization': 'Bearer ' + token
-        },
+        credentials: 'include',
         body: formData
     })
-    .then(response => response.json())
+    .then(response => {
+        if (response.status === 401 || response.status === 302) {
+            alert('Session expired. Please log in again.');
+            window.location.href = '/login';
+            return;
+        }
+        return response.json();
+    })
     .then(data => {
+        if (!data) return;
         if (data.message) {
             alert(data.message);
             location.reload();
@@ -338,16 +351,18 @@ document.getElementById('createCredentialForm').addEventListener('submit', funct
     .catch(error => {
         console.error('Error:', error);
         alert('Failed to create API credential');
+    })
+    .finally(() => {
+        // Reset button state
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
     });
 });
 
 function editCredential(credentialId) {
     // Fetch credential details
-    const token = localStorage.getItem('access_token');
     fetch('/api/api-credentials', {
-        headers: {
-            'Authorization': 'Bearer ' + token
-        }
+        credentials: 'include'
     })
     .then(response => response.json())
     .then(credentials => {
@@ -375,12 +390,9 @@ document.getElementById('editCredentialForm').addEventListener('submit', functio
     const credentialId = document.getElementById('edit_credential_id').value;
     const formData = new FormData(this);
     
-    const token = localStorage.getItem('access_token');
     fetch(`/api/api-credentials/${credentialId}`, {
         method: 'PUT',
-        headers: {
-            'Authorization': 'Bearer ' + token
-        },
+        credentials: 'include',
         body: formData
     })
     .then(response => response.json())
@@ -401,11 +413,10 @@ document.getElementById('editCredentialForm').addEventListener('submit', functio
 function unassignCredential(credentialId, credentialName) {
     if (!confirm(`Unassign API credential "${credentialName}"? The instance using it will be stopped.`)) return;
     
-    const token = localStorage.getItem('access_token');
     fetch(`/api/api-credentials/${credentialId}/unassign`, {
         method: 'POST',
+        credentials: 'include',
         headers: {
-            'Authorization': 'Bearer ' + token,
             'Content-Type': 'application/json'
         }
     })
@@ -432,11 +443,10 @@ function deleteCredential(credentialId, credentialName, isInUse) {
     
     if (!confirm(`Delete API credential "${credentialName}"? This action cannot be undone.`)) return;
     
-    const token = localStorage.getItem('access_token');
     fetch(`/api/api-credentials/${credentialId}`, {
         method: 'DELETE',
+        credentials: 'include',
         headers: {
-            'Authorization': 'Bearer ' + token,
             'Content-Type': 'application/json'
         }
     })
@@ -457,20 +467,19 @@ function deleteCredential(credentialId, credentialName, isInUse) {
 
 // Load credentials on page load
 function loadCredentials() {
-    const token = localStorage.getItem('access_token');
-    if (!token) {
-        window.location.href = '/login';
-        return;
-    }
-
     fetch('/api/api-credentials', {
         method: 'GET',
-        headers: {
-            'Authorization': 'Bearer ' + token
-        }
+        credentials: 'include'
     })
-    .then(response => response.json())
+    .then(response => {
+        if (response.status === 401 || response.status === 302) {
+            window.location.href = '/login';
+            return;
+        }
+        return response.json();
+    })
     .then(credentials => {
+        if (!credentials) return;
         const tbody = document.getElementById('credentials-table-body');
         if (!tbody) return;
         
