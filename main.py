@@ -1545,9 +1545,20 @@ async def monitor_instances():
 # Strategy Monitor Routes
 
 @app.get("/strategy-monitors", response_class=HTMLResponse)
-async def strategy_monitors_page(request: Request, current_user: User = Depends(get_current_user_html)):
+async def strategy_monitors_page(request: Request, current_user: User = Depends(get_current_user_html), db: Session = Depends(get_db)):
     """Strategy monitors management page"""
-    return templates.TemplateResponse("strategy_monitors.html", {"request": request, "current_user": current_user})
+    # Get available strategies from active instances
+    instances = db.query(BotInstance).filter(BotInstance.is_active == True).all()
+    all_strategies = set()
+    for instance in instances:
+        if instance.strategies:
+            all_strategies.update(instance.strategies)
+    
+    return templates.TemplateResponse("strategy_monitors.html", {
+        "request": request, 
+        "current_user": current_user,
+        "available_strategies": sorted(all_strategies)
+    })
 
 @app.post("/strategy-monitors")
 async def create_strategy_monitor(
@@ -1698,6 +1709,17 @@ async def send_test_report(monitor_id: int, db: Session = Depends(get_db)):
         return {"message": f"Test report sent for strategy '{monitor.strategy_name}'"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to send test report: {str(e)}")
+
+@app.get("/api/available-strategies")
+async def get_available_strategies(db: Session = Depends(get_db)):
+    """Get all available strategies from active bot instances"""
+    instances = db.query(BotInstance).filter(BotInstance.is_active == True).all()
+    all_strategies = set()
+    for instance in instances:
+        if instance.strategies:
+            all_strategies.update(instance.strategies)
+    
+    return {"strategies": sorted(all_strategies)}
 
 @app.get("/api/strategy-monitors")
 async def get_strategy_monitors(db: Session = Depends(get_db)):
