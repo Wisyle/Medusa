@@ -391,13 +391,18 @@ async def get_current_user_info(request: Request, current_user: User = Depends(g
     has_private_key = current_user.private_key_hash is not None and current_user.private_key_hash.strip() != ""
     has_passphrase = current_user.passphrase_hash is not None and current_user.passphrase_hash.strip() != ""
     
+    # Ensure all boolean fields have proper values (handle NULL gracefully)
+    is_active = True if current_user.is_active is None else bool(current_user.is_active)
+    is_superuser = False if current_user.is_superuser is None else bool(current_user.is_superuser)
+    totp_enabled = False if current_user.totp_enabled is None else bool(current_user.totp_enabled)
+    
     return UserResponse(
         id=current_user.id,
         email=current_user.email,
         full_name=current_user.full_name,
-        is_active=current_user.is_active or False,
-        is_superuser=current_user.is_superuser or False,
-        totp_enabled=current_user.totp_enabled or False,
+        is_active=is_active,
+        is_superuser=is_superuser,
+        totp_enabled=totp_enabled,
         has_private_key=has_private_key,
         has_passphrase=has_passphrase,
         created_at=current_user.created_at or datetime.utcnow()

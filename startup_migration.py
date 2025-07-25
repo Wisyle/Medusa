@@ -479,25 +479,76 @@ def fix_null_boolean_fields(conn, is_postgresql):
     try:
         logger.info("🔧 Fixing NULL boolean fields in users table...")
         
+        # Check for NULL values first
+        count_result = conn.execute(text("SELECT COUNT(*) FROM users WHERE totp_enabled IS NULL OR is_active IS NULL OR is_superuser IS NULL"))
+        null_count = count_result.scalar()
+        
+        if null_count == 0:
+            logger.info("✅ No NULL boolean fields found")
+            return True
+        
+        logger.info(f"Found {null_count} rows with NULL boolean fields")
+        
         # Update NULL totp_enabled to False
-        result = conn.execute(text("UPDATE users SET totp_enabled = %s WHERE totp_enabled IS NULL" if is_postgresql else "UPDATE users SET totp_enabled = ? WHERE totp_enabled IS NULL"), 
-                            (False,) if is_postgresql else (0,))
+        if is_postgresql:
+            result = conn.execute(text("UPDATE users SET totp_enabled = %s WHERE totp_enabled IS NULL"), (False,))
+        else:
+            result = conn.execute(text("UPDATE users SET totp_enabled = ? WHERE totp_enabled IS NULL"), (0,))
+        
         if result.rowcount > 0:
             logger.info(f"✅ Fixed {result.rowcount} NULL totp_enabled values")
         
         # Update NULL is_active to True (safer default for existing users)
-        result = conn.execute(text("UPDATE users SET is_active = %s WHERE is_active IS NULL" if is_postgresql else "UPDATE users SET is_active = ? WHERE is_active IS NULL"), 
-                            (True,) if is_postgresql else (1,))
+        if is_postgresql:
+            result = conn.execute(text("UPDATE users SET is_active = %s WHERE is_active IS NULL"), (True,))
+        else:
+            result = conn.execute(text("UPDATE users SET is_active = ? WHERE is_active IS NULL"), (1,))
+        
         if result.rowcount > 0:
             logger.info(f"✅ Fixed {result.rowcount} NULL is_active values")
         
         # Update NULL is_superuser to False
-        result = conn.execute(text("UPDATE users SET is_superuser = %s WHERE is_superuser IS NULL" if is_postgresql else "UPDATE users SET is_superuser = ? WHERE is_superuser IS NULL"), 
-                            (False,) if is_postgresql else (0,))
+        if is_postgresql:
+            result = conn.execute(text("UPDATE users SET is_superuser = %s WHERE is_superuser IS NULL"), (False,))
+        else:
+            result = conn.execute(text("UPDATE users SET is_superuser = ? WHERE is_superuser IS NULL"), (0,))
+        
         if result.rowcount > 0:
             logger.info(f"✅ Fixed {result.rowcount} NULL is_superuser values")
         
-        logger.info("✅ Boolean fields fixed successfully")
+        # Commit the transaction
+        conn.commit()
+        
+        # Verify the fix
+        verify_result = conn.execute(text("SELECT COUNT(*) FROM users WHERE totp_enabled IS NULL OR is_active IS NULL OR is_superuser IS NULL"))
+        remaining_nulls = verify_result.scalar()
+        
+        if remaining_nulls == 0:
+            logger.info("✅ All NULL boolean fields fixed successfully")
+        else:
+            logger.warning(f"⚠️ {remaining_nulls} NULL boolean fields still remain")
+        
+        # Add NOT NULL constraints with defaults to prevent future NULL values
+        try:
+            if is_postgresql:
+                # PostgreSQL syntax
+                conn.execute(text("ALTER TABLE users ALTER COLUMN totp_enabled SET DEFAULT FALSE"))
+                conn.execute(text("ALTER TABLE users ALTER COLUMN totp_enabled SET NOT NULL"))
+                conn.execute(text("ALTER TABLE users ALTER COLUMN is_active SET DEFAULT TRUE"))
+                conn.execute(text("ALTER TABLE users ALTER COLUMN is_active SET NOT NULL"))
+                conn.execute(text("ALTER TABLE users ALTER COLUMN is_superuser SET DEFAULT FALSE"))
+                conn.execute(text("ALTER TABLE users ALTER COLUMN is_superuser SET NOT NULL"))
+            else:
+                # SQLite doesn't support ALTER COLUMN directly, so we'll skip constraints
+                # But the default values in the model should prevent this
+                logger.info("SQLite detected - skipping column constraints (will rely on model defaults)")
+            
+            conn.commit()
+            logger.info("✅ Added NOT NULL constraints to boolean columns")
+        except Exception as constraint_error:
+            logger.warning(f"⚠️ Could not add NOT NULL constraints: {constraint_error}")
+            # Don't fail the migration for this
+        
         return True
         
     except Exception as e:
