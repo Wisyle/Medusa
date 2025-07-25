@@ -55,32 +55,86 @@
     background-color: #6c757d;
 }
 
-/* Simple modal styling */
-.modal-content {
-    background-color: var(--secondary-black);
-    border: 1px solid var(--medium-gray);
-    color: var(--white);
+/* Custom Modal Styling */
+.custom-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 9999;
+    display: none;
+    align-items: center;
+    justify-content: center;
 }
 
-.modal-header {
+.custom-modal-overlay.show {
+    display: flex;
+}
+
+.custom-modal {
+    background-color: var(--secondary-black);
+    border: 1px solid var(--medium-gray);
+    border-radius: 8px;
+    color: var(--white);
+    max-width: 90%;
+    width: 800px;
+    max-height: 90%;
+    overflow-y: auto;
+    position: relative;
+}
+
+.custom-modal-header {
+    padding: 1rem 1.5rem;
     border-bottom: 1px solid var(--medium-gray);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
-.modal-footer {
+.custom-modal-body {
+    padding: 1.5rem;
+}
+
+.custom-modal-footer {
+    padding: 1rem 1.5rem;
     border-top: 1px solid var(--medium-gray);
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
 }
 
-.modal .form-control, .modal .form-select {
+.custom-modal .form-control, .custom-modal .form-select {
     background-color: var(--secondary-black);
     border: 1px solid var(--medium-gray);
     color: var(--white);
 }
 
-.modal .form-control:focus, .modal .form-select:focus {
+.custom-modal .form-control:focus, .custom-modal .form-select:focus {
     background-color: var(--secondary-black);
     color: var(--white);
     border-color: var(--accent-blue);
     box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    color: var(--white);
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.close-btn:hover {
+    background-color: var(--medium-gray);
+    border-radius: 4px;
 }
 </style>
 
@@ -92,7 +146,7 @@
                     <h2><i class="fas fa-key"></i> API Library</h2>
                     <p class="text-muted">Manage reusable API credentials for your bot instances</p>
                 </div>
-                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createCredentialModal">
+                <button class="btn btn-primary" onclick="showCustomModal()">
                     <i class="fas fa-plus"></i> Add API Credential
                 </button>
             </div>
@@ -185,7 +239,7 @@
                                 <tr>
                                     <td colspan="8" class="text-center text-muted">
                                         <i class="fas fa-info-circle"></i>
-                                        No API credentials found. <a href="#" data-bs-toggle="modal" data-bs-target="#createCredentialModal">Create one now</a>.
+                                        No API credentials found. <a href="#" onclick="showCustomModal()">Create one now</a>.
                                     </td>
                                 </tr>
                                 {% endif %}
@@ -198,16 +252,17 @@
     </div>
 </div>
 
-<!-- Create API Credential Modal -->
-<div class="modal fade" id="createCredentialModal" tabindex="-1" aria-labelledby="createCredentialModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="createCredentialModalLabel">Add API Credential</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form id="createCredentialForm">
-                <div class="modal-body">
+<!-- Custom Create API Credential Modal -->
+<div class="custom-modal-overlay" id="createCredentialModal">
+    <div class="custom-modal">
+        <div class="custom-modal-header">
+            <h5>Add API Credential</h5>
+            <button type="button" class="close-btn" onclick="hideCustomModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <form id="createCredentialForm">
+            <div class="custom-modal-body">
                     <div class="row">
                         <div class="col-md-6">
                             <div class="form-group">
@@ -277,8 +332,8 @@
                                   placeholder="Optional description for this API credential"></textarea>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <div class="custom-modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="hideCustomModal()">Cancel</button>
                     <button type="submit" class="btn btn-primary">Create API Credential</button>
                 </div>
             </form>
@@ -287,15 +342,16 @@
 </div>
 
 <!-- Edit API Credential Modal -->
-<div class="modal fade" id="editCredentialModal" tabindex="-1" aria-labelledby="editCredentialModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="editCredentialModalLabel">Edit API Credential</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
+<div class="custom-modal-overlay" id="editCredentialModal">
+    <div class="custom-modal">
+        <div class="custom-modal-header">
+            <h5>Edit API Credential</h5>
+            <button type="button" class="close-btn" onclick="hideEditModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
             <form id="editCredentialForm">
-                <div class="modal-body">
+                <div class="custom-modal-body">
                     <input type="hidden" id="edit_credential_id">
                     
                     <div class="form-group">
@@ -322,8 +378,8 @@
                         <small class="form-text text-muted">Inactive credentials cannot be assigned to instances</small>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <div class="custom-modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="hideEditModal()">Cancel</button>
                     <button type="submit" class="btn btn-primary">Save Changes</button>
                 </div>
             </form>
@@ -355,15 +411,16 @@ document.getElementById('createCredentialForm').addEventListener('submit', funct
         }
         return response.json();
     })
-    .then(data => {
-        if (!data) return;
-        if (data.message) {
-            alert(data.message);
-            location.reload();
-        } else if (data.detail) {
-            alert('Error: ' + data.detail);
-        }
-    })
+         .then(data => {
+         if (!data) return;
+         if (data.message) {
+             hideCustomModal();
+             alert(data.message);
+             location.reload();
+         } else if (data.detail) {
+             alert('Error: ' + data.detail);
+         }
+     })
     .catch(error => {
         console.error('Error:', error);
         alert('Failed to create API credential');
@@ -390,8 +447,7 @@ function editCredential(credentialId) {
             document.getElementById('edit_tags').value = credential.tags ? credential.tags.join(', ') : '';
             document.getElementById('edit_is_active').checked = credential.is_active;
             
-            const modal = new bootstrap.Modal(document.getElementById('editCredentialModal'));
-            modal.show();
+            document.getElementById('editCredentialModal').classList.add('show');
         }
     })
     .catch(error => {
@@ -414,6 +470,7 @@ document.getElementById('editCredentialForm').addEventListener('submit', functio
     .then(response => response.json())
     .then(data => {
         if (data.message) {
+            hideEditModal();
             alert(data.message);
             location.reload();
         } else if (data.detail) {
@@ -503,8 +560,8 @@ function loadCredentials() {
             tbody.innerHTML = `
                 <tr>
                     <td colspan="8" class="text-center text-muted">
-                        <i class="fas fa-key"></i>
-                                                 No API credentials found. <a href="#" data-bs-toggle="modal" data-bs-target="#createCredentialModal">Create one now</a>.
+                                                 <i class="fas fa-key"></i>
+                         No API credentials found. <a href="#" onclick="showCustomModal()">Create one now</a>.
                     </td>
                 </tr>
             `;
@@ -582,15 +639,47 @@ function loadCredentials() {
     });
 }
 
-// Load credentials on page load and handle modal events
+// Custom modal functions
+function showCustomModal() {
+    document.getElementById('createCredentialForm').reset();
+    document.getElementById('createCredentialModal').classList.add('show');
+}
+
+function hideCustomModal() {
+    document.getElementById('createCredentialModal').classList.remove('show');
+}
+
+function hideEditModal() {
+    document.getElementById('editCredentialModal').classList.remove('show');
+}
+
+// Close modal when clicking overlay
+document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('custom-modal-overlay')) {
+        if (e.target.id === 'createCredentialModal') {
+            hideCustomModal();
+        } else if (e.target.id === 'editCredentialModal') {
+            hideEditModal();
+        }
+    }
+});
+
+// Close modal with Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        const createModal = document.getElementById('createCredentialModal');
+        const editModal = document.getElementById('editCredentialModal');
+        if (createModal.classList.contains('show')) {
+            hideCustomModal();
+        } else if (editModal.classList.contains('show')) {
+            hideEditModal();
+        }
+    }
+});
+
+// Load credentials on page load
 document.addEventListener('DOMContentLoaded', function() {
     loadCredentials();
-    
-    // Reset form when modal is shown
-    const createModal = document.getElementById('createCredentialModal');
-    createModal.addEventListener('show.bs.modal', function () {
-        document.getElementById('createCredentialForm').reset();
-    });
 });
 </script>
 {% endblock %}
