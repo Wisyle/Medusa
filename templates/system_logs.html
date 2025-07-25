@@ -414,13 +414,13 @@ async function loadLogs() {
         for (const endpoint of endpoints) {
             try {
                 const response = await fetch(`${endpoint}?limit=100`, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
-                
-                if (response.ok) {
-                    const data = await response.json();
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
                     logsData = data.logs || data || [];
                     break;
                 }

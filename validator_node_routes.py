@@ -3,22 +3,23 @@
 Validator Node Routes - API endpoints for validator node management
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from typing import List
 from datetime import datetime, timedelta
 
 from database import get_db
 from validator_node_model import ValidatorNode, ValidatorReward
-from auth import get_current_active_user, User
+from auth import get_current_user_html, User
 
 router = APIRouter(prefix="/api/validators", tags=["validators"])
 
 @router.get("/nodes", response_model=List[dict])
 async def get_validator_nodes(
+    request: Request,
     blockchain: str = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_user_html)
 ):
     """Get all validator nodes"""
     query = db.query(ValidatorNode)
@@ -31,9 +32,10 @@ async def get_validator_nodes(
 
 @router.post("/nodes")
 async def create_validator_node(
+    request: Request,
     node_data: dict,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_user_html)
 ):
     """Create a new validator node"""
     try:
@@ -50,10 +52,6 @@ async def create_validator_node(
             telegram_chat_id=node_data.get('telegram_chat_id'),
             telegram_topic_id=node_data.get('telegram_topic_id'),
             webhook_url=node_data.get('webhook_url'),
-            min_uptime_alert=node_data.get('min_uptime_alert', 95.0),
-            max_missed_blocks_alert=node_data.get('max_missed_blocks_alert', 10),
-            min_apy_alert=node_data.get('min_apy_alert', 5.0),
-            chain_config=node_data.get('chain_config'),
             description=node_data.get('description')
         )
         
@@ -61,17 +59,18 @@ async def create_validator_node(
         db.commit()
         db.refresh(node)
         
-        return {"message": "Validator node created successfully", "node": node.to_dict()}
-        
+        return {"message": f"Validator node '{node.name}' created successfully", "id": node.id}
+    
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=400, detail=f"Failed to create validator node: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to create validator node: {str(e)}")
 
 @router.get("/nodes/{node_id}")
 async def get_validator_node(
+    request: Request,
     node_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_user_html)
 ):
     """Get specific validator node"""
     node = db.query(ValidatorNode).filter(ValidatorNode.id == node_id).first()
@@ -82,159 +81,183 @@ async def get_validator_node(
 
 @router.put("/nodes/{node_id}")
 async def update_validator_node(
+    request: Request,
     node_id: int,
     node_data: dict,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_user_html)
 ):
-    """Update validator node"""
+    """Update a validator node"""
     node = db.query(ValidatorNode).filter(ValidatorNode.id == node_id).first()
     if not node:
         raise HTTPException(status_code=404, detail="Validator node not found")
     
     try:
-        for field, value in node_data.items():
-            if hasattr(node, field):
-                setattr(node, field, value)
+        # Update allowed fields
+        for field in ['name', 'staking_amount', 'delegated_amount', 'telegram_bot_token', 
+                     'telegram_chat_id', 'telegram_topic_id', 'webhook_url', 'description']:
+            if field in node_data:
+                setattr(node, field, node_data[field])
+        
+        # Recalculate total stake
+        if 'staking_amount' in node_data or 'delegated_amount' in node_data:
+            node.total_stake = node.staking_amount + node.delegated_amount
         
         node.updated_at = datetime.utcnow()
         db.commit()
         
-        return {"message": "Validator node updated successfully", "node": node.to_dict()}
-        
+        return {"message": f"Validator node '{node.name}' updated successfully"}
+    
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=400, detail=f"Failed to update validator node: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to update validator node: {str(e)}")
 
 @router.delete("/nodes/{node_id}")
 async def delete_validator_node(
+    request: Request,
     node_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_user_html)
 ):
-    """Delete validator node"""
+    """Delete a validator node"""
     node = db.query(ValidatorNode).filter(ValidatorNode.id == node_id).first()
     if not node:
         raise HTTPException(status_code=404, detail="Validator node not found")
     
+    if node.is_active:
+        raise HTTPException(status_code=400, detail="Cannot delete an active validator node. Stop it first.")
+    
     try:
-        db.query(ValidatorReward).filter(ValidatorReward.validator_id == node_id).delete()
-        
         db.delete(node)
         db.commit()
         
-        return {"message": "Validator node deleted successfully"}
-        
+        return {"message": f"Validator node '{node.name}' deleted successfully"}
+    
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=400, detail=f"Failed to delete validator node: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to delete validator node: {str(e)}")
 
-@router.get("/nodes/{node_id}/rewards")
+@router.post("/nodes/{node_id}/start")
+async def start_validator_monitoring(
+    request: Request,
+    node_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_html)
+):
+    """Start validator monitoring for node"""
+    node = db.query(ValidatorNode).filter(ValidatorNode.id == node_id).first()
+    if not node:
+        raise HTTPException(status_code=404, detail="Validator node not found")
+    
+    if node.is_active:
+        raise HTTPException(status_code=400, detail="Validator monitoring is already running")
+    
+    try:
+        node.is_active = True
+        node.last_activity = datetime.utcnow()
+        db.commit()
+        
+        return {"message": f"Validator monitoring for '{node.name}' started successfully"}
+    
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to start validator monitoring: {str(e)}")
+
+@router.post("/nodes/{node_id}/stop")
+async def stop_validator_monitoring(
+    request: Request,
+    node_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_html)
+):
+    """Stop validator monitoring for node"""
+    node = db.query(ValidatorNode).filter(ValidatorNode.id == node_id).first()
+    if not node:
+        raise HTTPException(status_code=404, detail="Validator node not found")
+    
+    if not node.is_active:
+        raise HTTPException(status_code=400, detail="Validator monitoring is already stopped")
+    
+    try:
+        node.is_active = False
+        db.commit()
+        
+        return {"message": f"Validator monitoring for '{node.name}' stopped successfully"}
+    
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to stop validator monitoring: {str(e)}")
+
+@router.get("/rewards")
 async def get_validator_rewards(
-    node_id: int,
+    request: Request,
+    node_id: int = None,
     days: int = 30,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_user_html)
 ):
-    """Get validator rewards history"""
-    node = db.query(ValidatorNode).filter(ValidatorNode.id == node_id).first()
-    if not node:
-        raise HTTPException(status_code=404, detail="Validator node not found")
+    """Get validator rewards"""
+    since_time = datetime.utcnow() - timedelta(days=days)
+    query = db.query(ValidatorReward).filter(ValidatorReward.reward_date >= since_time)
     
-    since = datetime.utcnow() - timedelta(days=days)
+    if node_id:
+        query = query.filter(ValidatorReward.node_id == node_id)
     
-    rewards = db.query(ValidatorReward).filter(
-        ValidatorReward.validator_id == node_id,
-        ValidatorReward.earned_at >= since
-    ).order_by(ValidatorReward.earned_at.desc()).all()
-    
+    rewards = query.order_by(ValidatorReward.reward_date.desc()).all()
     return [reward.to_dict() for reward in rewards]
-
-@router.get("/nodes/{node_id}/stats")
-async def get_validator_stats(
-    node_id: int,
-    days: int = 30,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
-):
-    """Get validator performance statistics"""
-    node = db.query(ValidatorNode).filter(ValidatorNode.id == node_id).first()
-    if not node:
-        raise HTTPException(status_code=404, detail="Validator node not found")
-    
-    since = datetime.utcnow() - timedelta(days=days)
-    
-    rewards = db.query(ValidatorReward).filter(
-        ValidatorReward.validator_id == node_id,
-        ValidatorReward.earned_at >= since
-    ).all()
-    
-    total_rewards = sum(float(reward.reward_amount) for reward in rewards)
-    claimed_rewards = sum(float(reward.reward_amount) for reward in rewards if reward.claimed)
-    unclaimed_rewards = total_rewards - claimed_rewards
-    
-    stats = {
-        "node_info": node.to_dict(),
-        "period_days": days,
-        "total_rewards": total_rewards,
-        "claimed_rewards": claimed_rewards,
-        "unclaimed_rewards": unclaimed_rewards,
-        "reward_count": len(rewards),
-        "average_daily_rewards": total_rewards / days if days > 0 else 0,
-        "current_apy": float(node.current_apy),
-        "uptime_percentage": float(node.uptime_percentage),
-        "missed_blocks": node.missed_blocks,
-        "node_status": node.node_status
-    }
-    
-    return stats
 
 @router.get("/overview")
 async def get_validators_overview(
+    request: Request,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_user_html)
 ):
-    """Get overview of all validator nodes"""
-    nodes = db.query(ValidatorNode).all()
-    
-    if not nodes:
+    """Get validators overview statistics"""
+    try:
+        total_nodes = db.query(ValidatorNode).count()
+        active_nodes = db.query(ValidatorNode).filter(ValidatorNode.is_active == True).count()
+        
+        # Calculate total staking amounts
+        total_staking = db.query(ValidatorNode).with_entities(
+            db.func.sum(ValidatorNode.total_stake)
+        ).scalar() or 0.0
+        
+        # Get recent rewards
+        recent_rewards = db.query(ValidatorReward).filter(
+            ValidatorReward.reward_date >= datetime.utcnow() - timedelta(days=30)
+        ).with_entities(
+            db.func.sum(ValidatorReward.amount)
+        ).scalar() or 0.0
+        
         return {
-            "total_nodes": 0,
-            "active_nodes": 0,
-            "total_staked": 0.0,
-            "total_rewards": 0.0,
-            "average_apy": 0.0,
-            "nodes_by_blockchain": {},
-            "nodes_by_strategy": {}
+            "total_nodes": total_nodes,
+            "active_nodes": active_nodes,
+            "inactive_nodes": total_nodes - active_nodes,
+            "total_staking": total_staking,
+            "monthly_rewards": recent_rewards,
+            "system_status": "healthy" if total_nodes > 0 else "no_nodes"
         }
     
-    active_nodes = [node for node in nodes if node.is_active]
-    total_staked = sum(float(node.total_stake) for node in nodes)
-    total_rewards = sum(float(node.total_rewards_earned) for node in nodes)
-    average_apy = sum(float(node.current_apy) for node in nodes) / len(nodes)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get validators overview: {str(e)}")
+
+@router.get("/status")
+async def get_validators_status(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_html)
+):
+    """Get overall validator system status"""
+    try:
+        total_nodes = db.query(ValidatorNode).count()
+        active_nodes = db.query(ValidatorNode).filter(ValidatorNode.is_active == True).count()
+        
+        return {
+            "total_nodes": total_nodes,
+            "active_nodes": active_nodes,
+            "inactive_nodes": total_nodes - active_nodes,
+            "system_status": "healthy" if total_nodes > 0 else "no_nodes"
+        }
     
-    nodes_by_blockchain = {}
-    for node in nodes:
-        blockchain = node.blockchain
-        if blockchain not in nodes_by_blockchain:
-            nodes_by_blockchain[blockchain] = []
-        nodes_by_blockchain[blockchain].append(node.to_dict())
-    
-    nodes_by_strategy = {}
-    for node in nodes:
-        strategy = node.strategy_name
-        if strategy not in nodes_by_strategy:
-            nodes_by_strategy[strategy] = []
-        nodes_by_strategy[strategy].append(node.to_dict())
-    
-    overview = {
-        "total_nodes": len(nodes),
-        "active_nodes": len(active_nodes),
-        "total_staked": total_staked,
-        "total_rewards": total_rewards,
-        "average_apy": average_apy,
-        "nodes_by_blockchain": nodes_by_blockchain,
-        "nodes_by_strategy": nodes_by_strategy
-    }
-    
-    return overview
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get validator status: {str(e)}")

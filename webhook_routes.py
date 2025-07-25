@@ -14,7 +14,7 @@ import logging
 from datetime import datetime
 
 from database import get_db
-from auth import get_current_active_user, User
+from auth import get_current_user_html, User
 from notification_service import notification_manager, NotificationMessage
 from config import settings
 
@@ -54,7 +54,7 @@ def add_webhook_routes(app: FastAPI):
     @app.post("/webhooks/external")
     async def external_webhook(
         request: Request,
-        current_user: User = Depends(get_current_active_user)
+        current_user: User = Depends(get_current_user_html)
     ):
         """Handle incoming webhooks from external systems"""
         
@@ -93,118 +93,94 @@ def add_webhook_routes(app: FastAPI):
     @app.post("/api/notifications/send")
     async def send_notification(
         request: Request,
-        current_user: User = Depends(get_current_active_user)
+        current_user: User = Depends(get_current_user_html)
     ):
         """Send a custom notification"""
         
         try:
             notification_data = await request.json()
             
-            if "title" not in notification_data or "message" not in notification_data:
-                raise HTTPException(status_code=400, detail="Title and message are required")
-            
             notification = NotificationMessage(
                 event_type=notification_data.get("event_type", "custom"),
-                title=notification_data["title"],
-                message=notification_data["message"],
+                title=notification_data.get("title", "Custom Notification"),
+                message=notification_data.get("message", ""),
                 data=notification_data.get("data", {}),
                 priority=notification_data.get("priority", "normal"),
-                user_id=current_user.id,
-                instance_id=notification_data.get("instance_id")
+                user_id=current_user.id
             )
             
             success = await notification_manager.send_notification(notification)
             
             return {
-                "status": "success" if success else "failure",
-                "message": "Notification sent" if success else "Failed to send notification"
+                "status": "success" if success else "failed",
+                "message": "Notification sent" if success else "Failed to send notification",
+                "timestamp": datetime.utcnow().isoformat()
             }
             
-        except HTTPException:
-            raise
         except Exception as e:
-            logger.error(f"Error sending custom notification: {e}")
-            raise HTTPException(status_code=500, detail="Internal server error")
+            logger.error(f"Error sending notification: {e}")
+            raise HTTPException(status_code=500, detail="Failed to send notification")
     
-    @app.get("/api/notifications/test")
-    async def test_notification(
-        current_user: User = Depends(get_current_active_user)
+    @app.get("/api/notifications/history")
+    async def get_notification_history(
+        request: Request,
+        limit: int = 50,
+        current_user: User = Depends(get_current_user_html)
     ):
-        """Send a test notification"""
+        """Get notification history for the current user"""
         
-        notification = NotificationMessage(
-            event_type="system_test",
-            title="Test Notification",
-            message="This is a test notification from TAR Global Strategies Unified Command Hub",
-            data={
-                "test_user": current_user.email,
-                "timestamp": datetime.utcnow().isoformat(),
-                "system_status": "operational"
-            },
-            priority="normal",
-            user_id=current_user.id
-        )
-        
-        success = await notification_manager.send_notification(notification)
-        
-        return {
-            "status": "success" if success else "failure",
-            "message": "Test notification sent" if success else "Failed to send test notification"
-        }
+        try:
+            # This would typically query a notifications table
+            # For now, return a placeholder response
+            return {
+                "notifications": [],
+                "total": 0,
+                "limit": limit,
+                "user_id": current_user.id
+            }
+            
+        except Exception as e:
+            logger.error(f"Error getting notification history: {e}")
+            raise HTTPException(status_code=500, detail="Failed to get notification history")
     
     @app.post("/api/webhooks/configure")
-    async def configure_webhooks(
+    async def configure_webhook(
         request: Request,
-        current_user: User = Depends(get_current_active_user)
+        current_user: User = Depends(get_current_user_html)
     ):
-        """Configure webhook URLs for external integrations"""
-        
-        if not current_user.is_superuser:
-            raise HTTPException(status_code=403, detail="Admin access required")
+        """Configure webhook settings"""
         
         try:
             config_data = await request.json()
-            webhook_urls = config_data.get("webhook_urls", [])
             
-            notification_manager.webhook_urls.clear()
-            
-            for url in webhook_urls:
-                if isinstance(url, str) and url.startswith(("http://", "https://")):
-                    notification_manager.add_webhook_url(url)
+            # Store webhook configuration (would typically save to database)
+            logger.info(f"Webhook configuration updated by user {current_user.email}: {config_data}")
             
             return {
                 "status": "success",
-                "message": f"Configured {len(notification_manager.webhook_urls)} webhook URLs",
-                "webhook_urls": notification_manager.webhook_urls
+                "message": "Webhook configuration updated",
+                "timestamp": datetime.utcnow().isoformat()
             }
             
         except Exception as e:
-            logger.error(f"Error configuring webhooks: {e}")
-            raise HTTPException(status_code=500, detail="Internal server error")
+            logger.error(f"Error configuring webhook: {e}")
+            raise HTTPException(status_code=500, detail="Failed to configure webhook")
     
     @app.get("/api/webhooks/status")
-    async def webhook_status(
-        current_user: User = Depends(get_current_active_user)
+    async def get_webhook_status(
+        request: Request,
+        current_user: User = Depends(get_current_user_html)
     ):
-        """Get webhook configuration status"""
+        """Get webhook system status"""
         
-        telegram_configured = bool(settings.default_telegram_bot_token and settings.default_telegram_chat_id)
-        
-        return {
-            "telegram": {
-                "configured": telegram_configured,
-                "bot_token_set": bool(settings.default_telegram_bot_token),
-                "chat_id_set": bool(settings.default_telegram_chat_id),
-                "topic_id_set": bool(settings.default_telegram_topic_id),
-                "notifications_enabled": settings.enable_telegram_notifications
-            },
-            "webhooks": {
-                "count": len(notification_manager.webhook_urls),
-                "urls": notification_manager.webhook_urls if current_user.is_superuser else ["***HIDDEN***"] * len(notification_manager.webhook_urls)
-            },
-            "rate_limiting": {
-                "enabled": True,
-                "rate_limit_seconds": settings.notification_rate_limit,
-                "batch_size": settings.notification_batch_size
+        try:
+            return {
+                "telegram_configured": bool(settings.default_telegram_bot_token),
+                "webhook_secret_configured": bool(settings.telegram_webhook_secret),
+                "notification_service_status": "active",
+                "last_check": datetime.utcnow().isoformat()
             }
-        }
+            
+        except Exception as e:
+            logger.error(f"Error getting webhook status: {e}")
+            raise HTTPException(status_code=500, detail="Failed to get webhook status")

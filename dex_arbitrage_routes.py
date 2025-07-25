@@ -3,21 +3,22 @@
 DEX Arbitrage Routes - API endpoints for DEX arbitrage management
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from typing import List
 from datetime import datetime, timedelta
 
 from database import get_db
 from dex_arbitrage_model import DEXArbitrageInstance, DEXOpportunity
-from auth import get_current_active_user, User
+from auth import get_current_user_html, User
 
 router = APIRouter(prefix="/api/dex-arbitrage", tags=["dex-arbitrage"])
 
 @router.get("/instances", response_model=List[dict])
 async def get_dex_arbitrage_instances(
+    request: Request,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_user_html)
 ):
     """Get all DEX arbitrage instances"""
     instances = db.query(DEXArbitrageInstance).all()
@@ -25,9 +26,10 @@ async def get_dex_arbitrage_instances(
 
 @router.post("/instances")
 async def create_dex_arbitrage_instance(
+    request: Request,
     instance_data: dict,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_user_html)
 ):
     """Create a new DEX arbitrage instance"""
     try:
@@ -53,17 +55,18 @@ async def create_dex_arbitrage_instance(
         db.commit()
         db.refresh(instance)
         
-        return {"message": "DEX arbitrage instance created successfully", "instance": instance.to_dict()}
-        
+        return {"message": f"DEX arbitrage instance '{instance.name}' created successfully", "id": instance.id}
+    
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=400, detail=f"Failed to create instance: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to create DEX arbitrage instance: {str(e)}")
 
 @router.get("/instances/{instance_id}")
 async def get_dex_arbitrage_instance(
+    request: Request,
     instance_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_user_html)
 ):
     """Get specific DEX arbitrage instance"""
     instance = db.query(DEXArbitrageInstance).filter(DEXArbitrageInstance.id == instance_id).first()
@@ -74,10 +77,11 @@ async def get_dex_arbitrage_instance(
 
 @router.put("/instances/{instance_id}")
 async def update_dex_arbitrage_instance(
+    request: Request,
     instance_id: int,
     instance_data: dict,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_user_html)
 ):
     """Update DEX arbitrage instance"""
     instance = db.query(DEXArbitrageInstance).filter(DEXArbitrageInstance.id == instance_id).first()
@@ -96,13 +100,14 @@ async def update_dex_arbitrage_instance(
         
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=400, detail=f"Failed to update instance: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to update DEX arbitrage instance: {str(e)}")
 
 @router.delete("/instances/{instance_id}")
 async def delete_dex_arbitrage_instance(
+    request: Request,
     instance_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_user_html)
 ):
     """Delete DEX arbitrage instance"""
     instance = db.query(DEXArbitrageInstance).filter(DEXArbitrageInstance.id == instance_id).first()
@@ -119,22 +124,26 @@ async def delete_dex_arbitrage_instance(
         
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=400, detail=f"Failed to delete instance: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to delete DEX arbitrage instance: {str(e)}")
 
 @router.post("/instances/{instance_id}/start")
 async def start_dex_arbitrage_monitoring(
+    request: Request,
     instance_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_user_html)
 ):
     """Start DEX arbitrage monitoring for instance"""
     instance = db.query(DEXArbitrageInstance).filter(DEXArbitrageInstance.id == instance_id).first()
     if not instance:
         raise HTTPException(status_code=404, detail="Instance not found")
     
+    if instance.is_active:
+        raise HTTPException(status_code=400, detail="Instance is already running")
+    
     try:
         instance.is_active = True
-        instance.updated_at = datetime.utcnow()
+        instance.last_activity = datetime.utcnow()
         db.commit()
         
         
@@ -142,22 +151,25 @@ async def start_dex_arbitrage_monitoring(
         
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=400, detail=f"Failed to start monitoring: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to start monitoring: {str(e)}")
 
 @router.post("/instances/{instance_id}/stop")
 async def stop_dex_arbitrage_monitoring(
+    request: Request,
     instance_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_user_html)
 ):
     """Stop DEX arbitrage monitoring for instance"""
     instance = db.query(DEXArbitrageInstance).filter(DEXArbitrageInstance.id == instance_id).first()
     if not instance:
         raise HTTPException(status_code=404, detail="Instance not found")
     
+    if not instance.is_active:
+        raise HTTPException(status_code=400, detail="Instance is already stopped")
+    
     try:
         instance.is_active = False
-        instance.updated_at = datetime.utcnow()
         db.commit()
         
         
@@ -165,33 +177,30 @@ async def stop_dex_arbitrage_monitoring(
         
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=400, detail=f"Failed to stop monitoring: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to stop monitoring: {str(e)}")
 
 @router.get("/opportunities")
 async def get_arbitrage_opportunities(
-    instance_id: int = None,
+    request: Request,
     hours: int = 24,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_user_html)
 ):
     """Get recent arbitrage opportunities"""
-    since = datetime.utcnow() - timedelta(hours=hours)
+    since_time = datetime.utcnow() - timedelta(hours=hours)
+    opportunities = db.query(DEXOpportunity).filter(
+        DEXOpportunity.detected_at >= since_time
+    ).order_by(DEXOpportunity.detected_at.desc()).limit(100).all()
     
-    query = db.query(DEXOpportunity).filter(DEXOpportunity.detected_at >= since)
-    
-    if instance_id:
-        query = query.filter(DEXOpportunity.instance_id == instance_id)
-    
-    opportunities = query.order_by(DEXOpportunity.detected_at.desc()).limit(100).all()
-    
-    return [opp.to_dict() for opp in opportunities]
+    return [opportunity.to_dict() for opportunity in opportunities]
 
 @router.get("/opportunities/stats")
 async def get_arbitrage_stats(
+    request: Request,
     instance_id: int = None,
     hours: int = 24,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_user_html)
 ):
     """Get arbitrage opportunity statistics"""
     since = datetime.utcnow() - timedelta(hours=hours)
@@ -225,3 +234,30 @@ async def get_arbitrage_stats(
     }
     
     return stats
+
+@router.get("/status")
+async def get_dex_arbitrage_status(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_html)
+):
+    """Get overall DEX arbitrage system status"""
+    try:
+        total_instances = db.query(DEXArbitrageInstance).count()
+        active_instances = db.query(DEXArbitrageInstance).filter(DEXArbitrageInstance.is_active == True).count()
+        
+        # Get recent opportunities
+        recent_opportunities = db.query(DEXOpportunity).filter(
+            DEXOpportunity.detected_at >= datetime.utcnow() - timedelta(hours=24)
+        ).count()
+        
+        return {
+            "total_instances": total_instances,
+            "active_instances": active_instances,
+            "inactive_instances": total_instances - active_instances,
+            "recent_opportunities_24h": recent_opportunities,
+            "system_status": "healthy" if total_instances > 0 else "no_instances"
+        }
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get DEX arbitrage status: {str(e)}")

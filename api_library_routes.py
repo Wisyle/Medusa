@@ -12,7 +12,7 @@ from datetime import datetime
 
 from database import get_db, BotInstance
 from api_library_model import ApiCredential
-from auth import get_current_active_user, User
+from auth import get_current_user_html, User
 
 templates = Jinja2Templates(directory="templates")
 
@@ -20,7 +20,7 @@ def add_api_library_routes(app: FastAPI):
     """Add API Library routes to the FastAPI app"""
     
     @app.get("/api-library", response_class=HTMLResponse)
-    async def api_library_page(request: Request, current_user: User = Depends(get_current_active_user)):
+    async def api_library_page(request: Request, current_user: User = Depends(get_current_user_html)):
         """API Library management page"""
         return templates.TemplateResponse("api_library.html", {
             "request": request,
@@ -29,9 +29,10 @@ def add_api_library_routes(app: FastAPI):
 
     @app.get("/api/api-credentials")
     async def get_api_credentials(
+        request: Request,
         show_all: bool = False,
         db: Session = Depends(get_db), 
-        current_user: User = Depends(get_current_active_user)
+        current_user: User = Depends(get_current_user_html)
     ):
         """Get API credentials (masked for security) - filtered by user unless admin requests all"""
         query = db.query(ApiCredential)
@@ -47,9 +48,10 @@ def add_api_library_routes(app: FastAPI):
     
     @app.get("/api/api-credentials/available")
     async def get_available_api_credentials(
+        request: Request,
         exchange: Optional[str] = None, 
         db: Session = Depends(get_db), 
-        current_user: User = Depends(get_current_active_user)
+        current_user: User = Depends(get_current_user_html)
     ):
         """Get available (not in use) API credentials for a specific exchange - filtered by user"""
         query = db.query(ApiCredential).filter(
@@ -66,6 +68,7 @@ def add_api_library_routes(app: FastAPI):
     
     @app.post("/api/api-credentials")
     async def create_api_credential(
+        request: Request,
         name: str = Form(...),
         exchange: str = Form(...),
         api_key: str = Form(...),
@@ -74,7 +77,7 @@ def add_api_library_routes(app: FastAPI):
         description: str = Form(""),
         tags: str = Form(""),
         db: Session = Depends(get_db),
-        current_user: User = Depends(get_current_active_user)
+        current_user: User = Depends(get_current_user_html)
     ):
         """Create new API credential"""
         
@@ -128,13 +131,14 @@ def add_api_library_routes(app: FastAPI):
     
     @app.put("/api/api-credentials/{credential_id}")
     async def update_api_credential(
+        request: Request,
         credential_id: int,
         name: Optional[str] = Form(None),
         description: Optional[str] = Form(None),
         tags: Optional[str] = Form(None),
         is_active: Optional[bool] = Form(None),
         db: Session = Depends(get_db),
-        current_user: User = Depends(get_current_active_user)
+        current_user: User = Depends(get_current_user_html)
     ):
         """Update API credential (non-sensitive fields only)"""
         
@@ -180,9 +184,10 @@ def add_api_library_routes(app: FastAPI):
     
     @app.delete("/api/api-credentials/{credential_id}")
     async def delete_api_credential(
+        request: Request,
         credential_id: int,
         db: Session = Depends(get_db),
-        current_user: User = Depends(get_current_active_user)
+        current_user: User = Depends(get_current_user_html)
     ):
         """Delete API credential"""
         
@@ -210,10 +215,11 @@ def add_api_library_routes(app: FastAPI):
     
     @app.post("/api/api-credentials/{credential_id}/assign/{instance_id}")
     async def assign_api_credential(
+        request: Request,
         credential_id: int,
         instance_id: int,
         db: Session = Depends(get_db),
-        current_user: User = Depends(get_current_active_user)
+        current_user: User = Depends(get_current_user_html)
     ):
         """Assign API credential to instance"""
         
@@ -263,9 +269,10 @@ def add_api_library_routes(app: FastAPI):
     
     @app.post("/api/api-credentials/{credential_id}/unassign")
     async def unassign_api_credential(
+        request: Request,
         credential_id: int,
         db: Session = Depends(get_db),
-        current_user: User = Depends(get_current_active_user)
+        current_user: User = Depends(get_current_user_html)
     ):
         """Unassign API credential from its current instance"""
         
