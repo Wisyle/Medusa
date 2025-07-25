@@ -872,11 +872,21 @@ async def get_instances(db: Session = Depends(get_db), current_user: User = Depe
             "id": instance.id,
             "name": instance.name,
             "exchange": instance.exchange,
+            "market_type": instance.market_type,
+            "api_credential_id": instance.api_credential_id,
+            "api_key": instance.api_key,
+            "api_secret": instance.api_secret,
+            "api_passphrase": instance.api_passphrase,
             "strategies": instance.strategies,
             "is_active": instance.is_active,
             "last_poll": instance.last_poll.isoformat() if instance.last_poll else None,
             "last_error": instance.last_error,
-            "polling_interval": instance.polling_interval
+            "polling_interval": instance.polling_interval,
+            "webhook_url": instance.webhook_url,
+            "telegram_bot_token": instance.telegram_bot_token,
+            "telegram_chat_id": instance.telegram_chat_id,
+            "telegram_topic_id": instance.telegram_topic_id,
+            "trading_pair": instance.trading_pair
         }
         for instance in instances
     ]
@@ -1101,8 +1111,11 @@ async def update_instance(
     instance_id: int,
     name: str = Form(...),
     exchange: str = Form(...),
-    api_key: str = Form(...),
-    api_secret: str = Form(...),
+    market_type: str = Form("unified"),
+    api_source: str = Form("library"),  # "library" or "direct"
+    api_credential_id: Optional[int] = Form(None),
+    api_key: Optional[str] = Form(None),
+    api_secret: Optional[str] = Form(None),
     api_passphrase: str = Form(""),
     strategies: str = Form(""),
     polling_interval: int = Form(60),
@@ -1111,7 +1124,6 @@ async def update_instance(
     telegram_chat_id: str = Form(""),
     telegram_topic_id: str = Form(""),
     trading_pair: str = Form(""),
-    market_type: str = Form("unified"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
@@ -1120,31 +1132,84 @@ async def update_instance(
     if not instance:
         raise HTTPException(status_code=404, detail="Instance not found")
     
-    # Validate the data
-    validation_errors = validate_instance_data(name, exchange, api_key, api_secret, trading_pair)
+    # Handle API credentials based on source
+    if api_source == "library":
+        if not api_credential_id:
+            raise HTTPException(status_code=400, detail="API credential must be selected when using library")
+        
+        # Check if credential exists and is available
+        credential = db.query(ApiCredential).filter(ApiCredential.id == api_credential_id).first()
+        if not credential:
+            raise HTTPException(status_code=400, detail="Selected API credential not found")
+        
+        # Check if credential is in use by another instance (unless it's the current instance)
+        if credential.is_in_use and credential.current_instance_id != instance_id:
+            current_instance = db.query(BotInstance).filter(BotInstance.api_credential_id == api_credential_id).first()
+            current_name = current_instance.name if current_instance else "Unknown"
+            raise HTTPException(status_code=400, detail=f"API credential is already in use by instance '{current_name}'")
+        
+        if credential.exchange.lower() != exchange.lower():
+            raise HTTPException(status_code=400, detail=f"API credential is for {credential.exchange}, but instance is for {exchange}")
+        
+        # Validation for library mode - just check basic fields
+        validation_errors = validate_instance_data(name, exchange, "dummy", "dummy", trading_pair)
+    else:
+        # Direct API mode - validate API credentials
+        if not api_key or not api_secret:
+            raise HTTPException(status_code=400, detail="API key and secret are required for direct mode")
+        
+        validation_errors = validate_instance_data(name, exchange, api_key, api_secret, trading_pair)
+    
     if validation_errors:
-        raise HTTPException(status_code=400, detail=validation_errors)
+        raise HTTPException(status_code=400, detail="; ".join(validation_errors))
     
     # Check if instance is running and stop it if updating critical fields
     was_active = instance.is_active
     if was_active and instance_id in active_processes:
         await stop_instance(instance_id, db, current_user)
     
-    # Update the instance
-    instance.name = name
-    instance.exchange = exchange
-    instance.api_key = api_key
-    instance.api_secret = api_secret
-    instance.api_passphrase = api_passphrase if api_passphrase else None
-    instance.strategies = strategies.split(',') if strategies else []
+    # Free up the old API credential if switching away from library
+    old_credential_id = instance.api_credential_id
+    if old_credential_id and api_source != "library":
+        old_credential = db.query(ApiCredential).filter(ApiCredential.id == old_credential_id).first()
+        if old_credential:
+            old_credential.is_in_use = False
+            old_credential.current_instance_id = None
+    
+    strategy_list = [s.strip() for s in strategies.split(",") if s.strip()] if strategies else []
+    
+    # Update instance based on API source
+    if api_source == "library":
+        instance.api_credential_id = api_credential_id
+        instance.api_key = None  # Clear direct credentials
+        instance.api_secret = None
+        instance.api_passphrase = None
+    else:
+        instance.api_credential_id = None  # Clear library reference
+        instance.api_key = api_key.strip()
+        instance.api_secret = api_secret.strip()
+        instance.api_passphrase = api_passphrase.strip() if api_passphrase else None
+    
+    # Update common fields
+    instance.name = name.strip()
+    instance.exchange = exchange.strip()
+    instance.market_type = market_type.strip()
+    instance.strategies = strategy_list
     instance.polling_interval = polling_interval
-    instance.webhook_url = webhook_url if webhook_url else None
-    instance.telegram_bot_token = telegram_bot_token if telegram_bot_token else None
-    instance.telegram_chat_id = telegram_chat_id if telegram_chat_id else None
-    instance.telegram_topic_id = telegram_topic_id if telegram_topic_id else None
+    instance.webhook_url = webhook_url.strip() if webhook_url else None
+    instance.telegram_bot_token = telegram_bot_token.strip() if telegram_bot_token else None
+    instance.telegram_chat_id = telegram_chat_id.strip() if telegram_chat_id else None
+    instance.telegram_topic_id = telegram_topic_id.strip() if telegram_topic_id else None
     instance.trading_pair = trading_pair.strip() if trading_pair else None
-    instance.market_type = market_type
     instance.updated_at = datetime.utcnow()
+    
+    # If using API library, mark credential as in use
+    if api_source == "library" and api_credential_id:
+        credential = db.query(ApiCredential).filter(ApiCredential.id == api_credential_id).first()
+        if credential:
+            credential.is_in_use = True
+            credential.current_instance_id = instance.id
+            credential.last_used = datetime.utcnow()
     
     db.commit()
     

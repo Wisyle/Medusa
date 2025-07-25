@@ -76,30 +76,72 @@
                         <i class="fas fa-key"></i>
                         API Configuration
                     </h5>
+                    <!-- API Source Selection -->
                     <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label for="api_key" class="form-label">API Key *</label>
-                            <input type="text" class="form-control" id="api_key" name="api_key" required 
-                                   placeholder="Your exchange API key">
-                        </div>
-                        <div class="col-md-6">
-                            <label for="api_secret" class="form-label">API Secret *</label>
-                            <input type="password" class="form-control" id="api_secret" name="api_secret" required 
-                                   placeholder="Your exchange API secret">
+                        <div class="col-md-12">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" id="use_library" name="api_source" value="library">
+                                <label class="form-check-label" for="use_library">
+                                    <strong>Use API from Library</strong> (Recommended)
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" id="use_direct" name="api_source" value="direct">
+                                <label class="form-check-label" for="use_direct">
+                                    <strong>Enter API Credentials Directly</strong>
+                                </label>
+                            </div>
                         </div>
                     </div>
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label for="api_passphrase" class="form-label">API Passphrase</label>
-                            <input type="password" class="form-control" id="api_passphrase" name="api_passphrase" 
-                                   placeholder="Required for some exchanges (OKX, KuCoin)">
-                            <small class="form-text text-muted">Only required for OKX and KuCoin</small>
+                    
+                    <!-- API Library Selection -->
+                    <div id="api_library_section" class="mb-3">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <label for="api_credential_id" class="form-label">Select API Credential</label>
+                                <select class="form-control" id="api_credential_id" name="api_credential_id">
+                                    <option value="">Loading available APIs...</option>
+                                </select>
+                                <small class="form-text text-muted">Only showing available API credentials for the selected exchange</small>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">&nbsp;</label>
+                                <div>
+                                    <a href="/api-library" target="_blank" class="btn btn-outline-info btn-sm">
+                                        <i class="fas fa-plus"></i> Manage API Library
+                                    </a>
+                                </div>
+                            </div>
                         </div>
-                        <div class="col-md-6">
-                            <label for="polling_interval" class="form-label">Polling Interval (seconds)</label>
-                            <input type="number" class="form-control" id="polling_interval" name="polling_interval" 
-                                   value="60" min="30" max="300">
-                            <small class="form-text text-muted">How often to check for changes (30-300 seconds)</small>
+                    </div>
+                    
+                    <!-- Direct API Input -->
+                    <div id="direct_api_section">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="api_key" class="form-label">API Key *</label>
+                                <input type="text" class="form-control" id="api_key" name="api_key" 
+                                       placeholder="Your exchange API key">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="api_secret" class="form-label">API Secret *</label>
+                                <input type="password" class="form-control" id="api_secret" name="api_secret" 
+                                       placeholder="Your exchange API secret">
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="api_passphrase" class="form-label">API Passphrase</label>
+                                <input type="password" class="form-control" id="api_passphrase" name="api_passphrase" 
+                                       placeholder="Required for some exchanges (OKX, KuCoin)">
+                                <small class="form-text text-muted">Only required for OKX and KuCoin</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="polling_interval" class="form-label">Polling Interval (seconds)</label>
+                                <input type="number" class="form-control" id="polling_interval" name="polling_interval" 
+                                       value="60" min="30" max="300">
+                                <small class="form-text text-muted">How often to check for changes (30-300 seconds)</small>
+                            </div>
                         </div>
                     </div>
 
@@ -273,6 +315,95 @@ function getInstanceId() {
     return pathParts[pathParts.length - 2]; // /instances/{id}/edit
 }
 
+// Toggle API source sections
+function toggleApiSource() {
+    const useLibrary = document.getElementById('use_library').checked;
+    const librarySection = document.getElementById('api_library_section');
+    const directSection = document.getElementById('direct_api_section');
+    
+    if (useLibrary) {
+        librarySection.style.display = 'block';
+        directSection.style.display = 'none';
+        // Remove required attribute from direct fields
+        document.getElementById('api_key').removeAttribute('required');
+        document.getElementById('api_secret').removeAttribute('required');
+    } else {
+        librarySection.style.display = 'none';
+        directSection.style.display = 'block';
+        // Add required attribute to direct fields
+        document.getElementById('api_key').setAttribute('required', '');
+        document.getElementById('api_secret').setAttribute('required', '');
+    }
+    
+    // Load available API credentials when library is selected
+    if (useLibrary) {
+        loadAvailableCredentials();
+    }
+}
+
+// Load available API credentials for the selected exchange
+function loadAvailableCredentials() {
+    const exchange = document.getElementById('exchange').value;
+    const credentialSelect = document.getElementById('api_credential_id');
+    
+    if (!exchange) {
+        credentialSelect.innerHTML = '<option value="">Please select an exchange first</option>';
+        return;
+    }
+    
+    credentialSelect.innerHTML = '<option value="">Loading...</option>';
+    
+    const token = localStorage.getItem('access_token');
+    fetch('/api/api-credentials', {
+        headers: {
+            'Authorization': 'Bearer ' + token
+        }
+    })
+    .then(response => response.json())
+    .then(credentials => {
+        credentialSelect.innerHTML = '<option value="">Select API Credential</option>';
+        
+        // Filter credentials for the selected exchange
+        const filteredCredentials = credentials.filter(cred => 
+            cred.exchange.toLowerCase() === exchange.toLowerCase() && 
+            cred.is_active && 
+            !cred.is_in_use
+        );
+        
+        // Add the currently used credential if editing an instance that uses library
+        const currentCredentialId = credentialSelect.dataset.currentId;
+        if (currentCredentialId) {
+            const currentCred = credentials.find(cred => cred.id == currentCredentialId);
+            if (currentCred) {
+                filteredCredentials.unshift(currentCred);
+            }
+        }
+        
+        filteredCredentials.forEach(credential => {
+            const option = document.createElement('option');
+            option.value = credential.id;
+            option.textContent = `${credential.name} (${credential.exchange})`;
+            credentialSelect.appendChild(option);
+        });
+        
+        // Select current credential if editing
+        if (currentCredentialId) {
+            credentialSelect.value = currentCredentialId;
+        }
+        
+        if (filteredCredentials.length === 0) {
+            const option = document.createElement('option');
+            option.value = '';
+            option.textContent = `No available ${exchange} credentials - create one in API Library`;
+            credentialSelect.appendChild(option);
+        }
+    })
+    .catch(error => {
+        console.error('Error loading API credentials:', error);
+        credentialSelect.innerHTML = '<option value="">Error loading credentials</option>';
+    });
+}
+
 // Load instance data
 function loadInstanceData() {
     instanceId = getInstanceId();
@@ -292,12 +423,9 @@ function loadInstanceData() {
             return;
         }
         
-        // Populate form fields
+        // Populate basic form fields
         document.getElementById('name').value = instance.name || '';
         document.getElementById('exchange').value = instance.exchange || '';
-        document.getElementById('api_key').value = instance.api_key || '';
-        document.getElementById('api_secret').value = instance.api_secret || '';
-        document.getElementById('api_passphrase').value = instance.api_passphrase || '';
         document.getElementById('polling_interval').value = instance.polling_interval || 60;
         document.getElementById('webhook_url').value = instance.webhook_url || '';
         document.getElementById('telegram_bot_token').value = instance.telegram_bot_token || '';
@@ -305,6 +433,42 @@ function loadInstanceData() {
         document.getElementById('telegram_topic_id').value = instance.telegram_topic_id || '';
         document.getElementById('trading_pair').value = instance.trading_pair || '';
         document.getElementById('market_type').value = instance.market_type || 'unified';
+        
+        // Determine API source based on instance data
+        const usesLibrary = instance.api_credential_id && !instance.api_key;
+        
+        if (usesLibrary) {
+            // Instance uses API library
+            document.getElementById('use_library').checked = true;
+            document.getElementById('use_direct').checked = false;
+            
+            // Store current credential ID for later use
+            document.getElementById('api_credential_id').dataset.currentId = instance.api_credential_id;
+            
+            // Show library section, hide direct section
+            document.getElementById('api_library_section').style.display = 'block';
+            document.getElementById('direct_api_section').style.display = 'none';
+            
+            // Load available credentials and select current one
+            loadAvailableCredentials();
+        } else {
+            // Instance uses direct API credentials
+            document.getElementById('use_library').checked = false;
+            document.getElementById('use_direct').checked = true;
+            
+            // Populate direct API fields
+            document.getElementById('api_key').value = instance.api_key || '';
+            document.getElementById('api_secret').value = instance.api_secret || '';
+            document.getElementById('api_passphrase').value = instance.api_passphrase || '';
+            
+            // Show direct section, hide library section
+            document.getElementById('api_library_section').style.display = 'none';
+            document.getElementById('direct_api_section').style.display = 'block';
+            
+            // Add required attributes to direct fields
+            document.getElementById('api_key').setAttribute('required', '');
+            document.getElementById('api_secret').setAttribute('required', '');
+        }
         
         // Set strategies checkboxes
         const strategies = instance.strategies || [];
@@ -317,8 +481,22 @@ function loadInstanceData() {
     });
 }
 
-// Load data when page loads
-document.addEventListener('DOMContentLoaded', loadInstanceData);
+// Add event listeners
+document.addEventListener('DOMContentLoaded', function() {
+    // Load instance data
+    loadInstanceData();
+    
+    // Add event listeners for API source radio buttons
+    document.getElementById('use_library').addEventListener('change', toggleApiSource);
+    document.getElementById('use_direct').addEventListener('change', toggleApiSource);
+    
+    // Add event listener for exchange selection to reload credentials
+    document.getElementById('exchange').addEventListener('change', function() {
+        if (document.getElementById('use_library').checked) {
+            loadAvailableCredentials();
+        }
+    });
+});
 
 document.getElementById('instance-form').addEventListener('submit', function(e) {
     e.preventDefault();
