@@ -12,6 +12,7 @@ import multiprocessing
 from datetime import datetime, timedelta
 import uvicorn
 import logging
+from contextlib import asynccontextmanager
 
 # Import migration system
 from startup_migration import run_startup_migrations
@@ -46,7 +47,48 @@ except Exception as e:
     logger.error("🛑 Application startup aborted due to migration failure")
     exit(1)
 
-app = FastAPI(title="TAR Global Strategies - Unified Command Hub", version="2.0.0")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Handle application lifespan events"""
+    # Startup
+    logger.info("🚀 Initializing application...")
+    
+    # Create tables first
+    init_db()
+    
+    # Then run migrations for any new columns
+    from migration import migrate_database
+    migrate_database()
+    
+    # Start monitoring instances
+    monitor_task = asyncio.create_task(monitor_instances())
+    
+    yield
+    
+    # Shutdown
+    logger.info("🔄 Shutting down application...")
+    
+    # Cancel monitoring task
+    monitor_task.cancel()
+    try:
+        await monitor_task
+    except asyncio.CancelledError:
+        pass
+    
+    # Clean up active processes
+    for process in active_processes.values():
+        process.terminate()
+        process.join(timeout=5)
+        if process.is_alive():
+            process.kill()
+    
+    logger.info("✅ Application shutdown complete")
+
+app = FastAPI(
+    title="TAR Global Strategies - Unified Command Hub", 
+    version="2.0.0",
+    lifespan=lifespan
+)
 
 class ConnectionManager:
     def __init__(self):
@@ -1553,26 +1595,7 @@ async def get_instance_signals(
     
     return {"signals": signals}
 
-@app.on_event("startup")
-async def startup_event():
-    """Initialize database and start monitoring"""
-    # Create tables first
-    init_db()
-    
-    # Then run migrations for any new columns
-    from migration import migrate_database
-    migrate_database()
-    
-    asyncio.create_task(monitor_instances())
 
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Clean up processes"""
-    for process in active_processes.values():
-        process.terminate()
-        process.join(timeout=5)
-        if process.is_alive():
-            process.kill()
 
 async def monitor_instances():
     """Monitor and restart failed instances"""
