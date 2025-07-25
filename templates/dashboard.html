@@ -1893,6 +1893,145 @@ function updateResourceUsage(resourceData) {
     });
 }
 
+// Update instances table
+function updateInstancesTable(instances) {
+    const tbody = document.querySelector('#instances-table tbody');
+    if (!tbody) return;
+    
+    if (!instances || instances.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="7" class="text-center">
+                    <div class="text-center py-4">
+                        <i class="fas fa-robot fa-3x text-muted mb-3"></i>
+                        <h4 class="text-muted">No Bot Instances Found</h4>
+                        <p class="text-muted">Create your first bot instance to get started</p>
+                        <a href="/instances/new" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Create Instance
+                        </a>
+                    </div>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    tbody.innerHTML = instances.map(instance => {
+        const lastPoll = instance.last_poll ? new Date(instance.last_poll).toLocaleString() : 'Never';
+        const statusBadge = instance.is_active ? 
+            '<span class="badge badge-success">Active</span>' : 
+            '<span class="badge badge-secondary">Inactive</span>';
+        const strategiesText = Array.isArray(instance.strategies) ? 
+            instance.strategies.join(', ') : 
+            (instance.strategies || 'Not specified');
+        const intervalText = instance.polling_interval ? `${instance.polling_interval}s` : '60s';
+        
+        return `
+            <tr>
+                <td><strong>${instance.name}</strong></td>
+                <td>${instance.exchange}</td>
+                <td>${strategiesText}</td>
+                <td>${intervalText}</td>
+                <td>${statusBadge}</td>
+                <td>${lastPoll}</td>
+                <td>
+                    <div class="btn-group btn-group-sm">
+                        <a href="/instances/${instance.id}" class="btn btn-outline-info btn-sm" title="View Details">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                        <a href="/instances/${instance.id}/edit" class="btn btn-outline-primary btn-sm" title="Edit">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                        <button class="btn btn-outline-${instance.is_active ? 'warning' : 'success'} btn-sm" onclick="toggleInstance(${instance.id})" title="${instance.is_active ? 'Stop' : 'Start'}">
+                            <i class="fas fa-${instance.is_active ? 'stop' : 'play'}"></i>
+                        </button>
+                        <button class="btn btn-outline-danger btn-sm" onclick="deleteInstance(${instance.id}, '${instance.name}')" title="Delete">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+// Toggle instance status
+async function toggleInstance(instanceId) {
+    const token = localStorage.getItem('access_token');
+    if (!token) return;
+    
+    try {
+        const response = await fetch(`/api/instances/${instanceId}/toggle`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            showNotification(data.message || 'Instance status updated', 'success');
+            setTimeout(() => refreshDashboard(), 1000);
+        } else {
+            showNotification('Failed to toggle instance', 'error');
+        }
+    } catch (error) {
+        console.error('Error toggling instance:', error);
+        showNotification('Error toggling instance', 'error');
+    }
+}
+
+// Delete instance
+async function deleteInstance(instanceId, instanceName) {
+    if (!confirm(`Are you sure you want to delete instance "${instanceName}"?`)) return;
+    
+    const token = localStorage.getItem('access_token');
+    if (!token) return;
+    
+    try {
+        const response = await fetch(`/api/instances/${instanceId}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            showNotification(data.message || 'Instance deleted successfully', 'success');
+            setTimeout(() => refreshDashboard(), 1000);
+        } else {
+            showNotification('Failed to delete instance', 'error');
+        }
+    } catch (error) {
+        console.error('Error deleting instance:', error);
+        showNotification('Error deleting instance', 'error');
+    }
+}
+
+// Show notification
+function showNotification(message, type = 'info') {
+    const alertClass = type === 'success' ? 'alert-success' : 
+                      type === 'error' ? 'alert-danger' : 'alert-info';
+    
+    const notification = document.createElement('div');
+    notification.className = `alert ${alertClass} alert-dismissible fade show position-fixed`;
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; max-width: 400px;';
+    notification.innerHTML = `
+        ${message}
+        <button type="button" class="close" data-dismiss="alert">
+            <span>&times;</span>
+        </button>
+    `;
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.remove();
+    }, 5000);
+}
+
 // Update recent activity table
 function updateRecentActivity(activities) {
     const tbody = document.querySelector('#recent-activity-table tbody');
