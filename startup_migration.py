@@ -452,6 +452,9 @@ def run_startup_migrations():
                     logger.error("❌ Failed to apply enhanced bypass features")
                     return False
                 
+                # 7. Ensure new strategy monitors exist (skip for now - not critical)
+                logger.info("⏭️ Skipping automatic strategy monitor creation - can be done via UI")
+                
                 # Commit transaction
                 trans.commit()
                 logger.info("🎉 All deployment migrations completed successfully!")
@@ -720,6 +723,52 @@ def fix_existing_api_credentials(conn, is_postgresql):
         
     except Exception as e:
         logger.error(f"❌ Failed to fix existing api_credentials: {e}")
+        return False
+
+def ensure_new_strategy_monitors(conn, is_postgresql):
+    """Create strategy monitors for new strategy types: TGLX, Cerberus, Predators"""
+    try:
+        logger.info("🎯 Ensuring new strategy monitors exist...")
+        
+        # List of new strategy types to add
+        new_strategies = ['TGLX', 'Cerberus', 'Predators']
+        
+        for strategy_name in new_strategies:
+            # Check if strategy monitor already exists
+            if is_postgresql:
+                result = conn.execute(text("SELECT COUNT(*) FROM strategy_monitors WHERE strategy_name = :name;"), 
+                                    {"name": strategy_name})
+            else:
+                result = conn.execute(text("SELECT COUNT(*) FROM strategy_monitors WHERE strategy_name = ?;"), 
+                                    (strategy_name,))
+            
+            count = result.scalar()
+            
+            if count == 0:
+                logger.info(f"➕ Creating strategy monitor for {strategy_name}...")
+                
+                if is_postgresql:
+                    conn.execute(text("""
+                        INSERT INTO strategy_monitors (strategy_name, is_active, report_interval, include_positions, 
+                                                     include_orders, include_trades, include_pnl, max_recent_positions)
+                        VALUES (:name, TRUE, 3600, TRUE, TRUE, TRUE, TRUE, 10);
+                    """), {"name": strategy_name})
+                else:
+                    conn.execute(text("""
+                        INSERT INTO strategy_monitors (strategy_name, is_active, report_interval, include_positions, 
+                                                     include_orders, include_trades, include_pnl, max_recent_positions)
+                        VALUES (?, 1, 3600, 1, 1, 1, 1, 10);
+                    """), (strategy_name,))
+                
+                logger.info(f"✅ Created strategy monitor for {strategy_name}")
+            else:
+                logger.info(f"✅ Strategy monitor for {strategy_name} already exists")
+        
+        logger.info("✅ All new strategy monitors ensured")
+        return True
+        
+    except Exception as e:
+        logger.error(f"❌ Failed to ensure new strategy monitors: {e}")
         return False
 
 def verify_migration_success():
