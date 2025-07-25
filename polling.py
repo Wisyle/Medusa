@@ -40,16 +40,33 @@ class ExchangePoller:
         import os
         import random
         
-        singapore_ips = os.getenv('SINGAPORE_IP_POOL', '103.28.248.1,103.28.249.1,119.81.28.1,119.81.29.1,18.141.147.1,18.141.148.1,52.220.0.1,52.221.0.1').split(',')
+        # Check if running on cloud hosting (Render, Heroku, etc.)
+        is_cloud_hosting = any(env in os.environ for env in ['RENDER', 'HEROKU', 'RAILWAY', 'VERCEL'])
+        if is_cloud_hosting:
+            logger.info("🌐 Cloud hosting detected - using enhanced bypass methods")
+        
+        # Alternative DNS servers for bypass
+        dns_alternatives = [
+            '8.8.8.8',      # Google DNS
+            '1.1.1.1',      # Cloudflare DNS
+            '208.67.222.222', # OpenDNS
+            '9.9.9.9'       # Quad9 DNS
+        ]
+        
+        # Updated IP pools for better CloudFront bypass (2025)
+        singapore_ips = os.getenv('SINGAPORE_IP_POOL', '103.28.248.100,119.81.28.200,18.141.147.50,52.220.100.50,13.228.104.25,54.169.1.100,175.41.128.50,202.54.1.100').split(',')
+        uae_ips = ['5.62.60.100', '5.62.61.200', '185.3.124.50', '185.3.125.100', '37.44.238.50', '109.123.116.200']
+        hk_ips = ['103.10.197.100', '202.45.84.50', '210.6.4.100', '119.28.0.50', '103.254.155.100', '202.67.10.50']
+        jp_ips = ['133.106.32.100', '210.173.160.50', '103.79.141.100', '202.32.115.50', '118.27.0.100', '210.148.59.50']
+        us_ips = ['173.252.66.100', '69.171.224.50', '31.13.64.100', '157.240.1.50', '204.15.20.100']
+        uk_ips = ['31.13.72.100', '157.240.15.50', '185.60.216.100', '173.252.88.50']
+        
         selected_sg_ip = random.choice(singapore_ips)
-        
-        uae_ips = ['5.62.60.1', '5.62.61.1', '185.3.124.1', '185.3.125.1']
-        hk_ips = ['103.10.197.1', '103.10.198.1', '202.45.84.1', '202.45.85.1']
-        jp_ips = ['133.106.0.1', '133.106.1.1', '210.173.160.1', '210.173.161.1']
-        
         selected_uae_ip = random.choice(uae_ips)
         selected_hk_ip = random.choice(hk_ips)
         selected_jp_ip = random.choice(jp_ips)
+        selected_us_ip = random.choice(us_ips)
+        selected_uk_ip = random.choice(uk_ips)
         
         configs_to_try = [
             {
@@ -59,8 +76,8 @@ class ExchangePoller:
                 'enableRateLimit': True,
                 'urls': {
                     'api': {
-                        'public': 'https://api.bytick.com',
-                        'private': 'https://api.bytick.com',
+                        'public': 'https://api.bybit.com',
+                        'private': 'https://api.bybit.com',
                     }
                 },
                 'headers': {
@@ -270,15 +287,98 @@ class ExchangePoller:
                 },
                 'timeout': 30000,
                 'rateLimit': 1200
+            },
+            # Additional bypass methods
+            {
+                'apiKey': self.api_credentials['api_key'],
+                'secret': self.api_credentials['api_secret'],
+                'sandbox': False,
+                'enableRateLimit': True,
+                'headers': {
+                    'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'Accept': 'application/json',
+                    'Accept-Language': 'en-US,en;q=0.9',
+                    'X-Forwarded-For': selected_us_ip,
+                    'X-Real-IP': selected_us_ip,
+                    'CF-Connecting-IP': selected_us_ip,
+                    'X-Country-Code': 'US',
+                    'CloudFront-Viewer-Country': 'US',
+                    'CloudFront-Viewer-ASN': '16509',
+                    'CloudFront-Forwarded-Proto': 'https',
+                    'Connection': 'keep-alive'
+                },
+                'timeout': 45000,
+                'rateLimit': 1000
+            },
+            {
+                'apiKey': self.api_credentials['api_key'],
+                'secret': self.api_credentials['api_secret'],
+                'sandbox': False,
+                'enableRateLimit': True,
+                'headers': {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:120.0) Gecko/20100101 Firefox/120.0',
+                    'Accept': 'application/json',
+                    'Accept-Language': 'en-GB,en;q=0.9',
+                    'X-Forwarded-For': selected_uk_ip,
+                    'X-Real-IP': selected_uk_ip,
+                    'CF-Connecting-IP': selected_uk_ip,
+                    'X-Country-Code': 'GB',
+                    'CloudFront-Viewer-Country': 'GB',
+                    'CloudFront-Viewer-Time-Zone': 'Europe/London',
+                    'Connection': 'keep-alive'
+                },
+                'timeout': 45000,
+                'rateLimit': 1000
+            },
+            # Fallback with no custom headers
+            {
+                'apiKey': self.api_credentials['api_key'],
+                'secret': self.api_credentials['api_secret'],
+                'sandbox': False,
+                'enableRateLimit': True,
+                'timeout': 30000,
+                'rateLimit': 1500
+            },
+            # DNS bypass using alternative resolver
+            {
+                'apiKey': self.api_credentials['api_key'],
+                'secret': self.api_credentials['api_secret'],
+                'sandbox': False,
+                'enableRateLimit': True,
+                'urls': {
+                    'api': {
+                        'public': 'https://api.bybit.com',
+                        'private': 'https://api.bybit.com',
+                    }
+                },
+                'headers': {
+                    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'Accept': 'application/json',
+                    'Host': 'api.bybit.com',
+                    'X-Forwarded-For': selected_sg_ip,
+                    'X-Real-IP': selected_sg_ip,
+                    'CF-Connecting-IP': selected_sg_ip,
+                    'X-Country-Code': 'SG',
+                    'CloudFront-Viewer-Country': 'SG'
+                },
+                'timeout': 45000,
+                'rateLimit': 1000,
+                'proxies': os.getenv('HTTPS_PROXY', None)  # Support for proxy if configured
             }
         ]
         
         method_names = [
             "Singapore IP Spoofing (Primary)",
             "UAE/Dubai IP Spoofing (Fallback)",
-            "Hong Kong IP with VPN headers",
+            "Testnet API with UAE headers",
+            "Hong Kong IP with VPN headers", 
             "Japan/Tokyo endpoint routing",
-            "Minimal headers fallback"
+            "Singapore testnet with multi-IP",
+            "Minimal headers mobile fallback",
+            "US datacenter IP spoofing",
+            "UK/London IP spoofing",
+            "Clean headers fallback (no geo-spoofing)",
+            "DNS bypass with proxy support"
         ]
         
         for i, config in enumerate(configs_to_try):
@@ -309,20 +409,42 @@ class ExchangePoller:
                 return test_exchange
                 
             except Exception as e:
+                import time
                 error_msg = str(e).lower()
-                if 'cloudfront' in error_msg or '403' in error_msg or 'forbidden' in error_msg:
-                    method_name = method_names[i] if i < len(method_names) else f"Method {i+1}"
-                    logger.warning(f"⚠️ Method {i+1} failed - CloudFront blocking detected: {method_name}")
+                method_name = method_names[i] if i < len(method_names) else f"Method {i+1}"
+                
+                # Enhanced CloudFront detection
+                cloudfront_indicators = [
+                    'cloudfront', '403', 'forbidden', 'request could not be satisfied',
+                    'configured to block access', 'country', 'region blocked',
+                    'access denied', 'geo-restriction', 'location restricted'
+                ]
+                
+                is_cloudfront_block = any(indicator in error_msg for indicator in cloudfront_indicators)
+                
+                if is_cloudfront_block:
+                    logger.warning(f"⚠️ Method {i+1}/{len(configs_to_try)} failed - CloudFront/Geo blocking: {method_name}")
+                    logger.debug(f"Error details: {str(e)[:200]}")
+                    
                     if i < len(configs_to_try) - 1:
-                        logger.info(f"🔄 Trying next bypass method...")
+                        logger.info(f"🔄 Waiting 2 seconds before next bypass attempt...")
+                        time.sleep(2)  # Brief delay to avoid rate limiting
                         continue
                     else:
-                        logger.error(f"❌ All CloudFront bypass methods failed!")
-                        self._log_error("cloudfront_bypass_failed", f"All {len(configs_to_try)} bypass methods failed: {e}")
-                        raise Exception(f"CloudFront bypass failed after {len(configs_to_try)} attempts: {e}")
+                        logger.error(f"❌ All {len(configs_to_try)} CloudFront bypass methods failed!")
+                        self._log_error("cloudfront_bypass_failed", f"All {len(configs_to_try)} bypass methods failed. Last error: {e}")
+                        
+                        # Suggest user action
+                        logger.error("💡 Suggestions:")
+                        logger.error("   1. Try using a VPN from Singapore, UAE, or Hong Kong")
+                        logger.error("   2. Check if your server IP is in a restricted region")
+                        logger.error("   3. Verify your API credentials are correct")
+                        
+                        raise Exception(f"CloudFront bypass failed after {len(configs_to_try)} attempts. Geographic restrictions detected.")
                 else:
                     logger.error(f"Failed to initialize exchange {self.instance.exchange} (Method {i+1}): {e}")
                     if i < len(configs_to_try) - 1:
+                        time.sleep(1)  # Brief delay before retry
                         continue
                     else:
                         self._log_error("exchange_init", str(e))

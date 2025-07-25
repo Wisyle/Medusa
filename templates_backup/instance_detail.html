@@ -1,0 +1,436 @@
+{% extends "base.html" %}
+
+{% block title %}Instance Details - TGL MEDUSA{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="fas fa-robot crypto-icon"></i>
+        Instance Details
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <a href="/instances" class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i>
+                Back to Instances
+            </a>
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="refreshData()">
+                <i class="fas fa-sync-alt"></i>
+                Refresh
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Instance Info -->
+<div class="row mb-4">
+    <div class="col-lg-8">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-info-circle"></i>
+                    Instance Information
+                </h6>
+            </div>
+            <div class="card-body" id="instance-info">
+                <div class="text-center">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    Loading instance details...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-success">
+                    <i class="fas fa-play-circle"></i>
+                    Quick Actions
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2" id="action-buttons">
+                    <div class="text-center">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        Loading...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Logs Tabs -->
+<div class="card shadow">
+    <div class="card-header py-3">
+        <ul class="nav nav-tabs card-header-tabs" id="logs-tabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="activity-tab" data-bs-toggle="tab" data-bs-target="#activity" 
+                        type="button" role="tab" aria-controls="activity" aria-selected="true">
+                    <i class="fas fa-clock"></i>
+                    Activity Logs
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="error-tab" data-bs-toggle="tab" data-bs-target="#errors" 
+                        type="button" role="tab" aria-controls="errors" aria-selected="false">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Error Logs
+                </button>
+            </li>
+        </ul>
+    </div>
+    <div class="card-body">
+        <div class="tab-content" id="logs-content">
+            <div class="tab-pane fade show active" id="activity" role="tabpanel" aria-labelledby="activity-tab">
+                <div id="activity-logs">
+                    <div class="text-center">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        Loading activity logs...
+                    </div>
+                </div>
+            </div>
+            <div class="tab-pane fade" id="errors" role="tabpanel" aria-labelledby="error-tab">
+                <div id="error-logs">
+                    <div class="text-center">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        Loading error logs...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const instanceId = {{ instance_id }};
+let instance = null;
+
+function refreshData() {
+    loadInstance();
+    loadActivityLogs();
+    loadErrorLogs();
+}
+
+function loadInstance() {
+    const token = localStorage.getItem('access_token');
+    fetch('/api/instances', {
+        headers: {
+            'Authorization': 'Bearer ' + token
+        }
+    })
+        .then(response => {
+            if (response.status === 401) {
+                localStorage.removeItem('access_token');
+                window.location.href = '/login';
+                return;
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (!data) return;
+            
+            instance = data.find(i => i.id === instanceId);
+            if (instance) {
+                updateInstanceInfo();
+                updateActionButtons();
+            } else {
+                document.getElementById('instance-info').innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Instance not found
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error('Error loading instance:', error);
+        });
+}
+
+function updateInstanceInfo() {
+    document.getElementById('instance-info').innerHTML = `
+        <div class="row">
+            <div class="col-md-6">
+                <h5>${instance.name}</h5>
+                <p class="text-muted">ID: ${instance.id}</p>
+                
+                <h6>Exchange</h6>
+                <span class="badge bg-info mb-3">${instance.exchange}</span>
+                
+                <h6>Status</h6>
+                ${instance.is_active ? 
+                    '<span class="badge bg-success mb-3"><i class="fas fa-play"></i> Active</span>' : 
+                    '<span class="badge bg-secondary mb-3"><i class="fas fa-stop"></i> Stopped</span>'
+                }
+                ${instance.last_error ? 
+                    '<br><span class="badge bg-danger mb-3"><i class="fas fa-exclamation-triangle"></i> Has Errors</span>' : ''
+                }
+            </div>
+            <div class="col-md-6">
+                <h6>Strategies</h6>
+                <div class="mb-3">
+                    ${instance.strategies.length > 0 ? 
+                        instance.strategies.map(s => `<span class="badge bg-secondary me-1">${s}</span>`).join('') :
+                        '<span class="text-muted">All strategies</span>'
+                    }
+                </div>
+                
+                <h6>Polling Interval</h6>
+                <p>${instance.polling_interval} seconds</p>
+                
+                <h6>Last Poll</h6>
+                <p>${instance.last_poll ? 
+                    new Date(instance.last_poll).toLocaleString() : 
+                    '<span class="text-muted">Never</span>'
+                }</p>
+            </div>
+        </div>
+        
+        ${instance.last_error ? `
+            <div class="alert alert-danger mt-3">
+                <h6><i class="fas fa-exclamation-triangle"></i> Last Error</h6>
+                <p class="mb-0">${instance.last_error}</p>
+            </div>
+        ` : ''}
+    `;
+}
+
+function updateActionButtons() {
+    document.getElementById('action-buttons').innerHTML = `
+        ${instance.is_active ? 
+            `<button class="btn btn-warning" onclick="stopInstance()">
+                <i class="fas fa-stop"></i> Stop Instance
+            </button>` :
+            `<button class="btn btn-success" onclick="startInstance()">
+                <i class="fas fa-play"></i> Start Instance
+            </button>`
+        }
+        <button class="btn btn-danger" onclick="deleteInstance()">
+            <i class="fas fa-trash"></i> Delete Instance
+        </button>
+    `;
+}
+
+function loadActivityLogs() {
+    const token = localStorage.getItem('access_token');
+    fetch(`/api/instances/${instanceId}/logs?log_type=activity&limit=50`, {
+        headers: {
+            'Authorization': 'Bearer ' + token
+        }
+    })
+        .then(response => {
+            if (response.status === 401) {
+                localStorage.removeItem('access_token');
+                window.location.href = '/login';
+                return;
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (!data) return;
+            
+            // Ensure data is an array before calling map
+            if (!Array.isArray(data)) {
+                console.error('Expected array but got:', typeof data, data);
+                document.getElementById('activity-logs').innerHTML = `
+                    <div class="alert alert-danger">
+                        Error loading logs: Invalid data format
+                    </div>
+                `;
+                return;
+            }
+            
+            if (data.length === 0) {
+                document.getElementById('activity-logs').innerHTML = `
+                    <div class="text-center text-muted">
+                        <i class="fas fa-clock"></i>
+                        No activity logs yet
+                    </div>
+                `;
+                return;
+            }
+            
+            document.getElementById('activity-logs').innerHTML = `
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>Event</th>
+                                <th>Symbol</th>
+                                <th>Message</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${data.map(log => `
+                                <tr>
+                                    <td><small>${new Date(log.timestamp).toLocaleString()}</small></td>
+                                    <td><span class="badge bg-info">${log.event_type}</span></td>
+                                    <td>${log.symbol || '-'}</td>
+                                    <td>${log.message}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        })
+        .catch(error => {
+            document.getElementById('activity-logs').innerHTML = `
+                <div class="alert alert-danger">
+                    Error loading activity logs: ${error.message}
+                </div>
+            `;
+        });
+}
+
+function loadErrorLogs() {
+    const token = localStorage.getItem('access_token');
+    fetch(`/api/instances/${instanceId}/logs?log_type=error&limit=50`, {
+        headers: {
+            'Authorization': 'Bearer ' + token
+        }
+    })
+        .then(response => {
+            if (response.status === 401) {
+                localStorage.removeItem('access_token');
+                window.location.href = '/login';
+                return;
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (!data) return;
+            
+            // Ensure data is an array before calling map
+            if (!Array.isArray(data)) {
+                console.error('Expected array but got:', typeof data, data);
+                document.getElementById('error-logs').innerHTML = `
+                    <div class="alert alert-danger">
+                        Error loading logs: Invalid data format
+                    </div>
+                `;
+                return;
+            }
+            
+            if (data.length === 0) {
+                document.getElementById('error-logs').innerHTML = `
+                    <div class="text-center text-muted">
+                        <i class="fas fa-check-circle"></i>
+                        No errors logged
+                    </div>
+                `;
+                return;
+            }
+            
+            document.getElementById('error-logs').innerHTML = `
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>Type</th>
+                                <th>Message</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${data.map(log => `
+                                <tr>
+                                    <td><small>${new Date(log.timestamp).toLocaleString()}</small></td>
+                                    <td><span class="badge bg-danger">${log.error_type}</span></td>
+                                    <td>${log.error_message}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        })
+        .catch(error => {
+            document.getElementById('error-logs').innerHTML = `
+                <div class="alert alert-danger">
+                    Error loading error logs: ${error.message}
+                </div>
+            `;
+        });
+}
+
+function startInstance() {
+    if (!confirm('Are you sure you want to start this instance?')) return;
+    
+    const token = localStorage.getItem('access_token');
+    fetch(`/api/instances/${instanceId}/start`, {
+        method: 'POST',
+        headers: {
+            'Authorization': 'Bearer ' + token
+        }
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (data.message) {
+                alert(data.message);
+                refreshData();
+            }
+        })
+        .catch(error => {
+            alert('Error starting instance: ' + error);
+        });
+}
+
+function stopInstance() {
+    if (!confirm('Are you sure you want to stop this instance?')) return;
+    
+    const token = localStorage.getItem('access_token');
+    fetch(`/api/instances/${instanceId}/stop`, {
+        method: 'POST',
+        headers: {
+            'Authorization': 'Bearer ' + token
+        }
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (data.message) {
+                alert(data.message);
+                refreshData();
+            }
+        })
+        .catch(error => {
+            alert('Error stopping instance: ' + error);
+        });
+}
+
+function deleteInstance() {
+    if (!confirm('Are you sure you want to delete this instance? This action cannot be undone.')) return;
+    
+    const token = localStorage.getItem('access_token');
+    fetch(`/api/instances/${instanceId}`, {
+        method: 'DELETE',
+        headers: {
+            'Authorization': 'Bearer ' + token
+        }
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (data.message) {
+                alert(data.message);
+                window.location.href = '/instances';
+            }
+        })
+        .catch(error => {
+            alert('Error deleting instance: ' + error);
+        });
+}
+
+// Load data on page load
+document.addEventListener('DOMContentLoaded', function() {
+    refreshData();
+    
+    // Auto-refresh every 30 seconds
+    setInterval(refreshData, 30000);
+});
+</script>
+{% endblock %}

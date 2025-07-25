@@ -4,7 +4,7 @@ services:
     name: tar-dashboard-web
     env: python
     plan: starter
-    buildCommand: "pip install -r requirements.txt"
+    buildCommand: "pip install -r requirements.txt && python startup_migration.py && python pre_deployment_validation.py"
     startCommand: "python main.py"
     autoDeploy: true
     healthCheckPath: /api/health
@@ -31,6 +31,8 @@ services:
         value: "0.0.0.0"
       - key: PORT
         value: "10000"
+      - key: AUTO_APPLY_ENHANCEMENTS
+        value: "true"
 
   # Background Worker Service - Polling & Monitoring
   - type: worker

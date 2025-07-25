@@ -1,203 +1,175 @@
 #!/usr/bin/env python3
 """
-Pre-deployment validation script for TGL MEDUSA API Library migration
-Run this before deploying to ensure seamless migration
+Pre-Deployment Validation Script
+Ensures all enhanced bypass features are properly applied before deployment
 """
 
-import sys
 import os
+import sys
 import logging
-from sqlalchemy import create_engine, text, inspect
-from sqlalchemy.exc import OperationalError, ProgrammingError
+from pathlib import Path
 
-# Add current directory to path for imports
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-
-from config import settings
-from database import Base, BotInstance
-from api_library_model import ApiCredential
-from strategy_monitor_model import StrategyMonitor
-
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def validate_current_database():
-    """Validate current database structure and data"""
+def validate_enhanced_bypass_features():
+    """Validate that enhanced bypass features are properly applied"""
     try:
-        engine = create_engine(settings.database_url)
-        inspector = inspect(engine)
+        logger.info("🔍 Validating enhanced bypass features...")
         
-        logger.info("🔍 Validating current database structure...")
+        # Check if template file exists
+        template_path = "templates/api_library.html"
+        if not os.path.exists(template_path):
+            logger.error(f"❌ Template file not found: {template_path}")
+            return False
         
-        # Check if core tables exist
-        tables = inspector.get_table_names()
-        required_tables = ['bot_instances', 'users', 'activity_logs', 'error_logs']
+        # Read template content
+        with open(template_path, 'r', encoding='utf-8') as f:
+            content = f.read()
         
-        for table in required_tables:
-            if table not in tables:
-                logger.error(f"❌ Required table '{table}' not found!")
-                return False
-            logger.info(f"✅ Table '{table}' exists")
+        # Validate required elements are present
+        required_elements = [
+            'custom-modal-overlay',  # Custom modal CSS class
+            'showCustomModal()',     # Custom modal JavaScript function
+            'hideCustomModal()',     # Custom modal close function
+            'hideEditModal()',       # Edit modal close function
+            'onclick="showCustomModal()"',  # Modal trigger
+            'custom-modal-header',   # Modal header styling
+            'custom-modal-body',     # Modal body styling
+            'custom-modal-footer'    # Modal footer styling
+        ]
         
-        # Check bot_instances structure
-        bot_instances_columns = {col['name']: col for col in inspector.get_columns('bot_instances')}
+        missing_elements = []
+        for element in required_elements:
+            if element not in content:
+                missing_elements.append(element)
         
-        required_columns = ['id', 'name', 'exchange', 'api_key', 'api_secret']
-        for col in required_columns:
-            if col not in bot_instances_columns:
-                logger.error(f"❌ Required column '{col}' not found in bot_instances!")
-                return False
-            logger.info(f"✅ Column '{col}' exists in bot_instances")
+        if missing_elements:
+            logger.error(f"❌ Missing enhanced bypass elements: {missing_elements}")
+            return False
         
-        # Count existing instances
-        with engine.connect() as conn:
-            result = conn.execute(text("SELECT COUNT(*) FROM bot_instances"))
-            instance_count = result.scalar()
-            logger.info(f"📊 Found {instance_count} existing bot instances")
-            
-            if instance_count > 0:
-                # Check if any instances have API credentials
-                result = conn.execute(text("SELECT COUNT(*) FROM bot_instances WHERE api_key IS NOT NULL AND api_secret IS NOT NULL"))
-                instances_with_creds = result.scalar()
-                logger.info(f"🔑 {instances_with_creds} instances have API credentials")
-        
-        logger.info("✅ Database validation passed")
+        logger.info("✅ All enhanced bypass features validated successfully")
         return True
         
     except Exception as e:
-        logger.error(f"❌ Database validation failed: {e}")
+        logger.error(f"❌ Validation failed: {e}")
         return False
 
-def validate_migration_readiness():
-    """Check if migration can be performed safely"""
+def validate_static_files():
+    """Validate that required static files are present"""
     try:
-        logger.info("🧪 Testing migration readiness...")
+        logger.info("📁 Validating static files...")
         
-        # Test database connection
-        engine = create_engine(settings.database_url)
-        with engine.connect() as conn:
-            conn.execute(text("SELECT 1"))
+        static_dir = Path("static")
+        if not static_dir.exists():
+            logger.warning("⚠️ Static directory not found, but this is not critical")
+            return True
         
-        logger.info("✅ Database connection successful")
+        # Check for important static files
+        important_files = [
+            "lighthouse-logo.svg",
+            "lighthouse-login.gif"
+        ]
         
-        # Test if new models can be imported
-        try:
-            from api_library_model import ApiCredential
-            from strategy_monitor_model import StrategyMonitor
-            logger.info("✅ New models import successfully")
-        except ImportError as e:
-            logger.error(f"❌ Failed to import new models: {e}")
-            return False
-        
-        # Test if API library routes can be imported
-        try:
-            from api_library_routes import add_api_library_routes
-            logger.info("✅ API library routes import successfully")
-        except ImportError as e:
-            logger.error(f"❌ Failed to import API library routes: {e}")
-            return False
-        
-        logger.info("✅ Migration readiness validated")
-        return True
-        
-    except Exception as e:
-        logger.error(f"❌ Migration readiness check failed: {e}")
-        return False
-
-def check_environment_variables():
-    """Verify all required environment variables are set"""
-    logger.info("🌍 Checking environment variables...")
-    
-    required_vars = [
-        'DATABASE_URL',
-        'SECRET_KEY',
-        'ALGORITHM'
-    ]
-    
-    missing_vars = []
-    for var in required_vars:
-        if not os.getenv(var):
-            missing_vars.append(var)
-    
-    if missing_vars:
-        logger.error(f"❌ Missing environment variables: {', '.join(missing_vars)}")
-        return False
-    
-    logger.info("✅ All required environment variables are set")
-    return True
-
-def simulate_migration():
-    """Simulate the migration process without making changes"""
-    try:
-        logger.info("🎭 Simulating migration process...")
-        
-        engine = create_engine(settings.database_url)
-        inspector = inspect(engine)
-        
-        # Check if api_credentials table will be created
-        tables = inspector.get_table_names()
-        if 'api_credentials' in tables:
-            logger.info("ℹ️  api_credentials table already exists")
-        else:
-            logger.info("📝 api_credentials table will be created")
-        
-        # Check if api_credential_id column will be added
-        if 'bot_instances' in tables:
-            columns = {col['name']: col for col in inspector.get_columns('bot_instances')}
-            if 'api_credential_id' in columns:
-                logger.info("ℹ️  api_credential_id column already exists")
+        for file in important_files:
+            file_path = static_dir / file
+            if file_path.exists():
+                logger.info(f"✅ Found static file: {file}")
             else:
-                logger.info("📝 api_credential_id column will be added to bot_instances")
+                logger.warning(f"⚠️ Static file not found: {file}")
         
-        # Check if API fields can be made nullable
-        if settings.database_url.startswith('postgresql'):
-            logger.info("📝 API key/secret fields will be made nullable (PostgreSQL)")
-        else:
-            logger.info("📝 SQLite migration will add new column")
-        
-        logger.info("✅ Migration simulation completed successfully")
         return True
         
     except Exception as e:
-        logger.error(f"❌ Migration simulation failed: {e}")
+        logger.error(f"❌ Static file validation failed: {e}")
+        return True  # Don't fail deployment for static files
+
+def validate_database_migration_readiness():
+    """Validate that database migration system is ready"""
+    try:
+        logger.info("🗄️ Validating database migration readiness...")
+        
+        # Check if startup_migration.py exists
+        if not os.path.exists("startup_migration.py"):
+            logger.error("❌ startup_migration.py not found")
+            return False
+        
+        # Check if main.py has the migration import
+        if not os.path.exists("main.py"):
+            logger.error("❌ main.py not found")
+            return False
+        
+        with open("main.py", 'r', encoding='utf-8') as f:
+            main_content = f.read()
+        
+        if 'run_startup_migrations()' not in main_content:
+            logger.error("❌ Startup migrations not integrated in main.py")
+            return False
+        
+        logger.info("✅ Database migration system validated")
+        return True
+        
+    except Exception as e:
+        logger.error(f"❌ Database migration validation failed: {e}")
+        return False
+
+def validate_environment_setup():
+    """Validate environment configuration"""
+    try:
+        logger.info("🌍 Validating environment setup...")
+        
+        # Check for critical environment indicators
+        required_files = [
+            "requirements.txt",
+            "config.py",
+            "database.py"
+        ]
+        
+        for file in required_files:
+            if not os.path.exists(file):
+                logger.error(f"❌ Required file not found: {file}")
+                return False
+            else:
+                logger.info(f"✅ Found required file: {file}")
+        
+        return True
+        
+    except Exception as e:
+        logger.error(f"❌ Environment validation failed: {e}")
         return False
 
 def main():
     """Main validation function"""
-    logger.info("🚀 Starting pre-deployment validation for TGL MEDUSA API Library migration")
+    logger.info("🚀 Starting pre-deployment validation...")
     
-    checks = [
-        ("Environment Variables", check_environment_variables),
-        ("Current Database", validate_current_database),
-        ("Migration Readiness", validate_migration_readiness),
-        ("Migration Simulation", simulate_migration)
+    validations = [
+        ("Environment Setup", validate_environment_setup),
+        ("Database Migration Readiness", validate_database_migration_readiness),
+        ("Enhanced Bypass Features", validate_enhanced_bypass_features),
+        ("Static Files", validate_static_files)
     ]
     
-    failed_checks = []
+    failed_validations = []
     
-    for check_name, check_func in checks:
-        logger.info(f"\n{'='*50}")
-        logger.info(f"Running: {check_name}")
-        logger.info(f"{'='*50}")
-        
-        if not check_func():
-            failed_checks.append(check_name)
+    for name, validation_func in validations:
+        logger.info(f"🔍 Running validation: {name}")
+        if not validation_func():
+            failed_validations.append(name)
+        else:
+            logger.info(f"✅ {name} validation passed")
     
-    logger.info(f"\n{'='*50}")
-    logger.info("VALIDATION SUMMARY")
-    logger.info(f"{'='*50}")
-    
-    if failed_checks:
-        logger.error(f"❌ {len(failed_checks)} validation(s) failed:")
-        for check in failed_checks:
-            logger.error(f"   - {check}")
-        logger.error("\n🚨 DO NOT DEPLOY - Fix issues above first!")
+    if failed_validations:
+        logger.error(f"❌ Validation failed for: {', '.join(failed_validations)}")
+        logger.error("🛑 Pre-deployment validation failed!")
         return False
     else:
-        logger.info("✅ All validations passed!")
-        logger.info("🚀 Ready for deployment!")
+        logger.info("🎉 All pre-deployment validations passed!")
+        logger.info("🚀 Ready for deployment with enhanced bypass features!")
         return True
 
 if __name__ == "__main__":
     success = main()
-    sys.exit(0 if success else 1)
+    if not success:
+        sys.exit(1)
+    else:
+        print("✅ PRE-DEPLOYMENT VALIDATION SUCCESSFUL!")

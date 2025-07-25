@@ -1,0 +1,408 @@
+{% extends "base.html" %}
+
+{% block title %}New Instance - TGL MEDUSA{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="fas fa-plus crypto-icon"></i>
+        Create New Bot Instance
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <a href="/instances" class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i>
+                Back to Instances
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-cog"></i>
+                    Instance Configuration
+                </h6>
+            </div>
+            <div class="card-body">
+                <form id="instance-form" action="/api/instances" method="post">
+                    <!-- Basic Information -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="name" class="form-label">Instance Name *</label>
+                            <input type="text" class="form-control" id="name" name="name" required 
+                                   placeholder="e.g., BTC-USDT-Grid-Bot">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="exchange" class="form-label">Exchange *</label>
+                            <select class="form-select" id="exchange" name="exchange" required>
+                                <option value="">Select Exchange</option>
+                                <option value="binance">Binance Futures</option>
+                                <option value="bybit">Bybit</option>
+                                <option value="okx">OKX</option>
+                                <option value="kucoin">KuCoin</option>
+                                <option value="mexc">MEXC</option>
+                                <option value="gateio">Gate.io</option>
+                                <option value="coinbasepro">Coinbase Pro</option>
+                                <option value="bitfinex">Bitfinex</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="market_type" class="form-label">Market Type</label>
+                            <select class="form-select" id="market_type" name="market_type">
+                                <option value="unified">Unified (Spot + Futures)</option>
+                                <option value="spot">Spot Trading</option>
+                                <option value="futures">Futures Trading</option>
+                            </select>
+                            <small class="form-text text-muted">Bybit unified allows both spot and futures trading</small>
+                        </div>
+                    </div>
+                    
+                    <!-- Trading Pair Configuration -->
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <label for="trading_pair" class="form-label">Trading Pair *</label>
+                            <input type="text" class="form-control" id="trading_pair" name="trading_pair" required 
+                                   placeholder="e.g., BTC/USDT, ETH/USDT">
+                            <small class="form-text text-muted">The specific trading pair to monitor (e.g., BTC/USDT)</small>
+                        </div>
+                    </div>
+
+                    <!-- API Configuration -->
+                    <h5 class="mb-3">
+                        <i class="fas fa-key"></i>
+                        API Configuration
+                    </h5>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" id="use_library" name="api_source" value="library" checked>
+                                <label class="form-check-label" for="use_library">
+                                    <strong>Use API from Library</strong> (Recommended)
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" id="use_direct" name="api_source" value="direct">
+                                <label class="form-check-label" for="use_direct">
+                                    <strong>Enter API Credentials Directly</strong>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- API Library Selection -->
+                    <div id="api_library_section" class="mb-3">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <label for="api_credential_id" class="form-label">Select API Credential</label>
+                                <select class="form-control" id="api_credential_id" name="api_credential_id">
+                                    <option value="">Loading available APIs...</option>
+                                </select>
+                                <small class="form-text text-muted">Only showing available API credentials for the selected exchange</small>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">&nbsp;</label>
+                                <div>
+                                    <a href="/api-library" target="_blank" class="btn btn-outline-info btn-sm">
+                                        <i class="fas fa-plus"></i> Manage API Library
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Direct API Input -->
+                    <div id="direct_api_section" style="display: none;">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="api_key" class="form-label">API Key *</label>
+                                <input type="text" class="form-control" id="api_key" name="api_key" 
+                                       placeholder="Your exchange API key">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="api_secret" class="form-label">API Secret *</label>
+                                <input type="password" class="form-control" id="api_secret" name="api_secret" 
+                                       placeholder="Your exchange API secret">
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="api_passphrase" class="form-label">API Passphrase</label>
+                                <input type="password" class="form-control" id="api_passphrase" name="api_passphrase" 
+                                       placeholder="Required for some exchanges (OKX, KuCoin)">
+                                <small class="form-text text-muted">Only required for OKX and KuCoin</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="polling_interval" class="form-label">Polling Interval (seconds)</label>
+                                <input type="number" class="form-control" id="polling_interval" name="polling_interval" 
+                                       value="60" min="30" max="300">
+                                <small class="form-text text-muted">How often to check for changes (30-300 seconds)</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Strategy Selection -->
+                    <h5 class="mb-3">
+                        <i class="fas fa-brain"></i>
+                        Strategy Selection
+                    </h5>
+                    <div class="mb-3">
+                        <label class="form-label">Select Strategies to Monitor</label>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="DCA" id="strategy-dca">
+                                    <label class="form-check-label" for="strategy-dca">
+                                        DCA (Dollar Cost Average)
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="Grid" id="strategy-grid">
+                                    <label class="form-check-label" for="strategy-grid">
+                                        Grid Trading
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="Combo" id="strategy-combo">
+                                    <label class="form-check-label" for="strategy-combo">
+                                        Combo Strategy
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="Loop" id="strategy-loop">
+                                    <label class="form-check-label" for="strategy-loop">
+                                        Loop Strategy
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="BTD" id="strategy-btd">
+                                    <label class="form-check-label" for="strategy-btd">
+                                        BTD (Buy The Dip)
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="DCA Futures" id="strategy-dca-futures">
+                                    <label class="form-check-label" for="strategy-dca-futures">
+                                        DCA Futures
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="AIS Assisted" id="strategy-ais">
+                                    <label class="form-check-label" for="strategy-ais">
+                                        AIS Assisted
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <small class="form-text text-muted">Leave all unchecked to monitor all strategies</small>
+                    </div>
+
+                    <!-- Notification Configuration -->
+                    <h5 class="mb-3">
+                        <i class="fas fa-bell"></i>
+                        Notification Configuration
+                    </h5>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="webhook_url" class="form-label">Webhook URL</label>
+                            <input type="url" class="form-control" id="webhook_url" name="webhook_url" 
+                                   placeholder="https://your-webhook-endpoint.com/webhook">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="telegram_bot_token" class="form-label">Telegram Bot Token</label>
+                            <input type="text" class="form-control" id="telegram_bot_token" name="telegram_bot_token" 
+                                   placeholder="123456789:ABCdefGHIjklMNOpqrsTUVwxyz">
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="telegram_chat_id" class="form-label">Telegram Chat ID</label>
+                            <input type="text" class="form-control" id="telegram_chat_id" name="telegram_chat_id" 
+                                   placeholder="-1001234567890">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="telegram_topic_id" class="form-label">Telegram Topic ID (Optional)</label>
+                            <input type="text" class="form-control" id="telegram_topic_id" name="telegram_topic_id" 
+                                   placeholder="123">
+                            <small class="form-text text-muted">Topic ID for threaded notifications in groups</small>
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <button type="button" class="btn btn-secondary me-md-2" onclick="window.location.href='/instances'">
+                            Cancel
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i>
+                            Create Instance
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-info">
+                    <i class="fas fa-info-circle"></i>
+                    Configuration Help
+                </h6>
+            </div>
+            <div class="card-body">
+                <h6>API Configuration</h6>
+                <p class="small">
+                    Create read-only API keys from your exchange. Never use keys with trading permissions.
+                </p>
+
+                <h6>Strategy Detection</h6>
+                <p class="small">
+                    The system will automatically detect strategy types based on symbol patterns and trading behavior.
+                </p>
+
+                <h6>Polling Interval</h6>
+                <p class="small">
+                    Lower intervals provide faster notifications but may hit rate limits. 60 seconds is recommended.
+                </p>
+
+                <h6>Telegram Setup</h6>
+                <p class="small">
+                    1. Create a bot with @BotFather<br>
+                    2. Get your chat ID from @userinfobot<br>
+                    3. Add the bot to your group/channel<br>
+                    4. (Optional) Get topic ID for threaded notifications
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Toggle between API Library and Direct API input
+document.getElementById('use_library').addEventListener('change', function() {
+    if (this.checked) {
+        document.getElementById('api_library_section').style.display = 'block';
+        document.getElementById('direct_api_section').style.display = 'none';
+        // Clear direct API fields
+        document.getElementById('api_key').value = '';
+        document.getElementById('api_secret').value = '';
+        document.getElementById('api_passphrase').value = '';
+        // Make library selection required
+        document.getElementById('api_credential_id').required = true;
+        // Make direct fields not required
+        document.getElementById('api_key').required = false;
+        document.getElementById('api_secret').required = false;
+    }
+});
+
+document.getElementById('use_direct').addEventListener('change', function() {
+    if (this.checked) {
+        document.getElementById('api_library_section').style.display = 'none';
+        document.getElementById('direct_api_section').style.display = 'block';
+        // Clear library selection
+        document.getElementById('api_credential_id').value = '';
+        // Make direct fields required
+        document.getElementById('api_key').required = true;
+        document.getElementById('api_secret').required = true;
+        // Make library selection not required
+        document.getElementById('api_credential_id').required = false;
+    }
+});
+
+// Load available API credentials when exchange changes
+document.getElementById('exchange').addEventListener('change', function() {
+    const exchange = this.value;
+    loadAvailableApiCredentials(exchange);
+});
+
+function loadAvailableApiCredentials(exchange) {
+    if (!exchange) {
+        document.getElementById('api_credential_id').innerHTML = '<option value="">Select exchange first</option>';
+        return;
+    }
+    
+    const token = localStorage.getItem('access_token');
+    fetch(`/api/api-credentials/available?exchange=${exchange}`, {
+        headers: {
+            'Authorization': 'Bearer ' + token
+        }
+    })
+    .then(response => response.json())
+    .then(credentials => {
+        const select = document.getElementById('api_credential_id');
+        select.innerHTML = '<option value="">Select API Credential</option>';
+        
+        if (credentials.length === 0) {
+            select.innerHTML += '<option value="" disabled>No available API credentials for this exchange</option>';
+        } else {
+            credentials.forEach(credential => {
+                const option = document.createElement('option');
+                option.value = credential.id;
+                option.textContent = `${credential.name} (${credential.api_key})`;
+                select.appendChild(option);
+            });
+        }
+    })
+    .catch(error => {
+        console.error('Error loading API credentials:', error);
+        document.getElementById('api_credential_id').innerHTML = '<option value="">Error loading credentials</option>';
+    });
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    // Trigger change to set initial state
+    document.getElementById('use_library').dispatchEvent(new Event('change'));
+});
+
+document.getElementById('instance-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    // Collect selected strategies
+    const strategies = [];
+    document.querySelectorAll('input[type="checkbox"]:checked').forEach(checkbox => {
+        strategies.push(checkbox.value);
+    });
+    
+    // Create form data
+    const formData = new FormData(this);
+    formData.set('strategies', strategies.join(','));
+    
+    // Submit form
+    const token = localStorage.getItem('access_token');
+    fetch('/api/instances', {
+        method: 'POST',
+        headers: {
+            'Authorization': 'Bearer ' + token
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.id) {
+            alert('Instance created successfully!');
+            window.location.href = '/instances';
+        } else if (data.detail) {
+            alert('Error: ' + data.detail);
+        } else {
+            alert('Instance created successfully!');
+            window.location.href = '/instances';
+        }
+    })
+    .catch(error => {
+        alert('Error creating instance: ' + error);
+    });
+});
+</script>
+{% endblock %}

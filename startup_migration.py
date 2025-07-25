@@ -5,12 +5,378 @@ Handles PostgreSQL database migrations on application startup
 """
 
 import logging
+import os
+import re
 from sqlalchemy import create_engine, text, inspect
 from sqlalchemy.orm import sessionmaker
 from config import settings
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+def ensure_enhanced_bypass_features():
+    """
+    Automatically apply enhanced bypass features to templates and static files
+    This ensures all UI improvements are applied on fresh deployments
+    """
+    try:
+        logger.info("🎨 Applying enhanced bypass features...")
+        
+        # Template file path
+        template_path = "templates/api_library.html"
+        
+        if not os.path.exists(template_path):
+            logger.warning(f"⚠️ Template file not found: {template_path}")
+            return True  # Don't fail the migration if template is missing
+        
+        # Read current template content
+        with open(template_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        # Check if custom modal CSS is already present
+        if 'custom-modal-overlay' in content:
+            logger.info("✅ Enhanced bypass features already applied")
+            return True
+        
+        logger.info("🔧 Applying custom modal system...")
+        
+        # Apply enhanced modal system fixes
+        enhanced_content = apply_custom_modal_system(content)
+        
+        # Write back the enhanced content
+        with open(template_path, 'w', encoding='utf-8') as f:
+            f.write(enhanced_content)
+        
+        logger.info("✅ Enhanced bypass features applied successfully")
+        return True
+        
+    except Exception as e:
+        logger.error(f"❌ Failed to apply enhanced bypass features: {e}")
+        # Don't fail the entire migration for UI enhancements
+        return True
+
+def apply_custom_modal_system(content):
+    """Apply the complete custom modal system to replace Bootstrap modals"""
+    
+    # 1. Replace the modal CSS with custom modal CSS
+    css_pattern = r'/\* Simple modal styling \*/.*?\.modal \+\.form-select:focus \{[^}]+\}'
+    custom_css = '''/* Custom Modal Styling */
+.custom-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 9999;
+    display: none;
+    align-items: center;
+    justify-content: center;
+}
+
+.custom-modal-overlay.show {
+    display: flex;
+}
+
+.custom-modal {
+    background-color: var(--secondary-black);
+    border: 1px solid var(--medium-gray);
+    border-radius: 8px;
+    max-width: 90%;
+    max-height: 90%;
+    overflow-y: auto;
+    color: var(--white);
+    width: 600px;
+}
+
+.custom-modal-header {
+    padding: 1rem;
+    border-bottom: 1px solid var(--medium-gray);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.custom-modal-header h5 {
+    margin: 0;
+    color: var(--white);
+}
+
+.custom-modal-body {
+    padding: 1rem;
+}
+
+.custom-modal-footer {
+    padding: 1rem;
+    border-top: 1px solid var(--medium-gray);
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    color: var(--white);
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 0;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.close-btn:hover {
+    color: var(--accent-blue);
+}
+
+.custom-modal .form-control, .custom-modal .form-select {
+    background-color: var(--secondary-black);
+    border: 1px solid var(--medium-gray);
+    color: var(--white);
+}
+
+.custom-modal .form-control:focus, .custom-modal .form-select:focus {
+    background-color: var(--secondary-black);
+    color: var(--white);
+    border-color: var(--accent-blue);
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}'''
+    
+    content = re.sub(css_pattern, custom_css, content, flags=re.DOTALL)
+    
+    # 2. Replace Bootstrap modal trigger buttons
+    content = content.replace(
+        'data-bs-toggle="modal" data-bs-target="#createCredentialModal"',
+        'onclick="showCustomModal()"'
+    )
+    
+    # 3. Replace create modal HTML structure
+    create_modal_pattern = r'<!-- Create API Credential Modal -->.*?</div>\s*</div>\s*</div>'
+    create_modal_replacement = '''<!-- Custom Create API Credential Modal -->
+<div class="custom-modal-overlay" id="createCredentialModal">
+    <div class="custom-modal">
+        <div class="custom-modal-header">
+            <h5>Add API Credential</h5>
+            <button type="button" class="close-btn" onclick="hideCustomModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <form id="createCredentialForm">
+            <div class="custom-modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="createName" class="form-label">Name</label>
+                            <input type="text" class="form-control" id="createName" name="name" required>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="createExchange" class="form-label">Exchange</label>
+                            <select class="form-select" id="createExchange" name="exchange" required>
+                                <option value="">Select Exchange</option>
+                                <option value="binance">Binance</option>
+                                <option value="bybit">Bybit</option>
+                                <option value="kucoin">KuCoin</option>
+                                <option value="okx">OKX</option>
+                                <option value="bitget">Bitget</option>
+                                <option value="gate">Gate.io</option>
+                                <option value="mexc">MEXC</option>
+                                <option value="huobi">Huobi</option>
+                                <option value="coinbase">Coinbase Pro</option>
+                                <option value="kraken">Kraken</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="createApiKey" class="form-label">API Key</label>
+                            <input type="text" class="form-control" id="createApiKey" name="api_key" required>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="createApiSecret" class="form-label">API Secret</label>
+                            <input type="password" class="form-control" id="createApiSecret" name="api_secret" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="createPassphrase" class="form-label">Passphrase (Optional)</label>
+                            <input type="password" class="form-control" id="createPassphrase" name="passphrase">
+                            <small class="form-text text-muted">Required for some exchanges like OKX, KuCoin</small>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="createTestnet" class="form-label">Environment</label>
+                            <select class="form-select" id="createTestnet" name="testnet">
+                                <option value="false">Mainnet</option>
+                                <option value="true">Testnet</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label for="createDescription" class="form-label">Description (Optional)</label>
+                    <textarea class="form-control" id="createDescription" name="description" rows="2"></textarea>
+                </div>
+            </div>
+            <div class="custom-modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="hideCustomModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Create API Credential</button>
+            </div>
+        </form>
+    </div>
+</div>'''
+    
+    content = re.sub(create_modal_pattern, create_modal_replacement, content, flags=re.DOTALL)
+    
+    # 4. Replace edit modal HTML structure
+    edit_modal_pattern = r'<!-- Edit API Credential Modal -->.*?</form>\s*</div>\s*</div>\s*</div>'
+    edit_modal_replacement = '''<!-- Edit API Credential Modal -->
+<div class="custom-modal-overlay" id="editCredentialModal">
+    <div class="custom-modal">
+        <div class="custom-modal-header">
+            <h5>Edit API Credential</h5>
+            <button type="button" class="close-btn" onclick="hideEditModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <form id="editCredentialForm">
+            <div class="custom-modal-body">
+                <input type="hidden" id="editCredentialId" name="credential_id">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="editName" class="form-label">Name</label>
+                            <input type="text" class="form-control" id="editName" name="name" required>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="editExchange" class="form-label">Exchange</label>
+                            <select class="form-select" id="editExchange" name="exchange" required>
+                                <option value="binance">Binance</option>
+                                <option value="bybit">Bybit</option>
+                                <option value="kucoin">KuCoin</option>
+                                <option value="okx">OKX</option>
+                                <option value="bitget">Bitget</option>
+                                <option value="gate">Gate.io</option>
+                                <option value="mexc">MEXC</option>
+                                <option value="huobi">Huobi</option>
+                                <option value="coinbase">Coinbase Pro</option>
+                                <option value="kraken">Kraken</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="editTestnet" class="form-label">Environment</label>
+                            <select class="form-select" id="editTestnet" name="testnet">
+                                <option value="false">Mainnet</option>
+                                <option value="true">Testnet</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="editDescription" class="form-label">Description</label>
+                            <textarea class="form-control" id="editDescription" name="description" rows="2"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="custom-modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="hideEditModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>'''
+    
+    content = re.sub(edit_modal_pattern, edit_modal_replacement, content, flags=re.DOTALL)
+    
+    # 5. Update JavaScript to use custom modal functions
+    js_pattern = r'// Load credentials on page load and handle modal events.*?document\.addEventListener\(\'DOMContentLoaded\'[^}]+\}\);'
+    js_replacement = '''// Custom modal functions
+function showCustomModal() {
+    document.getElementById('createCredentialForm').reset();
+    document.getElementById('createCredentialModal').classList.add('show');
+}
+
+function hideCustomModal() {
+    document.getElementById('createCredentialModal').classList.remove('show');
+}
+
+function hideEditModal() {
+    document.getElementById('editCredentialModal').classList.remove('show');
+}
+
+// Close modal when clicking overlay
+document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('custom-modal-overlay')) {
+        if (e.target.id === 'createCredentialModal') {
+            hideCustomModal();
+        } else if (e.target.id === 'editCredentialModal') {
+            hideEditModal();
+        }
+    }
+});
+
+// Close modal with Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        const createModal = document.getElementById('createCredentialModal');
+        const editModal = document.getElementById('editCredentialModal');
+        if (createModal && createModal.classList.contains('show')) {
+            hideCustomModal();
+        } else if (editModal && editModal.classList.contains('show')) {
+            hideEditModal();
+        }
+    }
+});
+
+// Load credentials on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadCredentials();
+});'''
+    
+    content = re.sub(js_pattern, js_replacement, content, flags=re.DOTALL)
+    
+    # 6. Update form submission handlers to close modals
+    content = content.replace(
+        'alert(data.message);\n                location.reload();',
+        'hideCustomModal();\n                alert(data.message);\n                location.reload();'
+    )
+    
+    content = content.replace(
+        'if (data.message) {\n            alert(data.message);\n            location.reload();',
+        'if (data.message) {\n            hideEditModal();\n            alert(data.message);\n            location.reload();'
+    )
+    
+    # 7. Update edit modal trigger
+    content = content.replace(
+        'const modal = new bootstrap.Modal(document.getElementById(\'editCredentialModal\'));\n            modal.show();',
+        'document.getElementById(\'editCredentialModal\').classList.add(\'show\');'
+    )
+    
+    # 8. Update "Create one now" links
+    content = content.replace(
+        'data-bs-toggle="modal" data-bs-target="#createCredentialModal"',
+        'onclick="showCustomModal()"'
+    )
+    
+    return content
 
 def run_startup_migrations():
     """Run all necessary migrations on application startup"""
@@ -59,6 +425,11 @@ def run_startup_migrations():
                 # 5. Fix any existing api_credentials without user_id
                 if not fix_existing_api_credentials(conn, is_postgresql):
                     logger.error("❌ Failed to fix existing api_credentials")
+                    return False
+                
+                # 6. Apply enhanced bypass features to templates
+                if not ensure_enhanced_bypass_features():
+                    logger.error("❌ Failed to apply enhanced bypass features")
                     return False
                 
                 # Commit transaction
@@ -286,44 +657,9 @@ def create_default_admin_user(conn, is_postgresql):
         else:
             logger.info("✅ Default admin user already exists")
         
-        # ALWAYS ensure admin user has correct configuration (AGGRESSIVE FIX)
-        logger.info("🔧 Ensuring admin user has correct configuration for simple login...")
-        
-        # Get correct password hash for verification
-        correct_hash = '$2b$12$AMiPtvZPRSrPlnJ8F4m6/ehwl25HJ5XupSRJ5Jar0PBzmuhIMfqCO'
-        
-        if is_postgresql:
-            # Force update admin user to ensure correct state
-            conn.execute(text("""
-                UPDATE users 
-                SET hashed_password = :hash,
-                    private_key_hash = NULL,
-                    passphrase_hash = NULL,
-                    totp_secret = NULL,
-                    totp_enabled = FALSE,
-                    needs_security_setup = TRUE,
-                    is_superuser = TRUE,
-                    is_active = TRUE
-                WHERE email = 'admin@tarstrategies.com';
-            """), {'hash': correct_hash})
-        else:
-            # Force update admin user to ensure correct state
-            conn.execute(text("""
-                UPDATE users 
-                SET hashed_password = ?,
-                    private_key_hash = NULL,
-                    passphrase_hash = NULL,
-                    totp_secret = NULL,
-                    totp_enabled = 0,
-                    needs_security_setup = 1,
-                    is_superuser = 1,
-                    is_active = 1
-                WHERE email = 'admin@tarstrategies.com';
-            """), (correct_hash,))
-        
-        logger.info("✅ FORCED admin user configuration update completed")
-        logger.info("🔑 Admin user guaranteed to work with: admin@tarstrategies.com / admin123")
-        logger.info("⚠️  All additional security cleared - simple email/password login enabled")
+        # Skip admin user update for now - enhanced bypass features are the priority
+        logger.info("✅ Admin user exists - enhanced bypass features are primary focus")
+        logger.info("🔑 Login available with existing credentials")
         
         return True
         
