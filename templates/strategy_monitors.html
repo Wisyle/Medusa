@@ -85,6 +85,21 @@
                         // Clear URL parameter
                         window.history.replaceState({}, document.title, window.location.pathname);
                     }
+                    
+                    const errorParam = urlParams.get('error');
+                    if (errorParam) {
+                        const alert = document.createElement('div');
+                        alert.className = 'alert alert-danger alert-dismissible fade show';
+                        alert.innerHTML = `
+                            <i class="fas fa-exclamation-triangle"></i>
+                            ${errorParam}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        `;
+                        document.querySelector('.container .col-md-12').insertBefore(alert, document.querySelector('.card'));
+                        
+                        // Clear URL parameter
+                        window.history.replaceState({}, document.title, window.location.pathname);
+                    }
                 });
             </script>
             
@@ -503,36 +518,8 @@ document.getElementById('editMonitorForm').addEventListener('submit', function(e
 document.addEventListener('DOMContentLoaded', function() {
     loadStrategyMonitors();
     
-    // Add form submission handler for create monitor form
-    const createForm = document.querySelector('form[action="/strategy-monitors"]');
-    if (createForm) {
-        createForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const formData = new FormData(this);
-            const token = localStorage.getItem('access_token');
-            
-            fetch('/strategy-monitors', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                },
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.message) {
-                    showErrorMessage(data.message, 'success');
-                    this.reset(); // Clear the form
-                    setTimeout(() => loadStrategyMonitors(), 1000); // Reload monitors
-                }
-            })
-            .catch(error => {
-                console.error('Error creating monitor:', error);
-                showErrorMessage('Failed to create strategy monitor');
-            });
-        });
-    }
+    // Remove form submission handler for create monitor form - let it use normal form submission
+    // The form will use the normal POST action to /strategy-monitors
 });
 
 function loadStrategyMonitors() {

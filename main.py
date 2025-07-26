@@ -1650,6 +1650,9 @@ async def monitor_instances():
 @app.get("/strategy-monitors", response_class=HTMLResponse)
 async def strategy_monitors_page(request: Request, current_user: User = Depends(get_current_user_html), db: Session = Depends(get_db)):
     """Strategy monitors management page"""
+    # Get existing monitors
+    monitors = db.query(StrategyMonitor).order_by(StrategyMonitor.strategy_name).all()
+    
     # Get available strategies from active instances
     instances = db.query(BotInstance).filter(BotInstance.is_active == True).all()
     all_strategies = set()
@@ -1660,6 +1663,7 @@ async def strategy_monitors_page(request: Request, current_user: User = Depends(
     return templates.TemplateResponse("strategy_monitors.html", {
         "request": request, 
         "current_user": current_user,
+        "monitors": monitors,
         "available_strategies": sorted(all_strategies)
     })
 
@@ -1675,6 +1679,7 @@ async def create_strategy_monitor(
     include_trades: bool = Form(True),
     include_pnl: bool = Form(True),
     max_recent_positions: int = Form(20),
+    current_user: User = Depends(get_current_user_html),
     db: Session = Depends(get_db)
 ):
     """Create new strategy monitor"""
@@ -1682,7 +1687,7 @@ async def create_strategy_monitor(
     # Check if monitor already exists
     existing = db.query(StrategyMonitor).filter(StrategyMonitor.strategy_name == strategy_name).first()
     if existing:
-        raise HTTPException(status_code=400, detail=f"Monitor for strategy '{strategy_name}' already exists")
+        return RedirectResponse(url=f"/strategy-monitors?error=Monitor for strategy '{strategy_name}' already exists", status_code=303)
     
     # Validate strategy exists in active instances
     instances = db.query(BotInstance).filter(BotInstance.is_active == True).all()
@@ -1693,27 +1698,33 @@ async def create_strategy_monitor(
             break
     
     if not strategy_exists:
-        raise HTTPException(status_code=400, detail=f"Strategy '{strategy_name}' not found in any active instances")
+        return RedirectResponse(url=f"/strategy-monitors?error=Strategy '{strategy_name}' not found in any active instances", status_code=303)
     
-    monitor = StrategyMonitor(
-        strategy_name=strategy_name,
-        telegram_bot_token=telegram_bot_token,
-        telegram_chat_id=telegram_chat_id,
-        telegram_topic_id=telegram_topic_id if telegram_topic_id else None,
-        report_interval=report_interval,
-        include_positions=include_positions,
-        include_orders=include_orders,
-        include_trades=include_trades,
-        include_pnl=include_pnl,
-        max_recent_positions=max_recent_positions,
-        is_active=True
-    )
-    
-    db.add(monitor)
-    db.commit()
-    db.refresh(monitor)
-    
-    return {"message": f"Strategy monitor created for '{strategy_name}'", "id": monitor.id}
+    try:
+        monitor = StrategyMonitor(
+            strategy_name=strategy_name,
+            telegram_bot_token=telegram_bot_token,
+            telegram_chat_id=telegram_chat_id,
+            telegram_topic_id=telegram_topic_id if telegram_topic_id else None,
+            report_interval=report_interval,
+            include_positions=include_positions,
+            include_orders=include_orders,
+            include_trades=include_trades,
+            include_pnl=include_pnl,
+            max_recent_positions=max_recent_positions,
+            is_active=True
+        )
+        
+        db.add(monitor)
+        db.commit()
+        db.refresh(monitor)
+        
+        # Redirect to strategy monitors page with success message
+        return RedirectResponse(url="/strategy-monitors?success=created", status_code=303)
+        
+    except Exception as e:
+        db.rollback()
+        return RedirectResponse(url=f"/strategy-monitors?error=Failed to create monitor: {str(e)}", status_code=303)
 
 @app.put("/strategy-monitors/{monitor_id}")
 async def update_strategy_monitor(
