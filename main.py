@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+# TAR Global Strategies - Lighthouse Trading Bot Platform
+# Balance tracking and notifications enabled
 from fastapi import FastAPI, Depends, HTTPException, Request, Form, status, WebSocket, WebSocketDisconnect, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -15,10 +18,9 @@ import logging
 from contextlib import asynccontextmanager
 from sqlalchemy import text
 
-# Import migration system
-from startup_migration import run_startup_migrations
+# Smart migration system integrated directly
 
-from database import get_db, init_db, BotInstance, ActivityLog, ErrorLog, User, BalanceHistory
+from database import get_db, init_db, BotInstance, ActivityLog, ErrorLog, User, BalanceHistory, SessionLocal, engine
 from api_library_model import ApiCredential
 from polling import run_poller
 from config import settings
@@ -38,6 +40,120 @@ logger = logging.getLogger(__name__)
 # Migrations are now optional - controlled by RUN_MIGRATIONS env var
 # This allows for faster deployments by default
 
+async def run_smart_migrations():
+    """Smart migration system that only applies missing changes"""
+    try:
+        from sqlalchemy import text, inspect
+        
+        logger.info("🔍 Checking database schema...")
+        
+        # Create inspector to check existing structure
+        inspector = inspect(engine)
+        
+        # Check if we're using PostgreSQL or SQLite
+        is_postgresql = str(engine.url).startswith('postgresql')
+        logger.info(f"📊 Database type: {'PostgreSQL' if is_postgresql else 'SQLite'}")
+        
+        db = SessionLocal()
+        migration_success = True
+        
+        try:
+            # 1. Check and add balance_enabled column to bot_instances
+            if 'bot_instances' in inspector.get_table_names():
+                columns = [col['name'] for col in inspector.get_columns('bot_instances')]
+                
+                if 'balance_enabled' not in columns:
+                    logger.info("➕ Adding balance_enabled column to bot_instances...")
+                    if is_postgresql:
+                        db.execute(text("ALTER TABLE bot_instances ADD COLUMN balance_enabled BOOLEAN DEFAULT FALSE"))
+                    else:
+                        db.execute(text("ALTER TABLE bot_instances ADD COLUMN balance_enabled BOOLEAN DEFAULT 0"))
+                    db.commit()
+                    logger.info("✅ Added balance_enabled column")
+                else:
+                    logger.info("✅ balance_enabled column already exists")
+                
+                if 'user_id' not in columns:
+                    logger.info("➕ Adding user_id column to bot_instances...")
+                    if is_postgresql:
+                        db.execute(text("ALTER TABLE bot_instances ADD COLUMN user_id INTEGER"))
+                        # Add foreign key constraint if users table exists
+                        if 'users' in inspector.get_table_names():
+                            try:
+                                db.execute(text("ALTER TABLE bot_instances ADD CONSTRAINT fk_bot_instances_user_id FOREIGN KEY (user_id) REFERENCES users (id)"))
+                            except Exception:
+                                pass  # Constraint might already exist
+                    else:
+                        db.execute(text("ALTER TABLE bot_instances ADD COLUMN user_id INTEGER"))
+                    db.commit()
+                    logger.info("✅ Added user_id column")
+                    
+                    # Assign existing instances to first user
+                    logger.info("🔧 Assigning existing instances to first user...")
+                    if 'users' in inspector.get_table_names():
+                        db.execute(text("UPDATE bot_instances SET user_id = (SELECT id FROM users ORDER BY id LIMIT 1) WHERE user_id IS NULL"))
+                        db.commit()
+                        logger.info("✅ Assigned existing instances to user")
+                else:
+                    logger.info("✅ user_id column already exists")
+            
+            # 2. Create balance_history table if it doesn't exist
+            if 'balance_history' not in inspector.get_table_names():
+                logger.info("➕ Creating balance_history table...")
+                from database import BalanceHistory
+                BalanceHistory.__table__.create(engine, checkfirst=True)
+                logger.info("✅ Created balance_history table")
+            else:
+                logger.info("✅ balance_history table already exists")
+            
+            # 3. Ensure users table exists (for user isolation)
+            if 'users' not in inspector.get_table_names():
+                logger.info("➕ Creating users table...")
+                from database import User
+                User.__table__.create(engine, checkfirst=True)
+                logger.info("✅ Created users table")
+            else:
+                logger.info("✅ users table already exists")
+            
+            # 4. Check other essential tables and create if missing
+            essential_tables = [
+                ('api_credentials', 'from api_library_model import ApiCredential; ApiCredential'),
+                ('strategy_monitors', 'from strategy_monitor_model import StrategyMonitor; StrategyMonitor'),
+                ('activity_logs', 'from database import ActivityLog; ActivityLog'),
+                ('error_logs', 'from database import ErrorLog; ErrorLog')
+            ]
+            
+            for table_name, import_code in essential_tables:
+                if table_name not in inspector.get_table_names():
+                    logger.info(f"➕ Creating {table_name} table...")
+                    try:
+                        # Dynamic import and create
+                        exec(import_code.split(';')[0])
+                        model_class = eval(import_code.split(';')[1])
+                        model_class.__table__.create(engine, checkfirst=True)
+                        logger.info(f"✅ Created {table_name} table")
+                    except Exception as e:
+                        logger.warning(f"⚠️ Could not create {table_name}: {e}")
+                else:
+                    logger.info(f"✅ {table_name} table already exists")
+            
+            db.commit()
+            logger.info("🎉 Smart migration completed successfully!")
+            return True
+            
+        except Exception as e:
+            logger.error(f"❌ Migration error: {e}")
+            db.rollback()
+            migration_success = False
+        finally:
+            db.close()
+            
+        return migration_success
+        
+    except Exception as e:
+        logger.error(f"❌ Smart migration failed: {e}")
+        return False
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Handle application lifespan events"""
@@ -47,17 +163,13 @@ async def lifespan(app: FastAPI):
     # Create tables first
     init_db()
     
-    # Run migrations only if explicitly enabled (for faster deployments)
-    run_migrations = os.getenv('RUN_MIGRATIONS', 'false').lower() == 'true'
-    if run_migrations:
-        logger.info("🔄 Running database migrations...")
-        success = run_startup_migrations()
-        if success:
-            logger.info("✅ Database migrations completed successfully")
-        else:
-            logger.error("❌ Database migrations failed")
+    # Smart auto-migration - only apply missing changes
+    logger.info("🔄 Running smart auto-migrations...")
+    success = await run_smart_migrations()
+    if success:
+        logger.info("✅ Smart migrations completed successfully")
     else:
-        logger.info("⏩ Skipping migrations for faster startup (set RUN_MIGRATIONS=true to enable)")
+        logger.warning("⚠️ Some migrations were skipped or failed (this may be normal)")
     
     # Start monitoring instances
     monitor_task = asyncio.create_task(monitor_instances())
