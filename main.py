@@ -35,14 +35,8 @@ from strategic_monitors import strategy_monitor
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Run automatic migrations before creating FastAPI app
-logger.info("🚀 Running automatic deployment migrations...")
-# Commenting out blocking migrations to allow fast startup
-# try:
-#     migration_success = run_startup_migrations()
-#     if not migration_success:
-#         logger.error("❌ Database migrations failed! Application cannot start.")
-#         exit(1)
+# Migrations are now optional - controlled by RUN_MIGRATIONS env var
+# This allows for faster deployments by default
 #     logger.info("✅ Database migrations completed successfully!")
 # except Exception as e:
 #     logger.error(f"❌ Migration error: {e}")

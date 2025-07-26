@@ -21,9 +21,13 @@ def initialize_strategy_monitor_system():
     try:
         logger.info("🚀 Initializing Strategy Monitor System...")
         
-        # Run database migrations first
-        logger.info("📊 Running database migrations...")
-        migrate_database()
+        # Run database migrations only if explicitly enabled
+        run_migrations = os.getenv('RUN_MIGRATIONS', 'false').lower() == 'true'
+        if run_migrations:
+            logger.info("📊 Running database migrations...")
+            migrate_database()
+        else:
+            logger.info("⏩ Skipping migrations for faster startup (set RUN_MIGRATIONS=true to enable)")
         
         # Initialize database
         logger.info("🔧 Initializing database...")
