@@ -37,11 +37,6 @@ logger = logging.getLogger(__name__)
 
 # Migrations are now optional - controlled by RUN_MIGRATIONS env var
 # This allows for faster deployments by default
-#     logger.info("✅ Database migrations completed successfully!")
-# except Exception as e:
-#     logger.error(f"❌ Migration error: {e}")
-#     logger.error("🛑 Application startup aborted due to migration failure")
-#     exit(1)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
