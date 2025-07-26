@@ -58,9 +58,14 @@ async def lifespan(app: FastAPI):
     # Create tables first
     init_db()
     
-    # Then run migrations for any new columns
-    from migration import migrate_database
-    migrate_database()
+    # Run migrations only if explicitly enabled (for faster deployments)
+    run_migrations = os.getenv('RUN_MIGRATIONS', 'false').lower() == 'true'
+    if run_migrations:
+        logger.info("🔄 Running database migrations...")
+        from migration import migrate_database
+        migrate_database()
+    else:
+        logger.info("⏩ Skipping migrations for faster startup (set RUN_MIGRATIONS=true to enable)")
     
     # Start monitoring instances
     monitor_task = asyncio.create_task(monitor_instances())
