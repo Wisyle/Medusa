@@ -953,7 +953,7 @@ def validate_instance_data(name: str, exchange: str, api_key: str, api_secret: s
         
     if not exchange or not exchange.strip():
         errors.append("Exchange is required")
-    elif exchange.strip().lower() not in ['bybit', 'binance', 'okx', 'kucoin', 'mexc', 'gate', 'coinbase', 'bitfinex']:
+    elif exchange.strip().lower() not in ['bybit', 'binance', 'okx', 'kucoin', 'mexc', 'gate', 'coinbase', 'bitfinex', 'bitget']:
         errors.append("Invalid exchange")
         
     if not api_key or not api_key.strip():

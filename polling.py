@@ -45,6 +45,13 @@ class ExchangePoller:
         if is_cloud_hosting:
             logger.info("🌐 Cloud hosting detected - using enhanced bypass methods")
         
+        exchange_name = self.instance.exchange.lower()
+        
+        # For non-Bybit exchanges, use simpler generic configurations
+        if exchange_name != 'bybit':
+            return self._init_generic_exchange()
+        
+        # Bybit-specific CloudFront bypass logic continues below...
         # Alternative DNS servers for bypass
         dns_alternatives = [
             '8.8.8.8',      # Google DNS
@@ -449,6 +456,109 @@ class ExchangePoller:
                     else:
                         self._log_error("exchange_init", str(e))
                         raise
+    
+    def _init_generic_exchange(self) -> ccxt.Exchange:
+        """Initialize non-Bybit exchanges with generic configurations"""
+        exchange_name = self.instance.exchange.lower()
+        
+        # Exchange-specific configurations
+        configs_to_try = []
+        
+        if exchange_name == 'bitget':
+            # Bitget-specific configurations
+            configs_to_try = [
+                {
+                    'apiKey': self.api_credentials['api_key'],
+                    'secret': self.api_credentials['api_secret'],
+                    'sandbox': False,
+                    'enableRateLimit': True,
+                    'headers': {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                        'Accept': 'application/json',
+                        'Accept-Language': 'en-US,en;q=0.9',
+                        'Connection': 'keep-alive'
+                    },
+                    'timeout': 30000,
+                    'rateLimit': 100
+                },
+                {
+                    'apiKey': self.api_credentials['api_key'],
+                    'secret': self.api_credentials['api_secret'],
+                    'sandbox': False,
+                    'enableRateLimit': True,
+                    'timeout': 30000,
+                    'rateLimit': 200
+                }
+            ]
+        else:
+            # Generic configurations for other exchanges
+            configs_to_try = [
+                {
+                    'apiKey': self.api_credentials['api_key'],
+                    'secret': self.api_credentials['api_secret'],
+                    'sandbox': False,
+                    'enableRateLimit': True,
+                    'headers': {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                        'Accept': 'application/json',
+                    },
+                    'timeout': 30000,
+                    'rateLimit': 100
+                },
+                {
+                    'apiKey': self.api_credentials['api_key'],
+                    'secret': self.api_credentials['api_secret'],
+                    'sandbox': False,
+                    'enableRateLimit': True,
+                    'timeout': 30000,
+                    'rateLimit': 200
+                }
+            ]
+        
+        # Add passphrase if provided (for exchanges like OKX, KuCoin)
+        for config in configs_to_try:
+            if self.api_credentials.get('api_passphrase'):
+                config['passphrase'] = self.api_credentials.get('api_passphrase')
+        
+        # Try each configuration
+        for i, config in enumerate(configs_to_try):
+            try:
+                exchange_class = getattr(ccxt, exchange_name)
+                test_exchange = exchange_class(config)
+                
+                # Load markets to test connection
+                test_exchange.load_markets()
+                
+                # Test with a common ticker (most exchanges support BTC/USDT)
+                try:
+                    test_exchange.fetch_ticker('BTC/USDT')
+                except Exception as ticker_error:
+                    # If BTC/USDT fails, try ETH/USDT
+                    try:
+                        test_exchange.fetch_ticker('ETH/USDT')
+                    except Exception:
+                        # If both fail, still continue if load_markets worked
+                        logger.warning(f"Ticker test failed for {exchange_name}, but connection established: {ticker_error}")
+                
+                logger.info(f"✅ [{exchange_name.upper()} SUCCESS] Connection established successfully (Method {i+1})")
+                return test_exchange
+                
+            except Exception as e:
+                logger.warning(f"⚠️ [{exchange_name.upper()}] Method {i+1} failed: {str(e)[:200]}")
+                if i < len(configs_to_try) - 1:
+                    continue
+                else:
+                    logger.error(f"❌ [{exchange_name.upper()}] All connection methods failed")
+                    self._log_error("exchange_init", f"Failed to initialize {exchange_name}: {e}")
+                    
+                    # Provide helpful error message
+                    error_msg = str(e).lower()
+                    if 'invalid api' in error_msg or 'authentication' in error_msg or 'signature' in error_msg:
+                        raise Exception(f"Invalid API credentials for {exchange_name.title()}. Please check your API key, secret, and passphrase (if required).")
+                    elif 'permission' in error_msg or 'not allowed' in error_msg:
+                        raise Exception(f"API key permissions insufficient for {exchange_name.title()}. Please ensure your API key has trading permissions enabled.")
+                    else:
+                        raise Exception(f"Failed to connect to {exchange_name.title()}: {e}")
     
     def _init_telegram(self) -> Optional[Bot]:
         """Initialize Telegram bot"""
