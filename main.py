@@ -916,8 +916,8 @@ async def broadcast_message(message: dict, current_user: User = Depends(get_curr
 
 @app.get("/api/instances")
 async def get_instances(db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
-    """Get all bot instances"""
-    instances = db.query(BotInstance).all()
+    """Get bot instances for current user"""
+    instances = db.query(BotInstance).filter(BotInstance.user_id == current_user.id).all()
     return [
         {
             "id": instance.id,
@@ -1043,6 +1043,7 @@ async def create_instance(
         # Create instance based on API source
         if api_source == "library":
             instance = BotInstance(
+                user_id=current_user.id,
                 name=name.strip(),
                 exchange=exchange.strip(),
                 market_type=market_type.strip(),
@@ -1060,6 +1061,7 @@ async def create_instance(
             )
         else:
             instance = BotInstance(
+                user_id=current_user.id,
                 name=name.strip(),
                 exchange=exchange.strip(),
                 market_type=market_type.strip(),
@@ -1105,7 +1107,10 @@ def _run_poller_sync(instance_id: int):
 @app.post("/api/instances/{instance_id}/start")
 async def start_instance(instance_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
     """Start bot instance"""
-    instance = db.query(BotInstance).filter(BotInstance.id == instance_id).first()
+    instance = db.query(BotInstance).filter(
+        BotInstance.id == instance_id,
+        BotInstance.user_id == current_user.id
+    ).first()
     if not instance:
         raise HTTPException(status_code=404, detail="Instance not found")
     
@@ -1125,7 +1130,10 @@ async def start_instance(instance_id: int, db: Session = Depends(get_db), curren
 @app.post("/api/instances/{instance_id}/stop")
 async def stop_instance(instance_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
     """Stop bot instance"""
-    instance = db.query(BotInstance).filter(BotInstance.id == instance_id).first()
+    instance = db.query(BotInstance).filter(
+        BotInstance.id == instance_id,
+        BotInstance.user_id == current_user.id
+    ).first()
     if not instance:
         raise HTTPException(status_code=404, detail="Instance not found")
     
@@ -1145,7 +1153,10 @@ async def stop_instance(instance_id: int, db: Session = Depends(get_db), current
 @app.delete("/api/instances/{instance_id}")
 async def delete_instance(instance_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
     """Delete bot instance"""
-    instance = db.query(BotInstance).filter(BotInstance.id == instance_id).first()
+    instance = db.query(BotInstance).filter(
+        BotInstance.id == instance_id,
+        BotInstance.user_id == current_user.id
+    ).first()
     if not instance:
         raise HTTPException(status_code=404, detail="Instance not found")
     
@@ -1179,7 +1190,10 @@ async def update_instance(
     current_user: User = Depends(get_current_active_user)
 ):
     """Update bot instance"""
-    instance = db.query(BotInstance).filter(BotInstance.id == instance_id).first()
+    instance = db.query(BotInstance).filter(
+        BotInstance.id == instance_id,
+        BotInstance.user_id == current_user.id
+    ).first()
     if not instance:
         raise HTTPException(status_code=404, detail="Instance not found")
     

@@ -470,6 +470,7 @@ class ExchangePoller:
                 {
                     'apiKey': self.api_credentials['api_key'],
                     'secret': self.api_credentials['api_secret'],
+                    'password': self.api_credentials.get('api_passphrase', ''),  # Bitget uses 'password' field
                     'sandbox': False,
                     'enableRateLimit': True,
                     'headers': {
@@ -484,6 +485,7 @@ class ExchangePoller:
                 {
                     'apiKey': self.api_credentials['api_key'],
                     'secret': self.api_credentials['api_secret'],
+                    'password': self.api_credentials.get('api_passphrase', ''),  # Bitget uses 'password' field
                     'sandbox': False,
                     'enableRateLimit': True,
                     'timeout': 30000,
@@ -832,7 +834,35 @@ class ExchangePoller:
             if self.instance.last_poll:
                 since = int(self.instance.last_poll.timestamp() * 1000)
             
-            return self.exchange.fetch_my_trades(since=since)
+            # Handle exchanges that require symbol parameter (like Bitget)
+            exchange_name = self.instance.exchange.lower()
+            if exchange_name == 'bitget':
+                # Bitget requires symbol parameter, so we need to get trades for specific symbols
+                all_trades = []
+                
+                # If trading_pair is specified, use it
+                if self.instance.trading_pair:
+                    try:
+                        trades = self.exchange.fetch_my_trades(symbol=self.instance.trading_pair, since=since)
+                        all_trades.extend(trades)
+                    except Exception as e:
+                        logger.warning(f"Failed to fetch trades for {self.instance.trading_pair}: {e}")
+                else:
+                    # Get trades for common pairs if no specific pair is set
+                    common_symbols = ['BTC/USDT', 'ETH/USDT', 'BNB/USDT', 'SOL/USDT']
+                    for symbol in common_symbols:
+                        try:
+                            trades = self.exchange.fetch_my_trades(symbol=symbol, since=since)
+                            all_trades.extend(trades)
+                        except Exception as e:
+                            # Ignore errors for symbols that don't exist or aren't traded
+                            continue
+                
+                return all_trades
+            else:
+                # For other exchanges, use the standard method
+                return self.exchange.fetch_my_trades(since=since)
+                
         except Exception as e:
             self._log_error("fetch_recent_trades", str(e))
             return []

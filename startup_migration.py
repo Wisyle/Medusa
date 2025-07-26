@@ -471,9 +471,19 @@ def run_startup_migrations():
                     logger.error("❌ Failed to fix api_credentials schema")
                     return False
                 
+                # 3.5. Check and fix bot_instances table (AFTER users table exists)
+                if not check_bot_instances_schema(conn, inspector, is_postgresql):
+                    logger.error("❌ Failed to fix bot_instances schema")
+                    return False
+                
                 # 4. Create default admin user if needed
                 if not create_default_admin_user(conn, is_postgresql):
                     logger.error("❌ Failed to create default admin user")
+                    return False
+                
+                # 4.5. Fix existing bot_instances without user_id (AFTER admin user exists)
+                if not fix_existing_bot_instances(conn, is_postgresql):
+                    logger.error("❌ Failed to fix existing bot_instances")
                     return False
                 
                 # 5. Skip non-critical migrations for faster deployment
@@ -686,6 +696,52 @@ def check_api_credentials_schema(conn, inspector, is_postgresql):
         logger.error(f"❌ Failed to check api_credentials schema: {e}")
         return False
 
+def check_bot_instances_schema(conn, inspector, is_postgresql):
+    """Check and fix bot_instances table schema"""
+    try:
+        logger.info("🔍 Checking bot_instances table schema...")
+        
+        # Check if table exists
+        tables = inspector.get_table_names()
+        if 'bot_instances' not in tables:
+            logger.info("➕ bot_instances table doesn't exist, will be created by Base.metadata.create_all")
+            return True
+        
+        # Check columns
+        columns = {col['name']: col for col in inspector.get_columns('bot_instances')}
+        logger.info(f"📊 Current bot_instances columns: {list(columns.keys())}")
+        
+        # Add user_id column if missing
+        if 'user_id' not in columns:
+            logger.info("➕ Adding user_id column to bot_instances...")
+            
+            if is_postgresql:
+                # PostgreSQL syntax
+                conn.execute(text("ALTER TABLE bot_instances ADD COLUMN user_id INTEGER;"))
+                
+                # Add foreign key constraint only if it doesn't exist
+                try:
+                    conn.execute(text("ALTER TABLE bot_instances ADD CONSTRAINT fk_bot_instances_user_id FOREIGN KEY (user_id) REFERENCES users(id);"))
+                    logger.info("✅ Added foreign key constraint")
+                except Exception as fk_error:
+                    if "already exists" in str(fk_error).lower() or "duplicate" in str(fk_error).lower():
+                        logger.info("✅ Foreign key constraint already exists")
+                    else:
+                        logger.warning(f"⚠️  Could not add foreign key constraint: {fk_error}")
+            else:
+                # SQLite syntax
+                conn.execute(text("ALTER TABLE bot_instances ADD COLUMN user_id INTEGER DEFAULT 1;"))
+            
+            logger.info("✅ Added user_id column to bot_instances")
+        else:
+            logger.info("✅ user_id column already exists in bot_instances")
+        
+        return True
+        
+    except Exception as e:
+        logger.error(f"❌ Failed to check bot_instances schema: {e}")
+        return False
+
 def ensure_users_table(conn, inspector, is_postgresql):
     """Ensure users table exists with proper structure"""
     try:
@@ -830,6 +886,41 @@ def fix_existing_api_credentials(conn, is_postgresql):
         logger.error(f"❌ Failed to fix existing api_credentials: {e}")
         return False
 
+def fix_existing_bot_instances(conn, is_postgresql):
+    """Fix any existing bot_instances records without user_id"""
+    try:
+        logger.info("🔍 Fixing existing bot_instances...")
+        
+        # Get admin user ID
+        result = conn.execute(text("SELECT id FROM users WHERE email = 'admin@tarstrategies.com' LIMIT 1;"))
+        admin_user = result.fetchone()
+        
+        if not admin_user:
+            logger.warning("⚠️  No admin user found, skipping bot_instances fix")
+            return True
+        
+        admin_id = admin_user[0]
+        
+        # Update NULL user_id values
+        if is_postgresql:
+            result = conn.execute(text("UPDATE bot_instances SET user_id = :admin_id WHERE user_id IS NULL;"), 
+                                {"admin_id": admin_id})
+        else:
+            result = conn.execute(text("UPDATE bot_instances SET user_id = ? WHERE user_id IS NULL;"), 
+                                [admin_id])
+        
+        updated_count = result.rowcount
+        if updated_count > 0:
+            logger.info(f"✅ Updated {updated_count} bot_instances records with admin user_id")
+        else:
+            logger.info("✅ No bot_instances records needed fixing")
+        
+        return True
+        
+    except Exception as e:
+        logger.error(f"❌ Failed to fix existing bot_instances: {e}")
+        return False
+
 def ensure_new_strategy_monitors(conn, is_postgresql):
     """Create strategy monitors for new strategy types: TGLX, Cerberus, Predators"""
     try:
@@ -897,6 +988,12 @@ def verify_migration_success():
         columns = {col['name']: col for col in inspector.get_columns('api_credentials')}
         if 'user_id' not in columns:
             logger.error("❌ api_credentials table missing user_id column")
+            return False
+        
+        # Check bot_instances has user_id column
+        bot_columns = {col['name']: col for col in inspector.get_columns('bot_instances')}
+        if 'user_id' not in bot_columns:
+            logger.error("❌ bot_instances table missing user_id column")
             return False
         
         # Test database connection with a simple query

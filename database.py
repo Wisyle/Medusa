@@ -32,6 +32,7 @@ class BotInstance(Base):
     __tablename__ = "bot_instances"
     
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True)  # Owner of the instance
     name = Column(String(100), nullable=False)
     exchange = Column(String(50), nullable=False)
     market_type = Column(String(20), default='unified')  # 'spot', 'futures', 'unified'
