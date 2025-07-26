@@ -72,6 +72,16 @@
                         </div>
                     </div>
 
+                    <!-- Polling Configuration -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="polling_interval" class="form-label">Polling Interval (seconds)</label>
+                            <input type="number" class="form-control" id="polling_interval" name="polling_interval" 
+                                   value="60" min="30" max="300">
+                            <small class="form-text text-muted">How often to check for changes (30-300 seconds)</small>
+                        </div>
+                    </div>
+
                     <!-- API Configuration -->
                     <h5 class="mb-3">
                         <i class="fas fa-key"></i>
@@ -136,12 +146,6 @@
                                 <input type="password" class="form-control" id="api_passphrase" name="api_passphrase" 
                                        placeholder="Required for some exchanges (OKX, KuCoin)">
                                 <small class="form-text text-muted">Only required for OKX and KuCoin</small>
-                            </div>
-                            <div class="col-md-6">
-                                <label for="polling_interval" class="form-label">Polling Interval (seconds)</label>
-                                <input type="number" class="form-control" id="polling_interval" name="polling_interval" 
-                                       value="60" min="30" max="300">
-                                <small class="form-text text-muted">How often to check for changes (30-300 seconds)</small>
                             </div>
                         </div>
                     </div>
