@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, and_, desc
 from telegram import Bot
 
-from database import SessionLocal, BotInstance, PollState, ActivityLog
+from database import SessionLocal, BotInstance, PollState, ActivityLog, ErrorLog, BalanceHistory
 from strategy_monitor_model import StrategyMonitor
 
 logging.basicConfig(level=logging.INFO)
@@ -86,6 +86,95 @@ class StrategyMonitorService:
             'symbol_pnl': dict(symbol_pnl),
             'total_pnl': sum(symbol_pnl.values())
         }
+    
+    def _get_balance_data(self, instance_ids: List[int]) -> Dict[str, Any]:
+        """Get current balance data for strategy instances"""
+        balance_data = {}
+        total_balances = {}
+        
+        for instance_id in instance_ids:
+            # Get the most recent balance for this instance
+            latest_balance = self.db.query(BalanceHistory).filter(
+                BalanceHistory.instance_id == instance_id
+            ).order_by(BalanceHistory.timestamp.desc()).first()
+            
+            if latest_balance and latest_balance.balance_data:
+                # Get instance name for display
+                instance = self.db.query(BotInstance).filter(BotInstance.id == instance_id).first()
+                instance_name = instance.name if instance else f"Instance {instance_id}"
+                
+                balance_data[instance_name] = {
+                    'balances': latest_balance.balance_data,
+                    'timestamp': latest_balance.timestamp,
+                    'instance_id': instance_id
+                }
+                
+                # Aggregate total balances across all instances
+                for currency, amounts in latest_balance.balance_data.items():
+                    if isinstance(amounts, dict) and amounts.get('total', 0) > 0:
+                        if currency not in total_balances:
+                            total_balances[currency] = {'total': 0, 'free': 0, 'used': 0}
+                        
+                        total_balances[currency]['total'] += amounts.get('total', 0)
+                        total_balances[currency]['free'] += amounts.get('free', 0)
+                        total_balances[currency]['used'] += amounts.get('used', 0)
+        
+        return {
+            'instance_balances': balance_data,
+            'total_balances': total_balances
+        }
+    
+    def _calculate_strategy_growth(self, instance_ids: List[int], hours: int = 24) -> Dict[str, Any]:
+        """Calculate growth data for strategy instances over the specified period"""
+        since = datetime.utcnow() - timedelta(hours=hours)
+        growth_data = {}
+        
+        for instance_id in instance_ids:
+            # Get current and historical balance
+            current_balance = self.db.query(BalanceHistory).filter(
+                BalanceHistory.instance_id == instance_id
+            ).order_by(BalanceHistory.timestamp.desc()).first()
+            
+            historical_balance = self.db.query(BalanceHistory).filter(
+                BalanceHistory.instance_id == instance_id,
+                BalanceHistory.timestamp >= since
+            ).order_by(BalanceHistory.timestamp.asc()).first()
+            
+            if not historical_balance:
+                # Try to get the closest earlier balance
+                historical_balance = self.db.query(BalanceHistory).filter(
+                    BalanceHistory.instance_id == instance_id,
+                    BalanceHistory.timestamp <= since
+                ).order_by(BalanceHistory.timestamp.desc()).first()
+            
+            if current_balance and historical_balance and current_balance.id != historical_balance.id:
+                # Get instance name
+                instance = self.db.query(BotInstance).filter(BotInstance.id == instance_id).first()
+                instance_name = instance.name if instance else f"Instance {instance_id}"
+                
+                current_data = current_balance.balance_data
+                historical_data = historical_balance.balance_data
+                
+                currency_growth = {}
+                for currency in current_data.keys():
+                    if currency in historical_data:
+                        current_amount = current_data[currency].get('total', 0)
+                        historical_amount = historical_data[currency].get('total', 0)
+                        
+                        if historical_amount > 0:
+                            change = current_amount - historical_amount
+                            percentage_change = (change / historical_amount) * 100
+                            currency_growth[currency] = {
+                                'change': change,
+                                'percentage_change': percentage_change,
+                                'current': current_amount,
+                                'historical': historical_amount
+                            }
+                
+                if currency_growth:
+                    growth_data[instance_name] = currency_growth
+        
+        return growth_data
     
     def _get_recent_orders(self, instance_ids: List[int], hours: int = 24) -> Dict[str, Any]:
         """Get recent order data for strategy instances"""
@@ -185,6 +274,8 @@ class StrategyMonitorService:
         positions_data = self._get_recent_positions(instance_ids)
         orders_data = self._get_recent_orders(instance_ids)
         trades_data = self._get_recent_trades(instance_ids)
+        balance_data = self._get_balance_data(instance_ids)
+        growth_data = self._calculate_strategy_growth(instance_ids)
         
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S UTC")
         
@@ -256,6 +347,23 @@ class StrategyMonitorService:
                 
                 side_emoji = "🟢" if side == 'buy' else "🔴" if side == 'sell' else "⚪"
                 report += f"{side_emoji} {symbol:<12} {side:<4} {amount:>8.4f} @${price:>8.4f}\n"
+            report += "```\n"
+        
+        # Balance and Growth
+        if balance_data['instance_balances']:
+            report += "\n💰 **Balance and Growth**\n```\n"
+            for instance_name, instance_data in balance_data['instance_balances'].items():
+                report += f"  {instance_name}:\n"
+                for currency, data in instance_data['balances'].items():
+                    total_formatted = self._format_currency(data.get('total', 0))
+                    free_formatted = self._format_currency(data.get('free', 0))
+                    used_formatted = self._format_currency(data.get('used', 0))
+                    report += f"    {currency}: Total={total_formatted}, Free={free_formatted}, Used={used_formatted}\n"
+                
+                if instance_name in growth_data:
+                    for currency, growth in growth_data[instance_name].items():
+                        percentage_change_formatted = self._format_percentage(growth['percentage_change'])
+                        report += f"    {currency} Growth: {percentage_change_formatted}\n"
             report += "```\n"
         
         report += f"\n📊 **Monitoring Active** | Next Report: {(datetime.now() + timedelta(seconds=self.monitor_config.report_interval)).strftime('%H:%M:%S')}"

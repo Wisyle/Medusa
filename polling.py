@@ -1091,6 +1091,7 @@ class ExchangePoller:
         event_type = payload.get('event_type')
         symbol = payload.get('symbol', 'N/A')
         bot_type = payload.get('bot_type', 'Unknown')
+        balance = payload.get('balance', {})
         
         # Safe formatting functions to handle None values
         def safe_float(value, decimals=2, default='0'):
@@ -1109,8 +1110,25 @@ class ExchangePoller:
         def safe_string(value, default='N/A'):
             return str(value) if value is not None else default
         
+        def format_balance_section(balance_data):
+            """Format balance data for display"""
+            if not balance_data:
+                return ""
+            
+            balance_lines = []
+            balance_lines.append("\n💰 **Account Balance:**")
+            
+            for currency, amounts in balance_data.items():
+                if isinstance(amounts, dict) and amounts.get('total', 0) > 0:
+                    total = amounts.get('total', 0)
+                    free = amounts.get('free', 0)
+                    used = amounts.get('used', 0)
+                    balance_lines.append(f"• **{currency}:** `{safe_float(total, 6)}` (Free: `{safe_float(free, 6)}`, Used: `{safe_float(used, 6)}`)")
+            
+            return "\n".join(balance_lines) if len(balance_lines) > 1 else ""
+
         if event_type == "order_filled":
-            return f"""🎯 **Order Filled** - {timestamp}
+            message = f"""🎯 **Order Filled** - {timestamp}
 
 **🤖 Bot:** `{self.instance.name}`
 **💱 Pair:** `{symbol}`
@@ -1121,12 +1139,12 @@ class ExchangePoller:
 • **Amount:** `{safe_float(payload.get('quantity'), 6)}`
 • **Price:** `${safe_float(payload.get('entry_price'), 4)}`
 • **Status:** ✅ FILLED
-• **PnL:** `${safe_float(payload.get('unrealized_pnl'), 2)}`
+• **PnL:** `${safe_float(payload.get('unrealized_pnl'), 2)}`{format_balance_section(balance)}
 
 ✅ **Transaction Complete**"""
 
         elif event_type == "position_update":
-            return f"""🔄 **Position Update** - {timestamp}
+            message = f"""🔄 **Position Update** - {timestamp}
 
 **🤖 Bot:** `{self.instance.name}`
 **💱 Pair:** `{symbol}`
@@ -1137,12 +1155,12 @@ class ExchangePoller:
 • **Size:** `{safe_float(payload.get('quantity'), 6)}`
 • **Entry:** `${safe_float(payload.get('entry_price'), 4)}`
 • **PnL:** `${safe_float(payload.get('unrealized_pnl'), 2)}`
-• **Strategy:** {bot_type}
+• **Strategy:** {bot_type}{format_balance_section(balance)}
 
 📊 **Monitoring Continues**"""
 
         elif event_type == "order_cancelled":
-            return f"""❌ **Order Cancelled** - {timestamp}
+            message = f"""❌ **Order Cancelled** - {timestamp}
 
 **🤖 Bot:** `{self.instance.name}`
 **💱 Pair:** `{symbol}`
@@ -1153,12 +1171,12 @@ class ExchangePoller:
 • **Side:** {safe_side(payload.get('side'))}
 • **Amount:** `{safe_float(payload.get('quantity'), 6)}`
 • **Status:** ❌ CANCELLED
-• **Strategy:** {bot_type}
+• **Strategy:** {bot_type}{format_balance_section(balance)}
 
 ⚠️ **Action Logged**"""
 
         elif event_type == "new_order":
-            return f"""🆕 **New Order** - {timestamp}
+            message = f"""🆕 **New Order** - {timestamp}
 
 **🤖 Bot:** `{self.instance.name}`
 **💱 Pair:** `{symbol}`
@@ -1170,20 +1188,22 @@ class ExchangePoller:
 • **Amount:** `{safe_float(payload.get('quantity'), 6)}`
 • **Price:** `${safe_float(payload.get('entry_price'), 4)}`
 • **Status:** ⏳ PENDING
-• **Strategy:** {bot_type}
+• **Strategy:** {bot_type}{format_balance_section(balance)}
 
 ⏳ **Awaiting Fill**"""
 
         else:
-            return f"""📊 **Bot Update** - {timestamp}
+            message = f"""📊 **Bot Update** - {timestamp}
 
 **🤖 Bot:** `{self.instance.name}`
 **💱 Pair:** `{symbol}`
 **📊 Exchange:** `{self.instance.exchange}`
 **🛡️ Event:** {event_type}
-**Strategy:** {bot_type}
+**Strategy:** {bot_type}{format_balance_section(balance)}
 
 📱 **Monitoring Active**"""
+
+        return message
     
     async def poll_once(self):
         """Perform one polling cycle"""

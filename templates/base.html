@@ -213,6 +213,40 @@
             transition: all 0.3s ease;
         }
         
+        /* Override backdrop-filter for modals to prevent blur issues */
+        .modal .card,
+        .modal-content,
+        .modal-dialog .card {
+            backdrop-filter: none !important;
+        }
+        
+        .modal-content {
+            border: 1px solid var(--medium-gray);
+            border-radius: 16px;
+            box-shadow: 
+                0 8px 32px rgba(0, 0, 0, 0.3),
+                0 0 0 1px rgba(255, 255, 255, 0.05),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            background: linear-gradient(145deg, var(--secondary-black), var(--dark-gray));
+            color: var(--white);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .modal-body {
+            color: var(--white);
+        }
+        
+        .modal-header {
+            border-bottom: 1px solid var(--medium-gray);
+            background: linear-gradient(145deg, var(--secondary-black), var(--dark-gray));
+        }
+        
+        .modal-footer {
+            border-top: 1px solid var(--medium-gray);
+            background: linear-gradient(145deg, var(--secondary-black), var(--dark-gray));
+        }
+        
         .card:hover {
             transform: translateY(-2px);
             box-shadow: 

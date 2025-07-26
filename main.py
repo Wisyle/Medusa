@@ -1732,29 +1732,33 @@ async def monitor_instances():
     """Monitor and restart failed instances"""
     while True:
         try:
-            db = next(get_db())
+            # Import here to avoid circular imports
+            from database import SessionLocal
             
-            active_instances = db.query(BotInstance).filter(BotInstance.is_active == True).all()
-            
-            for instance in active_instances:
-                if instance.id not in active_processes:
-                    try:
-                        process = multiprocessing.Process(target=_run_poller_sync, args=(instance.id,))
-                        process.start()
-                        active_processes[instance.id] = process
-                    except Exception as e:
-                        print(f"Failed to restart instance {instance.id}: {e}")
+            # Create a proper database session
+            db = SessionLocal()
+            try:
+                active_instances = db.query(BotInstance).filter(BotInstance.is_active == True).all()
                 
-                elif not active_processes[instance.id].is_alive():
-                    try:
-                        del active_processes[instance.id]
-                        process = multiprocessing.Process(target=_run_poller_sync, args=(instance.id,))
-                        process.start()
-                        active_processes[instance.id] = process
-                    except Exception as e:
-                        print(f"Failed to restart dead instance {instance.id}: {e}")
-            
-            db.close()
+                for instance in active_instances:
+                    if instance.id not in active_processes:
+                        try:
+                            process = multiprocessing.Process(target=_run_poller_sync, args=(instance.id,))
+                            process.start()
+                            active_processes[instance.id] = process
+                        except Exception as e:
+                            print(f"Failed to restart instance {instance.id}: {e}")
+                    
+                    elif not active_processes[instance.id].is_alive():
+                        try:
+                            del active_processes[instance.id]
+                            process = multiprocessing.Process(target=_run_poller_sync, args=(instance.id,))
+                            process.start()
+                            active_processes[instance.id] = process
+                        except Exception as e:
+                            print(f"Failed to restart dead instance {instance.id}: {e}")
+            finally:
+                db.close()
             
         except Exception as e:
             print(f"Monitor error: {e}")
