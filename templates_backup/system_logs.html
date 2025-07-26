@@ -413,7 +413,7 @@ async function loadLogs() {
         
         for (const endpoint of endpoints) {
             try {
-                const response = await fetch(`${endpoint}?limit=100`, {
+                const response = await fetch(`${endpoint}?limit=50`, {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
