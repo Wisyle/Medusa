@@ -259,6 +259,20 @@
                         </div>
                     </div>
 
+                    <!-- Balance Tracking -->
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="balance_enabled" name="balance_enabled" value="true">
+                                <label class="form-check-label" for="balance_enabled">
+                                    <i class="fas fa-wallet"></i>
+                                    Enable Balance Tracking & Notifications
+                                </label>
+                                <small class="form-text text-muted d-block">When enabled, the bot will fetch and include balance information in polling updates and notifications</small>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="d-grid gap-2 d-md-flex justify-content-md-end">
                         <button type="button" class="btn btn-secondary me-md-2" onclick="window.location.href='/instances'">
                             Cancel
@@ -438,6 +452,7 @@ function loadInstanceData() {
         document.getElementById('telegram_topic_id').value = instance.telegram_topic_id || '';
         document.getElementById('trading_pair').value = instance.trading_pair || '';
         document.getElementById('market_type').value = instance.market_type || 'unified';
+        document.getElementById('balance_enabled').checked = instance.balance_enabled || false;
         
         // Determine API source based on instance data
         const usesLibrary = instance.api_credential_id && !instance.api_key;

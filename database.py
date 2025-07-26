@@ -51,6 +51,7 @@ class BotInstance(Base):
     telegram_chat_id = Column(String(100), nullable=True)
     telegram_topic_id = Column(String(100), nullable=True)
     trading_pair = Column(String(20), nullable=True)
+    balance_enabled = Column(Boolean, default=False)  # Toggle for balance tracking and notifications
     
     is_active = Column(Boolean, default=False)
     last_poll = Column(DateTime, nullable=True)
@@ -94,6 +95,16 @@ class PollState(Base):
     data_hash = Column(String(64), nullable=False)  # Hash of the data for change detection
     data = Column(JSON, nullable=False)
     timestamp = Column(DateTime, default=datetime.utcnow)
+
+class BalanceHistory(Base):
+    __tablename__ = "balance_history"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    instance_id = Column(Integer, ForeignKey('bot_instances.id'), nullable=False, index=True)
+    timestamp = Column(DateTime, default=datetime.utcnow, index=True)
+    balance_data = Column(JSON, nullable=False)  # Full balance snapshot
+    total_value_usd = Column(Float, nullable=True)  # Optional: total value in USD
+    created_at = Column(DateTime, default=datetime.utcnow)
 
 class ActivityLog(Base):
     __tablename__ = "activity_logs"

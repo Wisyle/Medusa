@@ -18,7 +18,7 @@ from sqlalchemy import text
 # Import migration system
 from startup_migration import run_startup_migrations
 
-from database import get_db, init_db, BotInstance, ActivityLog, ErrorLog, User
+from database import get_db, init_db, BotInstance, ActivityLog, ErrorLog, User, BalanceHistory
 from api_library_model import ApiCredential
 from polling import run_poller
 from config import settings
@@ -51,8 +51,11 @@ async def lifespan(app: FastAPI):
     run_migrations = os.getenv('RUN_MIGRATIONS', 'false').lower() == 'true'
     if run_migrations:
         logger.info("🔄 Running database migrations...")
-        from migration import migrate_database
-        migrate_database()
+        success = run_startup_migrations()
+        if success:
+            logger.info("✅ Database migrations completed successfully")
+        else:
+            logger.error("❌ Database migrations failed")
     else:
         logger.info("⏩ Skipping migrations for faster startup (set RUN_MIGRATIONS=true to enable)")
     
@@ -1004,6 +1007,7 @@ async def create_instance(
     telegram_chat_id: str = Form(""),
     telegram_topic_id: str = Form(""),
     trading_pair: str = Form(""),
+    balance_enabled: bool = Form(False),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
@@ -1057,7 +1061,8 @@ async def create_instance(
                 telegram_bot_token=telegram_bot_token.strip() if telegram_bot_token else None,
                 telegram_chat_id=telegram_chat_id.strip() if telegram_chat_id else None,
                 telegram_topic_id=telegram_topic_id.strip() if telegram_topic_id else None,
-                trading_pair=trading_pair.strip() if trading_pair else None
+                trading_pair=trading_pair.strip() if trading_pair else None,
+                balance_enabled=balance_enabled
             )
         else:
             instance = BotInstance(
@@ -1075,7 +1080,8 @@ async def create_instance(
                 telegram_bot_token=telegram_bot_token.strip() if telegram_bot_token else None,
                 telegram_chat_id=telegram_chat_id.strip() if telegram_chat_id else None,
                 telegram_topic_id=telegram_topic_id.strip() if telegram_topic_id else None,
-                trading_pair=trading_pair.strip() if trading_pair else None
+                trading_pair=trading_pair.strip() if trading_pair else None,
+                balance_enabled=balance_enabled
             )
         
         db.add(instance)
@@ -1186,6 +1192,7 @@ async def update_instance(
     telegram_chat_id: str = Form(""),
     telegram_topic_id: str = Form(""),
     trading_pair: str = Form(""),
+    balance_enabled: bool = Form(False),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
@@ -1266,6 +1273,7 @@ async def update_instance(
     instance.telegram_chat_id = telegram_chat_id.strip() if telegram_chat_id else None
     instance.telegram_topic_id = telegram_topic_id.strip() if telegram_topic_id else None
     instance.trading_pair = trading_pair.strip() if trading_pair else None
+    instance.balance_enabled = balance_enabled
     instance.updated_at = datetime.utcnow()
     
     # If using API library, mark credential as in use
@@ -1283,6 +1291,106 @@ async def update_instance(
         await start_instance(instance_id, db, current_user)
     
     return {"message": "Instance updated successfully", "instance_id": instance_id}
+
+@app.get("/api/instances/{instance_id}/growth")
+async def get_instance_growth(instance_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
+    """Get growth data for different time periods"""
+    instance = db.query(BotInstance).filter(
+        BotInstance.id == instance_id,
+        BotInstance.user_id == current_user.id
+    ).first()
+    if not instance:
+        raise HTTPException(status_code=404, detail="Instance not found")
+    
+    if not instance.balance_enabled:
+        return {"error": "Balance tracking not enabled for this instance"}
+    
+    try:
+        now = datetime.utcnow()
+        
+        # Get balance history for different periods
+        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        week_start = now - timedelta(days=7)
+        month_start = now - timedelta(days=30)
+        
+        # Get most recent balance
+        latest_balance = db.query(BalanceHistory).filter(
+            BalanceHistory.instance_id == instance_id
+        ).order_by(BalanceHistory.timestamp.desc()).first()
+        
+        if not latest_balance:
+            return {"error": "No balance history found"}
+        
+        # Calculate growth for each period
+        growth_data = {
+            "current_balance": latest_balance.balance_data,
+            "growth": {
+                "today": await _calculate_growth(db, instance_id, today_start, latest_balance),
+                "7_days": await _calculate_growth(db, instance_id, week_start, latest_balance),
+                "30_days": await _calculate_growth(db, instance_id, month_start, latest_balance)
+            },
+            "timestamp": latest_balance.timestamp.isoformat()
+        }
+        
+        return growth_data
+        
+    except Exception as e:
+        logger.error(f"Error calculating growth for instance {instance_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to calculate growth data")
+
+async def _calculate_growth(db: Session, instance_id: int, start_time: datetime, latest_balance: BalanceHistory) -> Dict:
+    """Calculate growth between start_time and current balance"""
+    # Get balance closest to start_time
+    start_balance = db.query(BalanceHistory).filter(
+        BalanceHistory.instance_id == instance_id,
+        BalanceHistory.timestamp >= start_time
+    ).order_by(BalanceHistory.timestamp.asc()).first()
+    
+    if not start_balance:
+        # If no balance at start time, try to get the closest earlier balance
+        start_balance = db.query(BalanceHistory).filter(
+            BalanceHistory.instance_id == instance_id,
+            BalanceHistory.timestamp <= start_time
+        ).order_by(BalanceHistory.timestamp.desc()).first()
+    
+    if not start_balance:
+        return {"error": "No historical data available"}
+    
+    # Calculate percentage changes for each currency
+    current_data = latest_balance.balance_data
+    start_data = start_balance.balance_data
+    
+    growth_by_currency = {}
+    
+    for currency, current_amounts in current_data.items():
+        if currency in start_data:
+            current_total = current_amounts.get('total', 0)
+            start_total = start_data[currency].get('total', 0)
+            
+            if start_total > 0:
+                growth_percentage = ((current_total - start_total) / start_total) * 100
+                absolute_change = current_total - start_total
+                
+                growth_by_currency[currency] = {
+                    "start_amount": start_total,
+                    "current_amount": current_total,
+                    "absolute_change": absolute_change,
+                    "percentage_change": round(growth_percentage, 2)
+                }
+        else:
+            # New currency since start time
+            growth_by_currency[currency] = {
+                "start_amount": 0,
+                "current_amount": current_amounts.get('total', 0),
+                "absolute_change": current_amounts.get('total', 0),
+                "percentage_change": float('inf')  # Infinite growth from 0
+            }
+    
+    return {
+        "currencies": growth_by_currency,
+        "start_timestamp": start_balance.timestamp.isoformat(),
+        "has_data": True
+    }
 
 @app.get("/api/instances/{instance_id}/logs")
 async def get_instance_logs(

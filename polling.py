@@ -11,7 +11,7 @@ from sqlalchemy.exc import OperationalError, DisconnectionError
 from telegram import Bot
 import logging
 
-from database import SessionLocal, BotInstance, PollState, ActivityLog, ErrorLog
+from database import SessionLocal, BotInstance, PollState, ActivityLog, ErrorLog, BalanceHistory
 from config import settings
 
 logging.basicConfig(level=logging.INFO)
@@ -827,6 +827,68 @@ class ExchangePoller:
             self._log_error("fetch_open_orders", str(e))
             return []
     
+    async def fetch_balance(self) -> Dict:
+        """Fetch account balance"""
+        if not self.instance.balance_enabled:
+            return {}
+            
+        try:
+            balance = self.exchange.fetch_balance()
+            
+            # Filter out zero balances and format for notification
+            filtered_balance = {}
+            for currency, amount_data in balance.items():
+                if currency in ['info', 'free', 'used', 'total']:
+                    continue
+                
+                if isinstance(amount_data, dict):
+                    total = amount_data.get('total', 0)
+                    if total and total > 0:
+                        filtered_balance[currency] = {
+                            'free': amount_data.get('free', 0),
+                            'used': amount_data.get('used', 0),
+                            'total': total
+                        }
+                        
+            return filtered_balance
+        except Exception as e:
+            self._log_error("fetch_balance", str(e))
+            return {}
+
+    def _save_balance_history(self, balance: Dict):
+        """Save balance snapshot to history"""
+        if not balance or not self.instance.balance_enabled:
+            return
+            
+        try:
+            # Save balance history entry
+            history_entry = BalanceHistory(
+                instance_id=self.instance_id,
+                balance_data=balance,
+                timestamp=datetime.utcnow()
+            )
+            
+            self.db.add(history_entry)
+            self.db.commit()
+            
+            # Clean up old history entries (keep last 90 days)
+            cutoff_date = datetime.utcnow() - timedelta(days=90)
+            old_entries = self.db.query(BalanceHistory).filter(
+                BalanceHistory.instance_id == self.instance_id,
+                BalanceHistory.timestamp < cutoff_date
+            ).all()
+            
+            for entry in old_entries:
+                self.db.delete(entry)
+            
+            if old_entries:
+                self.db.commit()
+                logger.info(f"Cleaned up {len(old_entries)} old balance history entries")
+                
+        except Exception as e:
+            logger.error(f"Failed to save balance history: {e}")
+            self.db.rollback()
+
     async def fetch_recent_trades(self) -> List[Dict]:
         """Fetch recent trades since last poll"""
         try:
@@ -905,7 +967,7 @@ class ExchangePoller:
         except Exception as e:
             logger.error(f"Failed to save state after all retries: {e}")
     
-    def _create_event_payload(self, event_type: str, symbol: str, data: Dict) -> Dict:
+    def _create_event_payload(self, event_type: str, symbol: str, data: Dict, balance: Dict = None) -> Dict:
         """Create structured event payload"""
         strategy_type = self._detect_strategy_type(symbol, data)
         
@@ -917,6 +979,10 @@ class ExchangePoller:
             "instance_id": self.instance_id,
             "exchange": self.instance.exchange
         }
+        
+        # Add balance information if provided and enabled
+        if balance and self.instance.balance_enabled:
+            payload["balance"] = balance
         
         if event_type in ["order_filled", "order_cancelled", "new_order"]:
             if event_type == "order_filled" and 'order' in data:
@@ -1132,8 +1198,13 @@ class ExchangePoller:
             positions = await self.fetch_positions()
             orders = await self.fetch_open_orders()
             trades = await self.fetch_recent_trades()
+            balance = await self.fetch_balance() if self.instance.balance_enabled else {}
             
-            logger.info(f"[{cycle_id}] API responses - Positions: {len(positions)}, Orders: {len(orders)}, Trades: {len(trades)}")
+            # Save balance history if enabled and balance was fetched
+            if balance and self.instance.balance_enabled:
+                self._save_balance_history(balance)
+            
+            logger.info(f"[{cycle_id}] API responses - Positions: {len(positions)}, Orders: {len(orders)}, Trades: {len(trades)}, Balance: {len(balance)} currencies")
             
             # Log the actual symbols returned from the API
             if positions:
@@ -1160,7 +1231,7 @@ class ExchangePoller:
                 previous_hash = self._get_data_hash(previous_position) if previous_position else None
                 
                 if current_hash != previous_hash:
-                    payload = self._create_event_payload('position_update', symbol, position)
+                    payload = self._create_event_payload('position_update', symbol, position, balance)
                     await self._send_webhook(payload)
                     await self._send_telegram_notification(payload)
                     self._log_activity("position_update", symbol, "Position updated", payload)
@@ -1177,7 +1248,7 @@ class ExchangePoller:
                 previous_order = self._get_previous_state(symbol, f"order_{order['id']}")
                 
                 if not previous_order:
-                    payload = self._create_event_payload('new_order', symbol, order)
+                    payload = self._create_event_payload('new_order', symbol, order, balance)
                     await self._send_webhook(payload)
                     await self._send_telegram_notification(payload)
                     self._log_activity("new_order", symbol, "New order detected", payload)
@@ -1192,7 +1263,7 @@ class ExchangePoller:
                     else:
                         event_type = 'order_update'
                     
-                    payload = self._create_event_payload(event_type, symbol, order)
+                    payload = self._create_event_payload(event_type, symbol, order, balance)
                     await self._send_webhook(payload)
                     await self._send_telegram_notification(payload)
                     self._log_activity(event_type, symbol, f"Order status changed to {order['status']}", payload)
@@ -1209,7 +1280,7 @@ class ExchangePoller:
                 previous_trade = self._get_previous_state(symbol, f"trade_{trade['id']}")
                 
                 if not previous_trade:
-                    payload = self._create_event_payload('order_filled', symbol, trade)
+                    payload = self._create_event_payload('order_filled', symbol, trade, balance)
                     await self._send_webhook(payload)
                     await self._send_telegram_notification(payload)
                     self._log_activity("order_filled", symbol, f"Trade executed: {trade['id']}", payload)

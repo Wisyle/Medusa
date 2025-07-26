@@ -428,7 +428,7 @@ def run_startup_migrations():
                 logger.info("📋 Creating base tables in dependency order...")
                 
                 # Import all models to ensure they're registered
-                from database import Base, User, ActivityLog, ErrorLog, BotInstance
+                from database import Base, User, ActivityLog, ErrorLog, BotInstance, BalanceHistory
                 from api_library_model import ApiCredential
                 from strategy_monitor_model import StrategyMonitor
                 from dex_arbitrage_model import DEXArbitrageInstance, DEXOpportunity
@@ -447,6 +447,7 @@ def run_startup_migrations():
                 # Now create tables with foreign key dependencies
                 logger.info("📊 Creating tables with foreign key dependencies...")
                 BotInstance.__table__.create(engine, checkfirst=True)
+                BalanceHistory.__table__.create(engine, checkfirst=True)
                 ValidatorNode.__table__.create(engine, checkfirst=True)
                 
                 logger.info("✅ All tables created successfully in correct order")
@@ -736,6 +737,21 @@ def check_bot_instances_schema(conn, inspector, is_postgresql):
         else:
             logger.info("✅ user_id column already exists in bot_instances")
         
+        # Add balance_enabled column if missing
+        if 'balance_enabled' not in columns:
+            logger.info("➕ Adding balance_enabled column to bot_instances...")
+            
+            if is_postgresql:
+                # PostgreSQL syntax
+                conn.execute(text("ALTER TABLE bot_instances ADD COLUMN balance_enabled BOOLEAN DEFAULT FALSE;"))
+            else:
+                # SQLite syntax
+                conn.execute(text("ALTER TABLE bot_instances ADD COLUMN balance_enabled INTEGER DEFAULT 0;"))
+            
+            logger.info("✅ Added balance_enabled column to bot_instances")
+        else:
+            logger.info("✅ balance_enabled column already exists in bot_instances")
+        
         return True
         
     except Exception as e:
@@ -990,10 +1006,13 @@ def verify_migration_success():
             logger.error("❌ api_credentials table missing user_id column")
             return False
         
-        # Check bot_instances has user_id column
+        # Check bot_instances has user_id and balance_enabled columns
         bot_columns = {col['name']: col for col in inspector.get_columns('bot_instances')}
         if 'user_id' not in bot_columns:
             logger.error("❌ bot_instances table missing user_id column")
+            return False
+        if 'balance_enabled' not in bot_columns:
+            logger.error("❌ bot_instances table missing balance_enabled column")
             return False
         
         # Test database connection with a simple query

@@ -61,6 +61,26 @@
     </div>
 </div>
 
+<!-- Growth Data -->
+<div class="row mb-4" id="growth-section" style="display: none;">
+    <div class="col-12">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-success">
+                    <i class="fas fa-chart-line"></i>
+                    Balance Growth & Performance
+                </h6>
+            </div>
+            <div class="card-body" id="growth-data">
+                <div class="text-center">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    Loading growth data...
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Logs Tabs -->
 <div class="card shadow">
     <div class="card-header py-3">
@@ -113,6 +133,7 @@ function refreshData() {
     loadInstance();
     loadActivityLogs();
     loadErrorLogs();
+    loadGrowthData();
 }
 
 function loadInstance() {
@@ -137,6 +158,15 @@ function loadInstance() {
             if (instance) {
                 updateInstanceInfo();
                 updateActionButtons();
+                
+                // Show/hide growth section based on balance_enabled
+                const growthSection = document.getElementById('growth-section');
+                if (instance.balance_enabled) {
+                    growthSection.style.display = 'block';
+                    loadGrowthData();
+                } else {
+                    growthSection.style.display = 'none';
+                }
             } else {
                 document.getElementById('instance-info').innerHTML = `
                     <div class="alert alert-danger">
@@ -423,6 +453,139 @@ function deleteInstance() {
         .catch(error => {
             alert('Error deleting instance: ' + error);
         });
+}
+
+function loadGrowthData() {
+    if (!instance || !instance.balance_enabled) return;
+    
+    const token = localStorage.getItem('access_token');
+    const growthContainer = document.getElementById('growth-data');
+    
+    growthContainer.innerHTML = `
+        <div class="text-center">
+            <i class="fas fa-spinner fa-spin"></i>
+            Loading growth data...
+        </div>
+    `;
+    
+    fetch(`/api/instances/${instanceId}/growth`, {
+        headers: {
+            'Authorization': 'Bearer ' + token
+        }
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                growthContainer.innerHTML = `
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        ${data.error}
+                    </div>
+                `;
+                return;
+            }
+            
+            displayGrowthData(data);
+        })
+        .catch(error => {
+            console.error('Error loading growth data:', error);
+            growthContainer.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Error loading growth data: ${error.message}
+                </div>
+            `;
+        });
+}
+
+function displayGrowthData(data) {
+    const growthContainer = document.getElementById('growth-data');
+    
+    let html = `
+        <div class="row mb-3">
+            <div class="col-12">
+                <h6 class="text-muted">Current Balance (${new Date(data.timestamp).toLocaleString()})</h6>
+                <div class="row">
+    `;
+    
+    // Display current balances
+    for (const [currency, amounts] of Object.entries(data.current_balance)) {
+        html += `
+            <div class="col-md-4 mb-2">
+                <div class="card border-0 bg-light">
+                    <div class="card-body p-2">
+                        <small class="text-muted">${currency}</small>
+                        <div class="fw-bold">${amounts.total.toFixed(6)}</div>
+                        <small class="text-muted">Free: ${amounts.free.toFixed(6)} | Used: ${amounts.used.toFixed(6)}</small>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    html += `
+                </div>
+            </div>
+        </div>
+        <div class="row">
+    `;
+    
+    // Display growth for each period
+    const periods = [
+        { key: 'today', label: 'Today', icon: 'fas fa-clock', class: 'primary' },
+        { key: '7_days', label: '7 Days', icon: 'fas fa-calendar-week', class: 'info' },
+        { key: '30_days', label: '30 Days', icon: 'fas fa-calendar-alt', class: 'success' }
+    ];
+    
+    periods.forEach(period => {
+        const growthData = data.growth[period.key];
+        
+        html += `
+            <div class="col-md-4 mb-3">
+                <div class="card border-${period.class}">
+                    <div class="card-header bg-${period.class} text-white">
+                        <i class="${period.icon}"></i>
+                        ${period.label} Growth
+                    </div>
+                    <div class="card-body">
+        `;
+        
+        if (growthData.error) {
+            html += `<small class="text-muted">${growthData.error}</small>`;
+        } else if (growthData.has_data) {
+            for (const [currency, growth] of Object.entries(growthData.currencies)) {
+                const changeClass = growth.percentage_change > 0 ? 'text-success' : 
+                                    growth.percentage_change < 0 ? 'text-danger' : 'text-muted';
+                const changeIcon = growth.percentage_change > 0 ? 'fa-arrow-up' : 
+                                   growth.percentage_change < 0 ? 'fa-arrow-down' : 'fa-minus';
+                
+                html += `
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <small class="fw-bold">${currency}</small>
+                        <span class="${changeClass}">
+                            <i class="fas ${changeIcon}"></i>
+                            ${growth.percentage_change === Infinity ? '∞' : growth.percentage_change}%
+                        </span>
+                    </div>
+                    <div class="d-flex justify-content-between text-muted" style="font-size: 0.8em;">
+                        <span>${growth.start_amount.toFixed(6)} → ${growth.current_amount.toFixed(6)}</span>
+                        <span class="${changeClass}">${growth.absolute_change > 0 ? '+' : ''}${growth.absolute_change.toFixed(6)}</span>
+                    </div>
+                    <hr class="my-2">
+                `;
+            }
+        }
+        
+        html += `
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    
+    growthContainer.innerHTML = html;
 }
 
 // Load data on page load
