@@ -8,29 +8,25 @@ import json
 from config import settings
 import os
 
-connect_args = {}
-if settings.database_url.startswith('postgresql'):
-    connect_args = {
-        'sslmode': 'require',
-        'connect_timeout': 10,  # Reduced from 30 to fail faster
-        'application_name': 'tgl_medusa_worker',
-        'keepalives': 1,
-        'keepalives_idle': 30,
-        'keepalives_interval': 10,
-        'keepalives_count': 5
-    }
-
 # Create database engine
 if settings.database_url.startswith('postgresql'):
-    # For PostgreSQL, add SSL configuration
+    # For PostgreSQL, add SSL configuration and connection pooling
     engine = create_engine(
         settings.database_url,
         pool_pre_ping=True,
         pool_recycle=3600,
+        pool_size=10,
+        max_overflow=20,
+        pool_timeout=30,
         echo=False,
         connect_args={
             "sslmode": "prefer",  # Use SSL if available but don't require it
             "connect_timeout": 10,
+            "application_name": "tgl_medusa_app",
+            "keepalives": 1,
+            "keepalives_idle": 30,
+            "keepalives_interval": 10,
+            "keepalives_count": 5,
             "options": "-c statement_timeout=30000"  # 30 second statement timeout
         }
     )

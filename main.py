@@ -1080,53 +1080,62 @@ async def broadcast_message(message: dict, current_user: User = Depends(get_curr
 @app.get("/api/instances")
 async def get_instances(db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
     """Get bot instances for current user"""
-    instances = db.query(BotInstance).filter(BotInstance.user_id == current_user.id).all()
-    
-    # Get latest balance for each instance
-    result = []
-    for instance in instances:
-        instance_data = {
-            "id": instance.id,
-            "name": instance.name,
-            "exchange": instance.exchange,
-            "market_type": instance.market_type,
-            "api_credential_id": instance.api_credential_id,
-            "api_key": instance.api_key,
-            "api_secret": instance.api_secret,
-            "api_passphrase": instance.api_passphrase,
-            "strategies": instance.strategies,
-            "is_active": instance.is_active,
-            "last_poll": instance.last_poll.isoformat() if instance.last_poll else None,
-            "last_error": instance.last_error,
-            "polling_interval": instance.polling_interval,
-            "webhook_url": instance.webhook_url,
-            "telegram_bot_token": instance.telegram_bot_token,
-            "telegram_chat_id": instance.telegram_chat_id,
-            "telegram_topic_id": instance.telegram_topic_id,
-            "trading_pair": instance.trading_pair,
-            "balance_enabled": instance.balance_enabled
-        }
+    try:
+        instances = db.query(BotInstance).filter(BotInstance.user_id == current_user.id).all()
         
-        # Add latest balance if enabled
-        if instance.balance_enabled:
-            latest_balance = db.query(BalanceHistory).filter(
-                BalanceHistory.instance_id == instance.id
-            ).order_by(BalanceHistory.timestamp.desc()).first()
+        # Get latest balance for each instance
+        result = []
+        for instance in instances:
+            instance_data = {
+                "id": instance.id,
+                "name": instance.name,
+                "exchange": instance.exchange,
+                "market_type": instance.market_type,
+                "api_credential_id": instance.api_credential_id,
+                "api_key": instance.api_key,
+                "api_secret": instance.api_secret,
+                "api_passphrase": instance.api_passphrase,
+                "strategies": instance.strategies,
+                "is_active": instance.is_active,
+                "last_poll": instance.last_poll.isoformat() if instance.last_poll else None,
+                "last_error": instance.last_error,
+                "polling_interval": instance.polling_interval,
+                "webhook_url": instance.webhook_url,
+                "telegram_bot_token": instance.telegram_bot_token,
+                "telegram_chat_id": instance.telegram_chat_id,
+                "telegram_topic_id": instance.telegram_topic_id,
+                "trading_pair": instance.trading_pair,
+                "balance_enabled": instance.balance_enabled
+            }
             
-            if latest_balance:
-                instance_data["latest_balance"] = {
-                    "total_usdt": latest_balance.total_balance_usdt,
-                    "timestamp": latest_balance.timestamp.isoformat(),
-                    "data": latest_balance.balance_data
-                }
+            # Add latest balance if enabled
+            if instance.balance_enabled:
+                try:
+                    latest_balance = db.query(BalanceHistory).filter(
+                        BalanceHistory.instance_id == instance.id
+                    ).order_by(BalanceHistory.timestamp.desc()).first()
+                    
+                    if latest_balance:
+                        instance_data["latest_balance"] = {
+                            "total_usdt": latest_balance.total_value_usd,
+                            "timestamp": latest_balance.timestamp.isoformat(),
+                            "data": latest_balance.balance_data
+                        }
+                    else:
+                        instance_data["latest_balance"] = None
+                except Exception as balance_error:
+                    logger.warning(f"Failed to fetch balance for instance {instance.id}: {balance_error}")
+                    instance_data["latest_balance"] = None
             else:
                 instance_data["latest_balance"] = None
-        else:
-            instance_data["latest_balance"] = None
-            
-        result.append(instance_data)
-    
-    return result
+                
+            result.append(instance_data)
+        
+        return result
+    except Exception as e:
+        logger.error(f"Failed to fetch instances: {e}")
+        # Return JSON error response instead of HTML
+        raise HTTPException(status_code=500, detail=f"Failed to fetch instances: {str(e)}")
 
 def validate_instance_data(name: str, exchange: str, api_key: str, api_secret: str, trading_pair: Optional[str] = None):
     """Validate instance creation data"""

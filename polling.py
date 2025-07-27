@@ -860,7 +860,7 @@ class ExchangePoller:
         if not balance or not self.instance.balance_enabled:
             return
             
-        try:
+        def _save_operation():
             # Save balance history entry
             history_entry = BalanceHistory(
                 instance_id=self.instance_id,
@@ -884,10 +884,12 @@ class ExchangePoller:
             if old_entries:
                 self.db.commit()
                 logger.info(f"Cleaned up {len(old_entries)} old balance history entries")
-                
+        
+        try:
+            self._execute_db_operation(_save_operation, "save_balance_history")
         except Exception as e:
             logger.error(f"Failed to save balance history: {e}")
-            self.db.rollback()
+            # Don't re-raise - balance history is not critical enough to stop polling
 
     async def fetch_recent_trades(self) -> List[Dict]:
         """Fetch recent trades since last poll"""
