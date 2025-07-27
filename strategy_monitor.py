@@ -319,7 +319,7 @@ class StrategyMonitorService:
         # Active Positions
         if positions_data['positions']:
             total_positions = len(positions_data['positions'])
-            report += f"\n🎯 **Active Positions** ({total_positions})\n"
+            report += f"\n🎯 **Active Positions** ({total_positions})\n```\n"
             
             # Group positions by instance for better display
             instance_names = {instance.id: instance.name for instance in instances}
@@ -340,7 +340,9 @@ class StrategyMonitorService:
                 pnl_sign = "🟢" if unrealized_pnl > 0 else "🔴" if unrealized_pnl < 0 else "⚪"
                 
                 # Format like individual position updates: 🔴 INSTANCE_NAME SYMBOL SIDE SIZE @$PRICE 🟢$PNL
-                report += f"{side_emoji} **{instance_name}** {symbol} {side.lower()} {size:.4f} @${entry_price:.4f} {pnl_sign}${pnl_formatted}\n"
+                report += f"{side_emoji} {instance_name} {symbol} {side.lower()} {size:.4f} @${entry_price:.4f} {pnl_sign}${pnl_formatted}\n"
+            
+            report += "```\n"
         
         # Recent Closed Orders
         if orders_data['closed_orders']:

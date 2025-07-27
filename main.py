@@ -300,6 +300,14 @@ app.include_router(dex_arbitrage_router)
 from validator_node_routes import router as validator_node_router
 app.include_router(validator_node_router)
 
+# Include debug routes (only in development/superuser access)
+try:
+    from debug_routes import add_debug_routes
+    add_debug_routes(app)
+except ImportError:
+    pass  # Debug routes not available
+
+# Include additional routes
 from migration_routes import router as migration_router
 app.include_router(migration_router)
 
