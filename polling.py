@@ -1113,21 +1113,42 @@ class ExchangePoller:
             return str(value) if value is not None else default
         
         def format_balance_section(balance_data):
-            """Format balance data for display"""
+            """Format balance data for display - only active trading coin"""
             if not balance_data:
+                return ""
+            
+            # Extract active coin from trading pair
+            active_coin = self._get_active_coin_from_trading_pair()
+            if not active_coin:
                 return ""
             
             balance_lines = []
             balance_lines.append("\n💰 **Account Balance:**")
+            balance_lines.append("```")
             
+            # Show only active coin and USDT (for context)
+            priority_currencies = [active_coin, 'USDT']
+            
+            for currency in priority_currencies:
+                if currency in balance_data:
+                    amounts = balance_data[currency]
+                    if isinstance(amounts, dict) and amounts.get('total', 0) > 0:
+                        total = amounts.get('total', 0)
+                        free = amounts.get('free', 0)
+                        used = amounts.get('used', 0)
+                        balance_lines.append(f"• {currency}: {safe_float(total, 6)} (Free: {safe_float(free, 6)}, Used: {safe_float(used, 6)})")
+            
+            # Show any other currencies with significant balances (>$1 equivalent)
             for currency, amounts in balance_data.items():
-                if isinstance(amounts, dict) and amounts.get('total', 0) > 0:
+                if currency not in priority_currencies and isinstance(amounts, dict):
                     total = amounts.get('total', 0)
-                    free = amounts.get('free', 0)
-                    used = amounts.get('used', 0)
-                    balance_lines.append(f"• **{currency}:** `{safe_float(total, 6)}` (Free: `{safe_float(free, 6)}`, Used: `{safe_float(used, 6)}`)")
+                    if total > 1:  # Only show if balance > 1
+                        free = amounts.get('free', 0)
+                        used = amounts.get('used', 0)
+                        balance_lines.append(f"• {currency}: {safe_float(total, 6)} (Free: {safe_float(free, 6)}, Used: {safe_float(used, 6)})")
             
-            return "\n".join(balance_lines) if len(balance_lines) > 1 else ""
+            balance_lines.append("```")
+            return "\n".join(balance_lines) if len(balance_lines) > 3 else ""
 
         if event_type == "order_filled":
             message = f"""🎯 **Order Filled** - {timestamp}
@@ -1358,6 +1379,31 @@ class ExchangePoller:
         """Clean up resources"""
         if self.db:
             self.db.close()
+
+    def _get_active_coin_from_trading_pair(self) -> str:
+        """Extract active trading coin from instance trading pair"""
+        if not self.instance.trading_pair:
+            return ""
+        
+        trading_pair = self.instance.trading_pair.upper()
+        
+        # Handle formats like 'LTC/USDT:USDT', 'LTC/USDT', 'LTCUSDT'
+        if '/' in trading_pair:
+            base_currency = trading_pair.split('/')[0]
+        elif ':' in trading_pair:
+            base_currency = trading_pair.split(':')[0].split('/')[0] if '/' in trading_pair else trading_pair.split(':')[0]
+        else:
+            # Handle LTCUSDT format
+            if trading_pair.endswith('USDT'):
+                base_currency = trading_pair[:-4]
+            elif trading_pair.endswith('BTC'):
+                base_currency = trading_pair[:-3]
+            elif trading_pair.endswith('ETH'):
+                base_currency = trading_pair[:-3]
+            else:
+                base_currency = trading_pair
+        
+        return base_currency
 
 async def run_poller(instance_id: int):
     """Run poller for a specific instance"""

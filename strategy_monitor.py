@@ -349,21 +349,29 @@ class StrategyMonitorService:
                 report += f"{side_emoji} {symbol:<12} {side:<4} {amount:>8.4f} @${price:>8.4f}\n"
             report += "```\n"
         
-        # Balance and Growth
-        if balance_data['instance_balances']:
-            report += "\n💰 **Balance and Growth**\n```\n"
+        # Active Coin Growth Only
+        active_coins = self._extract_active_coins(instances)
+        if balance_data['instance_balances'] and active_coins:
+            report += "\n💰 **Active Coin Growth**\n```\n"
             for instance_name, instance_data in balance_data['instance_balances'].items():
-                report += f"  {instance_name}:\n"
-                for currency, data in instance_data['balances'].items():
-                    total_formatted = self._format_currency(data.get('total', 0))
-                    free_formatted = self._format_currency(data.get('free', 0))
-                    used_formatted = self._format_currency(data.get('used', 0))
-                    report += f"    {currency}: Total={total_formatted}, Free={free_formatted}, Used={used_formatted}\n"
-                
-                if instance_name in growth_data:
-                    for currency, growth in growth_data[instance_name].items():
+                if instance_name in active_coins:
+                    active_coin = active_coins[instance_name]
+                    report += f"  {instance_name} ({active_coin}):\n"
+                    
+                    # Show only active coin balance
+                    if active_coin in instance_data['balances']:
+                        data = instance_data['balances'][active_coin]
+                        total_formatted = self._format_currency(data.get('total', 0))
+                        free_formatted = self._format_currency(data.get('free', 0))
+                        used_formatted = self._format_currency(data.get('used', 0))
+                        report += f"    Balance: {total_formatted} (Free: {free_formatted}, Used: {used_formatted})\n"
+                    
+                    # Show only active coin growth
+                    if instance_name in growth_data and active_coin in growth_data[instance_name]:
+                        growth = growth_data[instance_name][active_coin]
                         percentage_change_formatted = self._format_percentage(growth['percentage_change'])
-                        report += f"    {currency} Growth: {percentage_change_formatted}\n"
+                        profit_formatted = self._format_currency(growth.get('profit_change', 0))
+                        report += f"    Growth: {percentage_change_formatted} (${profit_formatted})\n"
             report += "```\n"
         
         report += f"\n📊 **Monitoring Active** | Next Report: {(datetime.now() + timedelta(seconds=self.monitor_config.report_interval)).strftime('%H:%M:%S')}"
@@ -420,6 +428,32 @@ class StrategyMonitorService:
         """Clean up resources"""
         if self.db:
             self.db.close()
+
+    def _extract_active_coins(self, instances: List) -> Dict[str, str]:
+        """Extract active trading coins for each instance"""
+        active_coins = {}
+        for instance in instances:
+            if instance.trading_pair:
+                # Extract base currency from trading pair
+                # Handle formats like 'LTC/USDT:USDT', 'LTC/USDT', 'LTCUSDT'
+                trading_pair = instance.trading_pair.upper()
+                if '/' in trading_pair:
+                    base_currency = trading_pair.split('/')[0]
+                elif ':' in trading_pair:
+                    base_currency = trading_pair.split(':')[0].split('/')[0] if '/' in trading_pair else trading_pair.split(':')[0]
+                else:
+                    # Handle LTCUSDT format
+                    if trading_pair.endswith('USDT'):
+                        base_currency = trading_pair[:-4]
+                    elif trading_pair.endswith('BTC'):
+                        base_currency = trading_pair[:-3]
+                    elif trading_pair.endswith('ETH'):
+                        base_currency = trading_pair[:-3]
+                    else:
+                        base_currency = trading_pair
+                
+                active_coins[instance.name] = base_currency
+        return active_coins
 
 async def run_strategy_monitor(strategy_name: str):
     """Run strategy monitor for a specific strategy"""
