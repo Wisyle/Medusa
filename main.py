@@ -1116,8 +1116,20 @@ async def get_instances(db: Session = Depends(get_db), current_user: User = Depe
                     ).order_by(BalanceHistory.timestamp.desc()).first()
                     
                     if latest_balance:
+                        # Ensure total_value_usd is a valid number
+                        total_usdt = latest_balance.total_value_usd
+                        if total_usdt is None or str(total_usdt).lower() in ['nan', 'infinity', '-infinity']:
+                            total_usdt = 0.0
+                        else:
+                            try:
+                                total_usdt = float(total_usdt)
+                                if not (total_usdt == total_usdt):  # Check for NaN
+                                    total_usdt = 0.0
+                            except (ValueError, TypeError):
+                                total_usdt = 0.0
+                        
                         instance_data["latest_balance"] = {
-                            "total_usdt": latest_balance.total_value_usd,
+                            "total_usdt": total_usdt,
                             "timestamp": latest_balance.timestamp.isoformat(),
                             "data": latest_balance.balance_data
                         }
@@ -1351,20 +1363,46 @@ async def stop_instance(instance_id: int, db: Session = Depends(get_db), current
 @app.delete("/api/instances/{instance_id}")
 async def delete_instance(instance_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
     """Delete bot instance"""
-    instance = db.query(BotInstance).filter(
-        BotInstance.id == instance_id,
-        BotInstance.user_id == current_user.id
-    ).first()
-    if not instance:
-        raise HTTPException(status_code=404, detail="Instance not found")
-    
-    if instance_id in active_processes:
-        await stop_instance(instance_id, db, current_user)
-    
-    db.delete(instance)
-    db.commit()
-    
-    return {"message": "Instance deleted successfully"}
+    try:
+        instance = db.query(BotInstance).filter(
+            BotInstance.id == instance_id,
+            BotInstance.user_id == current_user.id
+        ).first()
+        if not instance:
+            raise HTTPException(status_code=404, detail="Instance not found")
+        
+        # Stop the instance if it's running
+        if instance_id in active_processes:
+            try:
+                await stop_instance(instance_id, db, current_user)
+            except Exception as stop_error:
+                logger.warning(f"Failed to stop instance {instance_id} during deletion: {stop_error}")
+        
+        # Delete related data first
+        try:
+            # Delete balance history
+            db.query(BalanceHistory).filter(BalanceHistory.instance_id == instance_id).delete()
+            # Delete activity logs
+            db.query(ActivityLog).filter(ActivityLog.instance_id == instance_id).delete()
+            # Delete error logs
+            db.query(ErrorLog).filter(ErrorLog.instance_id == instance_id).delete()
+        except Exception as cleanup_error:
+            logger.warning(f"Failed to clean up related data for instance {instance_id}: {cleanup_error}")
+        
+        # Delete the instance itself
+        db.delete(instance)
+        db.commit()
+        
+        logger.info(f"✅ Successfully deleted instance {instance_id} ({instance.name}) for user {current_user.id}")
+        return {"message": "Instance deleted successfully", "success": True}
+        
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"❌ Failed to delete instance {instance_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to delete instance: {str(e)}")
 
 @app.put("/api/instances/{instance_id}")
 async def update_instance(

@@ -64,6 +64,20 @@
 <script>
 let instances = [];
 
+function safeFormatCurrency(value) {
+    // Safe currency formatting to prevent NaN display
+    if (value === null || value === undefined || value === '' || isNaN(value)) {
+        return '0.00';
+    }
+    
+    const numValue = parseFloat(value);
+    if (isNaN(numValue) || !isFinite(numValue)) {
+        return '0.00';
+    }
+    
+    return numValue.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+}
+
 function refreshInstances() {
     loadInstances();
 }
@@ -75,7 +89,12 @@ function loadInstances() {
             'Authorization': 'Bearer ' + token
         }
     })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response.json();
+        })
         .then(data => {
             instances = data;
             updateInstancesTable();
@@ -84,7 +103,7 @@ function loadInstances() {
             console.error('Error loading instances:', error);
             document.querySelector('#instances-table tbody').innerHTML = `
                 <tr>
-                    <td colspan="7" class="text-center text-danger">
+                    <td colspan="8" class="text-center text-danger">
                         <i class="fas fa-exclamation-triangle"></i>
                         Error loading instances: ${error.message}
                     </td>
@@ -140,7 +159,7 @@ function updateInstancesTable() {
             <td>
                 ${instance.balance_enabled ? (
                     instance.latest_balance ? 
-                        `<span class="text-success">$${parseFloat(instance.latest_balance.total_usdt).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                        `<span class="text-success">$${safeFormatCurrency(instance.latest_balance.total_usdt)}</span>
                         <br><small class="text-muted">${new Date(instance.latest_balance.timestamp).toLocaleTimeString()}</small>` :
                         '<span class="text-warning"><i class="fas fa-sync-alt"></i> Waiting...</span>'
                 ) : '<span class="text-muted">Disabled</span>'}
@@ -233,7 +252,12 @@ function deleteInstance(instanceId) {
             'Authorization': 'Bearer ' + token
         }
     })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.message) {
                 alert(data.message);
@@ -241,7 +265,8 @@ function deleteInstance(instanceId) {
             }
         })
         .catch(error => {
-            alert('Error deleting instance: ' + error);
+            console.error('Error deleting instance:', error);
+            alert('Error deleting instance: ' + error.message);
         });
 }
 

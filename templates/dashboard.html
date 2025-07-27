@@ -1454,6 +1454,39 @@
 let instances = [];
 let charts = {}; // Store chart instances
 
+// Safe formatting functions
+function safeFormatCurrency(value, useLocaleString = false) {
+    // Safe currency formatting to prevent NaN display
+    if (value === null || value === undefined || value === '' || isNaN(value)) {
+        return '0.00';
+    }
+    
+    const numValue = parseFloat(value);
+    if (isNaN(numValue) || !isFinite(numValue)) {
+        return '0.00';
+    }
+    
+    if (useLocaleString) {
+        return numValue.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    }
+    
+    return numValue.toFixed(2);
+}
+
+function safeFormatPercentage(value, decimals = 1) {
+    // Safe percentage formatting to prevent NaN display
+    if (value === null || value === undefined || value === '' || isNaN(value)) {
+        return '0.0';
+    }
+    
+    const numValue = parseFloat(value);
+    if (isNaN(numValue) || !isFinite(numValue)) {
+        return '0.0';
+    }
+    
+    return numValue.toFixed(decimals);
+}
+
 // Get user display name from API
 async function getUserDisplayName() {
     try {
@@ -1844,13 +1877,13 @@ function updateTradingBotsStats(data) {
     document.getElementById('total-instances').textContent = data.total_instances || 0;
     document.getElementById('active-instances').textContent = data.active_instances || 0;
     document.getElementById('error-instances').textContent = data.error_instances || 0;
-    document.getElementById('total-pnl').textContent = `$${(data.total_pnl || 0).toFixed(2)}`;
+    document.getElementById('total-pnl').textContent = `$${safeFormatCurrency(data.total_pnl)}`;
 }
 
 // Update system overview statistics
 function updateSystemOverviewStats(data) {
     if (data.system_health) {
-        document.getElementById('system-uptime').textContent = `${(data.system_health.uptime_percentage || 0).toFixed(1)}%`;
+        document.getElementById('system-uptime').textContent = `${safeFormatPercentage(data.system_health.uptime_percentage)}%`;
         document.getElementById('active-services').textContent = `${data.system_health.active_bots || 0}/${data.system_health.total_bots || 0}`;
         document.getElementById('system-errors-24h').textContent = data.system_health.recent_errors || 0;
         document.getElementById('total-api-credentials').textContent = `${data.system_health.active_api_credentials || 0}/${data.system_health.total_api_credentials || 0}`;
@@ -1998,16 +2031,15 @@ async function deleteInstance(instanceId, instanceName) {
             }
         });
         
-        if (response.ok) {
-            const data = await response.json();
-            showNotification(data.message || 'Instance deleted successfully', 'success');
-            setTimeout(() => refreshDashboard(), 1000);
-        } else {
-            showNotification('Failed to delete instance', 'error');
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
+        const data = await response.json();
+        showNotification(data.message || 'Instance deleted successfully', 'success');
+        setTimeout(() => refreshDashboard(), 1000);
     } catch (error) {
         console.error('Error deleting instance:', error);
-        showNotification('Error deleting instance', 'error');
+        showNotification('Error deleting instance: ' + error.message, 'error');
     }
 }
 
@@ -2067,7 +2099,7 @@ function updateDEXArbitrageData(data) {
     document.getElementById('total-dex-instances').textContent = data.total_instances || 0;
     document.getElementById('active-dex-instances').textContent = data.active_instances || 0;
     document.getElementById('dex-opportunities-24h').textContent = data.opportunities_24h || 0;
-    document.getElementById('dex-profit-24h').textContent = `$${(data.total_profit_24h || 0).toFixed(2)}`;
+    document.getElementById('dex-profit-24h').textContent = `$${safeFormatCurrency(data.total_profit_24h)}`;
     
     // Update opportunities table
     updateDEXOpportunitiesTable(data.recent_opportunities || []);
@@ -2178,8 +2210,8 @@ function updateValidatorNodesData(data) {
     // Update stats
     document.getElementById('total-validators').textContent = data.total_validators || 0;
     document.getElementById('active-validators').textContent = data.active_validators || 0;
-    document.getElementById('total-staked').textContent = `$${(data.total_stake || 0).toLocaleString()}`;
-    document.getElementById('validator-rewards-24h').textContent = `$${(data.total_rewards_24h || 0).toFixed(2)}`;
+    document.getElementById('total-staked').textContent = `$${safeFormatCurrency(data.total_stake, true)}`;
+    document.getElementById('validator-rewards-24h').textContent = `$${safeFormatCurrency(data.total_rewards_24h)}`;
     
     // Update rewards table
     updateValidatorRewardsTable(data.recent_rewards || []);
