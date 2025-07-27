@@ -1142,11 +1142,11 @@ class ExchangePoller:
                         used = amounts.get('used', 0)
                         balance_lines.append(f"• {currency}: {safe_float(total, 6)} (Free: {safe_float(free, 6)}, Used: {safe_float(used, 6)})")
             
-            # Show any other currencies with significant balances (>$1 equivalent)
+            # Show any other currencies with significant balances (>$0.01 equivalent)
             for currency, amounts in balance_data.items():
                 if currency not in priority_currencies and isinstance(amounts, dict):
                     total = amounts.get('total', 0)
-                    if total > 1:  # Only show if balance > 1
+                    if total > 0.01:  # Show balances > 1 cent (was > 1)
                         free = amounts.get('free', 0)
                         used = amounts.get('used', 0)
                         balance_lines.append(f"• {currency}: {safe_float(total, 6)} (Free: {safe_float(free, 6)}, Used: {safe_float(used, 6)})")
@@ -1249,7 +1249,12 @@ class ExchangePoller:
             
             # Save balance history if enabled and balance was fetched
             if balance and self.instance.balance_enabled:
+                logger.info(f"[{cycle_id}] Saving balance history for {self.instance.name} - {len(balance)} currencies")
                 self._save_balance_history(balance)
+            elif self.instance.balance_enabled:
+                logger.warning(f"[{cycle_id}] No balance data to save for {self.instance.name} (balance_enabled=True but balance empty)")
+            else:
+                logger.info(f"[{cycle_id}] Balance tracking disabled for {self.instance.name}")
             
             logger.info(f"[{cycle_id}] API responses - Positions: {len(positions)}, Orders: {len(orders)}, Trades: {len(trades)}, Balance: {len(balance)} currencies")
             
