@@ -743,10 +743,10 @@ def check_bot_instances_schema(conn, inspector, is_postgresql):
             
             if is_postgresql:
                 # PostgreSQL syntax
-                conn.execute(text("ALTER TABLE bot_instances ADD COLUMN balance_enabled BOOLEAN DEFAULT FALSE;"))
+                conn.execute(text("ALTER TABLE bot_instances ADD COLUMN balance_enabled BOOLEAN DEFAULT TRUE;"))
             else:
                 # SQLite syntax
-                conn.execute(text("ALTER TABLE bot_instances ADD COLUMN balance_enabled INTEGER DEFAULT 0;"))
+                conn.execute(text("ALTER TABLE bot_instances ADD COLUMN balance_enabled INTEGER DEFAULT 1;"))
             
             logger.info("✅ Added balance_enabled column to bot_instances")
         else:

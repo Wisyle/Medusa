@@ -90,9 +90,9 @@ async def run_smart_migrations():
                 if 'balance_enabled' not in columns:
                     logger.info("➕ Adding balance_enabled column to bot_instances...")
                     if is_postgresql:
-                        db.execute(text("ALTER TABLE bot_instances ADD COLUMN balance_enabled BOOLEAN DEFAULT FALSE"))
+                        db.execute(text("ALTER TABLE bot_instances ADD COLUMN balance_enabled BOOLEAN DEFAULT TRUE"))
                     else:
-                        db.execute(text("ALTER TABLE bot_instances ADD COLUMN balance_enabled BOOLEAN DEFAULT 0"))
+                        db.execute(text("ALTER TABLE bot_instances ADD COLUMN balance_enabled BOOLEAN DEFAULT 1"))
                     db.commit()
                     logger.info("✅ Added balance_enabled column")
                 else:
@@ -1429,7 +1429,7 @@ async def update_instance(
     telegram_chat_id: str = Form(""),
     telegram_topic_id: str = Form(""),
     trading_pair: str = Form(""),
-    balance_enabled: bool = Form(False),
+    balance_enabled: bool = Form(True),  # Changed from False to True - was disabling balance on updates!
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
