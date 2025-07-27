@@ -390,6 +390,51 @@
             transform: scale(1.05);
             box-shadow: 0 4px 12px rgba(255, 215, 0, 0.2);
         }
+        /* Modal fixes */
+        .modal-backdrop {
+            z-index: 1040 !important;
+        }
+        
+        .modal {
+            z-index: 1050 !important;
+        }
+        
+        .modal-dialog {
+            z-index: 1060 !important;
+        }
+        
+        /* Ensure modals are clickable */
+        .modal.show .modal-dialog {
+            pointer-events: auto;
+        }
+        
+        /* Fix modal close button styling */
+        .modal .close {
+            color: #fff;
+            opacity: 0.8;
+            font-size: 1.5rem;
+            font-weight: bold;
+            line-height: 1;
+            background: none;
+            border: 0;
+            padding: 0;
+            cursor: pointer;
+        }
+        
+        .modal .close:hover {
+            opacity: 1;
+            color: #fff;
+        }
+        
+        /* Prevent modal from blocking page interaction */
+        body.modal-open {
+            overflow: hidden;
+        }
+        
+        .modal-open .modal {
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
     </style>
 </head>
 <body>

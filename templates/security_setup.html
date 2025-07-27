@@ -113,12 +113,14 @@
                     </form>
 
                     <!-- TOTP QR Code Modal -->
-                    <div class="modal fade" id="totpModal" tabindex="-1" aria-hidden="true">
+                    <div class="modal fade" id="totpModal" tabindex="-1" aria-hidden="true" data-keyboard="true">
                         <div class="modal-dialog">
                             <div class="modal-content">
                                 <div class="modal-header">
-                                    <h5 class="modal-title">Google Authenticator Setup</h5>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    <h5 class="modal-title">TOTP Setup</h5>
+                                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
                                 </div>
                                 <div class="modal-body text-center">
                                     <p>Scan this QR code with Google Authenticator:</p>

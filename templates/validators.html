@@ -177,12 +177,16 @@
 </div>
 
 <!-- Create Validator Node Modal -->
-<div class="modal fade" id="createValidatorModal" tabindex="-1">
+<div class="modal fade" id="createValidatorModal" tabindex="-1" data-keyboard="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Create Validator Node</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <h5 class="modal-title">
+                    <i class="fas fa-plus-circle"></i> Add New Validator Node
+                </h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
             </div>
             <div class="modal-body">
                 <form id="createValidatorForm">
@@ -264,8 +268,10 @@
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-success" onclick="createValidatorNode()">Create Node</button>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-success">
+                    <i class="fas fa-plus"></i> Add Validator
+                </button>
             </div>
         </div>
     </div>
