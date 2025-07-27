@@ -85,8 +85,6 @@ async def get_migration_status(current_user: User = Depends(get_current_user)):
                 column_names = [col['name'] for col in columns]
                 
                 # Check for specific required columns
-                if table == 'users' and 'role' not in column_names:
-                    table_issues.append({'table': 'users', 'issue': 'Missing role column'})
                 if table == 'api_credentials' and 'user_id' not in column_names:
                     table_issues.append({'table': 'api_credentials', 'issue': 'Missing user_id column'})
                     
@@ -185,6 +183,17 @@ async def run_migrations(current_user: User = Depends(get_current_user)):
         
         # Run migrations
         try:
+            # Import all models to ensure they're registered
+            from database import User, Role, Permission, UserRole, RolePermission
+            from dex_arbitrage_model import DEXArbitrageInstance, DEXOpportunity
+            from validator_node_model import ValidatorNode
+            from strategy_monitor_model import StrategyMonitor
+            
+            logger.info("Creating all tables...")
+            # Create all tables
+            Base.metadata.create_all(bind=engine)
+            changes_made.append("Created/updated all database tables")
+            
             # First run startup migrations
             logger.info("Running startup migrations...")
             run_startup_migrations()

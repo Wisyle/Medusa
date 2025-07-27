@@ -20,16 +20,26 @@ if settings.database_url.startswith('postgresql'):
         'keepalives_count': 5
     }
 
-engine = create_engine(
-    settings.database_url, 
-    echo=False,  # Disable debug logging in production
-    connect_args=connect_args,
-    pool_size=5,  # Reduced pool size for better resource usage
-    max_overflow=10,  # Allow temporary connections when needed
-    pool_recycle=300,  # Recycle connections every 5 minutes
-    pool_pre_ping=True,
-    pool_timeout=10  # Reduced timeout to fail faster
-)
+# Create database engine
+if settings.database_url.startswith('postgresql'):
+    # For PostgreSQL, add SSL configuration
+    engine = create_engine(
+        settings.database_url,
+        pool_pre_ping=True,
+        pool_recycle=3600,
+        echo=False,
+        connect_args={
+            "sslmode": "prefer",  # Use SSL if available but don't require it
+            "connect_timeout": 10,
+            "options": "-c statement_timeout=30000"  # 30 second statement timeout
+        }
+    )
+else:
+    # SQLite
+    engine = create_engine(
+        settings.database_url,
+        connect_args={"check_same_thread": False}
+    )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 

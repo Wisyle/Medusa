@@ -136,13 +136,16 @@
 </div>
 
 <!-- Migration Progress Modal -->
-<div class="modal fade" id="migrationModal" tabindex="-1" data-backdrop="static" data-keyboard="false">
+<div class="modal fade" id="migrationModal" tabindex="-1" data-keyboard="false">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">
                     <i class="fas fa-spinner fa-spin"></i> Running Migrations
                 </h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
             </div>
             <div class="modal-body">
                 <div class="alert alert-info">
@@ -167,8 +170,8 @@
                 <h5 class="modal-title">
                     <i class="fas fa-microscope"></i> Schema Analysis
                 </h5>
-                <button type="button" class="close" data-dismiss="modal">
-                    <span>&times;</span>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
                 </button>
             </div>
             <div class="modal-body">
@@ -179,13 +182,16 @@
 </div>
 
 <!-- Cleanup Progress Modal -->
-<div class="modal fade" id="cleanupModal" tabindex="-1" data-backdrop="static" data-keyboard="false">
+<div class="modal fade" id="cleanupModal" tabindex="-1" data-keyboard="false">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">
                     <i class="fas fa-broom"></i> Database Cleanup & Optimization
                 </h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
             </div>
             <div class="modal-body">
                 <div class="alert alert-warning">
