@@ -67,7 +67,7 @@ class StrategyMonitorService:
             PollState.timestamp >= since
         ).order_by(desc(PollState.timestamp)).all()
         
-        # Group by (instance_id, symbol) and get latest position for each
+        # Group by (instance_id, symbol, side) and get latest position for each
         latest_positions = {}
         symbol_pnl = defaultdict(float)
         instance_positions = defaultdict(list)  # Track positions per instance
@@ -75,13 +75,15 @@ class StrategyMonitorService:
         for pos in positions:
             symbol = pos.symbol
             instance_id = pos.instance_id
-            position_key = f"{instance_id}_{symbol}"
+            side = pos.data.get('side', 'unknown') if pos.data else 'unknown'
+            position_key = f"{instance_id}_{symbol}_{side}"
             
             if position_key not in latest_positions:
                 latest_positions[position_key] = {
                     'data': pos.data,
                     'symbol': symbol,
-                    'instance_id': instance_id
+                    'instance_id': instance_id,
+                    'side': side
                 }
                 instance_positions[instance_id].append(pos.data)
                 
@@ -317,7 +319,7 @@ class StrategyMonitorService:
         # Active Positions
         if positions_data['positions']:
             total_positions = len(positions_data['positions'])
-            report += f"\n🎯 **Active Positions** ({total_positions})\n```\n"
+            report += f"\n🎯 **Active Positions** ({total_positions})\n"
             
             # Group positions by instance for better display
             instance_names = {instance.id: instance.name for instance in instances}
@@ -328,18 +330,17 @@ class StrategyMonitorService:
                 instance_id = position_info['instance_id']
                 instance_name = instance_names.get(instance_id, f"Instance_{instance_id}")
                 
-                side = pos.get('side', 'N/A')
+                side = pos.get('side', 'N/A').upper()
                 size = float(pos.get('contracts', 0) or 0)
                 entry_price = float(pos.get('entryPrice', 0) or 0)
                 unrealized_pnl = float(pos.get('unrealizedPnl', 0) or 0)
                 
-                side_emoji = "🟢" if side == 'long' else "🔴" if side == 'short' else "⚪"
+                side_emoji = "🟢" if side == 'LONG' else "🔴" if side == 'SHORT' else "⚪"
                 pnl_formatted = self._format_currency(unrealized_pnl)
                 pnl_sign = "🟢" if unrealized_pnl > 0 else "🔴" if unrealized_pnl < 0 else "⚪"
                 
-                report += f"{side_emoji} {instance_name:<10} {symbol:<10} {side:<5} {size:>8.4f} @${entry_price:>8.4f} {pnl_sign}${pnl_formatted}\n"
-                
-            report += "```\n"
+                # Format like individual position updates: 🔴 INSTANCE_NAME SYMBOL SIDE SIZE @$PRICE 🟢$PNL
+                report += f"{side_emoji} **{instance_name}** {symbol} {side.lower()} {size:.4f} @${entry_price:.4f} {pnl_sign}${pnl_formatted}\n"
         
         # Recent Closed Orders
         if orders_data['closed_orders']:

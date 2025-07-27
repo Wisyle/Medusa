@@ -1273,7 +1273,9 @@ class ExchangePoller:
                     continue
                 
                 processed_positions += 1
-                previous_position = self._get_previous_state(symbol, 'position')
+                side = position.get('side', 'unknown')
+                position_state_key = f"position_{side}"  # Include side in state key
+                previous_position = self._get_previous_state(symbol, position_state_key)
                 current_hash = self._get_data_hash(position)
                 previous_hash = self._get_data_hash(previous_position) if previous_position else None
                 
@@ -1282,8 +1284,8 @@ class ExchangePoller:
                     await self._send_webhook(payload)
                     await self._send_telegram_notification(payload)
                     self._log_activity("position_update", symbol, "Position updated", payload)
-                    self._save_state(symbol, 'position', position)
-                    logger.info(f"[{cycle_id}] Position change detected for {symbol}")
+                    self._save_state(symbol, position_state_key, position)
+                    logger.info(f"[{cycle_id}] Position change detected for {symbol} {side}")
             
             processed_orders = 0
             for order in orders:

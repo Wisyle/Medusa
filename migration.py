@@ -114,6 +114,7 @@ def migrate_postgresql():
             
             # Define columns to add
             columns_to_add = [
+                ('user_id', 'INTEGER REFERENCES users(id)', 'User ownership column'),
                 ('trading_pair', 'VARCHAR(20)', 'Trading pair filter'),
                 ('telegram_topic_id', 'VARCHAR(100)', 'Telegram topic ID'),
                 ('market_type', "VARCHAR(20) DEFAULT 'unified'", 'Market type (spot/futures/unified)')
@@ -292,6 +293,28 @@ def migrate_sqlite():
                 logger.error(f"❌ Failed to create users table: {e}")
         else:
             logger.info("✅ users table already exists")
+        
+        # Check for user_id column
+        if 'user_id' not in existing_columns:
+            try:
+                logger.info("➕ Adding user_id column to bot_instances...")
+                cursor.execute("ALTER TABLE bot_instances ADD COLUMN user_id INTEGER REFERENCES users(id);")
+                logger.info("✅ Successfully added user_id column")
+            except Exception as e:
+                logger.error(f"❌ Failed to add user_id column: {e}")
+        else:
+            logger.info("✅ user_id column already exists")
+        
+        # Check for telegram_topic_id column
+        if 'telegram_topic_id' not in existing_columns:
+            try:
+                logger.info("➕ Adding telegram_topic_id column to bot_instances...")
+                cursor.execute("ALTER TABLE bot_instances ADD COLUMN telegram_topic_id VARCHAR(100);")
+                logger.info("✅ Successfully added telegram_topic_id column")
+            except Exception as e:
+                logger.error(f"❌ Failed to add telegram_topic_id column: {e}")
+        else:
+            logger.info("✅ telegram_topic_id column already exists")
         
         # Check and add strategy_monitors table
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='strategy_monitors'")
