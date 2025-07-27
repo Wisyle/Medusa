@@ -24,8 +24,12 @@ logger = logging.getLogger(__name__)
 @router.get("/migrations", response_class=HTMLResponse)
 async def migrations_dashboard(request: Request, current_user: User = Depends(get_current_user_html)):
     """Display migrations dashboard"""
-    if current_user.role != 'admin':
-        raise HTTPException(status_code=403, detail="Admin access required")
+    # Check if user is superuser or has admin role
+    if not current_user.is_superuser:
+        # Check if user has admin role
+        has_admin_role = any(user_role.role.name == 'admin' for user_role in current_user.roles)
+        if not has_admin_role:
+            raise HTTPException(status_code=403, detail="Admin access required")
     
     from main import templates
     return templates.TemplateResponse("migrations.html", {"request": request, "current_user": current_user})
@@ -33,8 +37,12 @@ async def migrations_dashboard(request: Request, current_user: User = Depends(ge
 @router.get("/api/migrations/status")
 async def get_migration_status(current_user: User = Depends(get_current_user)):
     """Get comprehensive migration and system status"""
-    if current_user.role != 'admin':
-        raise HTTPException(status_code=403, detail="Admin access required")
+    # Check if user is superuser or has admin role
+    if not current_user.is_superuser:
+        # Check if user has admin role
+        has_admin_role = any(user_role.role.name == 'admin' for user_role in current_user.roles)
+        if not has_admin_role:
+            raise HTTPException(status_code=403, detail="Admin access required")
     
     db = SessionLocal()
     try:
@@ -150,8 +158,12 @@ async def get_migration_status(current_user: User = Depends(get_current_user)):
 @router.post("/api/migrations/run")
 async def run_migrations(current_user: User = Depends(get_current_user)):
     """Run migrations and restart service"""
-    if current_user.role != 'admin':
-        raise HTTPException(status_code=403, detail="Admin access required")
+    # Check if user is superuser or has admin role
+    if not current_user.is_superuser:
+        # Check if user has admin role
+        has_admin_role = any(user_role.role.name == 'admin' for user_role in current_user.roles)
+        if not has_admin_role:
+            raise HTTPException(status_code=403, detail="Admin access required")
     
     db = SessionLocal()
     migration_record = None
@@ -238,8 +250,12 @@ async def run_migrations(current_user: User = Depends(get_current_user)):
 @router.post("/api/migrations/analyze")
 async def analyze_schema(current_user: User = Depends(get_current_user)):
     """Analyze database schema and suggest migrations"""
-    if current_user.role != 'admin':
-        raise HTTPException(status_code=403, detail="Admin access required")
+    # Check if user is superuser or has admin role
+    if not current_user.is_superuser:
+        # Check if user has admin role
+        has_admin_role = any(user_role.role.name == 'admin' for user_role in current_user.roles)
+        if not has_admin_role:
+            raise HTTPException(status_code=403, detail="Admin access required")
     
     try:
         inspector = inspect(engine)
