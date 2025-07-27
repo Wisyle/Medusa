@@ -17,6 +17,8 @@ import logging
 from auth import get_current_user, get_current_user_html
 from database import User
 from jinja2 import Template
+# Import models for cleanup
+from database import ActivityLog, ErrorLog, BalanceHistory, BotInstance
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -24,12 +26,9 @@ logger = logging.getLogger(__name__)
 @router.get("/migrations", response_class=HTMLResponse)
 async def migrations_dashboard(request: Request, current_user: User = Depends(get_current_user_html)):
     """Display migrations dashboard"""
-    # Check if user is superuser or has admin role
+    # Only allow superusers
     if not current_user.is_superuser:
-        # Check if user has admin role
-        has_admin_role = any(user_role.role.name == 'admin' for user_role in current_user.roles)
-        if not has_admin_role:
-            raise HTTPException(status_code=403, detail="Admin access required")
+        raise HTTPException(status_code=403, detail="Superuser access required")
     
     from main import templates
     return templates.TemplateResponse("migrations.html", {"request": request, "current_user": current_user})
@@ -37,12 +36,9 @@ async def migrations_dashboard(request: Request, current_user: User = Depends(ge
 @router.get("/api/migrations/status")
 async def get_migration_status(current_user: User = Depends(get_current_user)):
     """Get comprehensive migration and system status"""
-    # Check if user is superuser or has admin role
+    # Only allow superusers
     if not current_user.is_superuser:
-        # Check if user has admin role
-        has_admin_role = any(user_role.role.name == 'admin' for user_role in current_user.roles)
-        if not has_admin_role:
-            raise HTTPException(status_code=403, detail="Admin access required")
+        raise HTTPException(status_code=403, detail="Superuser access required")
     
     db = SessionLocal()
     try:
@@ -158,12 +154,9 @@ async def get_migration_status(current_user: User = Depends(get_current_user)):
 @router.post("/api/migrations/run")
 async def run_migrations(current_user: User = Depends(get_current_user)):
     """Run migrations and restart service"""
-    # Check if user is superuser or has admin role
+    # Only allow superusers
     if not current_user.is_superuser:
-        # Check if user has admin role
-        has_admin_role = any(user_role.role.name == 'admin' for user_role in current_user.roles)
-        if not has_admin_role:
-            raise HTTPException(status_code=403, detail="Admin access required")
+        raise HTTPException(status_code=403, detail="Superuser access required")
     
     db = SessionLocal()
     migration_record = None
@@ -250,12 +243,9 @@ async def run_migrations(current_user: User = Depends(get_current_user)):
 @router.post("/api/migrations/analyze")
 async def analyze_schema(current_user: User = Depends(get_current_user)):
     """Analyze database schema and suggest migrations"""
-    # Check if user is superuser or has admin role
+    # Only allow superusers
     if not current_user.is_superuser:
-        # Check if user has admin role
-        has_admin_role = any(user_role.role.name == 'admin' for user_role in current_user.roles)
-        if not has_admin_role:
-            raise HTTPException(status_code=403, detail="Admin access required")
+        raise HTTPException(status_code=403, detail="Superuser access required")
     
     try:
         inspector = inspect(engine)
@@ -266,31 +256,250 @@ async def analyze_schema(current_user: User = Depends(get_current_user)):
         
         # Analyze each table
         for table_name in inspector.get_table_names():
-            columns = inspector.get_columns(table_name)
-            indexes = inspector.get_indexes(table_name)
-            foreign_keys = inspector.get_foreign_keys(table_name)
-            
-            analysis['tables'][table_name] = {
-                'columns': [{'name': col['name'], 'type': str(col['type'])} for col in columns],
-                'indexes': indexes,
-                'foreign_keys': foreign_keys
-            }
-            
-            # Check for common issues
-            column_names = [col['name'] for col in columns]
-            
-            # Check for missing indexes on foreign keys
-            for fk in foreign_keys:
-                if not any(fk['constrained_columns'][0] in idx['column_names'] for idx in indexes):
-                    analysis['recommendations'].append({
-                        'type': 'index',
-                        'table': table_name,
-                        'column': fk['constrained_columns'][0],
-                        'reason': 'Foreign key without index'
+            try:
+                columns = inspector.get_columns(table_name)
+                indexes = inspector.get_indexes(table_name)
+                foreign_keys = inspector.get_foreign_keys(table_name)
+                
+                # Convert column types to string representation
+                column_info = []
+                for col in columns:
+                    col_type = str(col.get('type', 'Unknown'))
+                    column_info.append({
+                        'name': col['name'],
+                        'type': col_type,
+                        'nullable': col.get('nullable', True),
+                        'default': str(col.get('default', '')) if col.get('default') else None
                     })
+                
+                analysis['tables'][table_name] = {
+                    'columns': column_info,
+                    'indexes': indexes,
+                    'foreign_keys': foreign_keys
+                }
+                
+                # Check for missing indexes on foreign keys
+                for fk in foreign_keys:
+                    if fk.get('constrained_columns'):
+                        for col in fk['constrained_columns']:
+                            # Check if any index contains this column
+                            has_index = False
+                            for idx in indexes:
+                                if col in idx.get('column_names', []):
+                                    has_index = True
+                                    break
+                            
+                            if not has_index:
+                                analysis['recommendations'].append({
+                                    'type': 'index',
+                                    'table': table_name,
+                                    'column': col,
+                                    'reason': f'Foreign key column {col} without index'
+                                })
+                
+            except Exception as e:
+                logger.error(f"Error analyzing table {table_name}: {e}")
+                analysis['tables'][table_name] = {
+                    'error': str(e),
+                    'columns': [],
+                    'indexes': [],
+                    'foreign_keys': []
+                }
         
         return analysis
         
     except Exception as e:
         logger.error(f"Error analyzing schema: {e}")
         raise HTTPException(status_code=500, detail=str(e)) 
+
+@router.post("/api/migrations/cleanup")
+async def cleanup_database(current_user: User = Depends(get_current_user)):
+    """Clean up unused data and optimize database"""
+    # Only allow superusers
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Superuser access required")
+    
+    db = SessionLocal()
+    cleanup_stats = {
+        'test_users_removed': 0,
+        'test_bots_removed': 0,
+        'old_logs_removed': 0,
+        'old_errors_removed': 0,
+        'old_balance_removed': 0,
+        'failed_migrations_removed': 0,
+        'database_optimized': False,
+        'errors': []
+    }
+    
+    try:
+        logger.info("🧹 Starting database cleanup...")
+        
+        # Remove test users
+        test_emails = ['admin@test.com', 'test@test.com', 'demo@demo.com']
+        test_users = db.query(User).filter(User.email.in_(test_emails)).all()
+        
+        if test_users:
+            for user in test_users:
+                logger.info(f"Removing test user: {user.email}")
+                db.delete(user)
+                cleanup_stats['test_users_removed'] += 1
+            db.commit()
+        
+        # Remove test bot instances
+        test_bots = db.query(BotInstance).filter(
+            BotInstance.name.in_(['Test Bot', 'Demo Bot', 'Example Bot'])
+        ).all()
+        
+        if test_bots:
+            for bot in test_bots:
+                logger.info(f"Removing test bot: {bot.name}")
+                db.delete(bot)
+                cleanup_stats['test_bots_removed'] += 1
+            db.commit()
+        
+        # Clean up old logs (older than 30 days)
+        from datetime import timedelta
+        cutoff_date = datetime.utcnow() - timedelta(days=30)
+        
+        # Activity logs
+        old_activity_logs = db.query(ActivityLog).filter(
+            ActivityLog.timestamp < cutoff_date
+        ).count()
+        
+        if old_activity_logs > 0:
+            db.query(ActivityLog).filter(
+                ActivityLog.timestamp < cutoff_date
+            ).delete()
+            cleanup_stats['old_logs_removed'] = old_activity_logs
+            db.commit()
+        
+        # Error logs
+        old_error_logs = db.query(ErrorLog).filter(
+            ErrorLog.timestamp < cutoff_date
+        ).count()
+        
+        if old_error_logs > 0:
+            db.query(ErrorLog).filter(
+                ErrorLog.timestamp < cutoff_date
+            ).delete()
+            cleanup_stats['old_errors_removed'] = old_error_logs
+            db.commit()
+        
+        # Balance history (older than 90 days)
+        balance_cutoff = datetime.utcnow() - timedelta(days=90)
+        old_balance_history = db.query(BalanceHistory).filter(
+            BalanceHistory.timestamp < balance_cutoff
+        ).count()
+        
+        if old_balance_history > 0:
+            db.query(BalanceHistory).filter(
+                BalanceHistory.timestamp < balance_cutoff
+            ).delete()
+            cleanup_stats['old_balance_removed'] = old_balance_history
+            db.commit()
+        
+        # Clean up failed migrations
+        failed_migrations = db.query(MigrationHistory).filter(
+            MigrationHistory.status == 'failed'
+        ).all()
+        
+        if failed_migrations:
+            for migration in failed_migrations:
+                db.delete(migration)
+                cleanup_stats['failed_migrations_removed'] += 1
+            db.commit()
+        
+        # Vacuum database to reclaim space
+        try:
+            is_postgresql = str(engine.url).startswith('postgresql')
+            
+            if is_postgresql:
+                # For PostgreSQL, use raw connection
+                conn = engine.raw_connection()
+                conn.set_isolation_level(0)  # AUTOCOMMIT
+                cursor = conn.cursor()
+                cursor.execute("VACUUM ANALYZE")
+                cursor.close()
+                conn.close()
+                cleanup_stats['database_optimized'] = True
+            else:
+                # SQLite vacuum
+                db.execute(text("VACUUM"))
+                db.commit()
+                cleanup_stats['database_optimized'] = True
+                
+        except Exception as e:
+            logger.error(f"Error vacuuming database: {e}")
+            cleanup_stats['errors'].append(f"Vacuum error: {str(e)}")
+        
+        logger.info("✅ Database cleanup completed")
+        
+        return {
+            'success': True,
+            'message': 'Database cleanup completed successfully',
+            'stats': cleanup_stats
+        }
+        
+    except Exception as e:
+        logger.error(f"Error during cleanup: {e}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        db.close()
+
+@router.get("/api/migrations/storage-analysis")
+async def analyze_storage(current_user: User = Depends(get_current_user)):
+    """Analyze database storage usage"""
+    # Only allow superusers
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Superuser access required")
+    
+    db = SessionLocal()
+    try:
+        is_postgresql = str(engine.url).startswith('postgresql')
+        storage_info = {
+            'tables': [],
+            'total_size': 0,
+            'database_type': 'PostgreSQL' if is_postgresql else 'SQLite'
+        }
+        
+        if is_postgresql:
+            # PostgreSQL table sizes
+            result = db.execute(text("""
+                SELECT 
+                    tablename,
+                    pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) AS size,
+                    pg_total_relation_size(schemaname||'.'||tablename) AS size_bytes
+                FROM pg_tables 
+                WHERE schemaname = 'public'
+                ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC
+            """))
+            
+            for row in result:
+                storage_info['tables'].append({
+                    'name': row.tablename,
+                    'size': row.size,
+                    'size_bytes': row.size_bytes
+                })
+                storage_info['total_size'] += row.size_bytes
+                
+            # Get total database size
+            db_size_result = db.execute(text("SELECT pg_database_size(current_database())")).fetchone()
+            if db_size_result:
+                storage_info['total_database_size'] = db_size_result[0]
+                storage_info['total_database_size_pretty'] = f"{db_size_result[0] / (1024**2):.2f} MB"
+        else:
+            # SQLite - just get file size
+            if os.path.exists('medusa.db'):
+                size = os.path.getsize('medusa.db')
+                storage_info['total_size'] = size
+                storage_info['total_database_size'] = size
+                storage_info['total_database_size_pretty'] = f"{size / (1024**2):.2f} MB"
+                
+        return storage_info
+        
+    except Exception as e:
+        logger.error(f"Error analyzing storage: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        db.close() 

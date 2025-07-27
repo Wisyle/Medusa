@@ -22,7 +22,8 @@ from sqlalchemy import text
 
 from database import get_db, init_db, BotInstance, ActivityLog, ErrorLog, User, BalanceHistory, SessionLocal, engine
 from api_library_model import ApiCredential
-from polling import run_poller
+from migration_tracking_model import MigrationHistory
+from polling import run_poller, monitor_instances
 from config import settings
 from api_library_routes import add_api_library_routes
 from auth import (

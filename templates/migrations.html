@@ -63,6 +63,9 @@
                     <button class="btn btn-secondary btn-block mb-2" onclick="analyzeSchema()">
                         <i class="fas fa-microscope"></i> Analyze Schema
                     </button>
+                    <button class="btn btn-warning btn-block mb-2" onclick="runCleanup()">
+                        <i class="fas fa-broom"></i> Clean & Optimize
+                    </button>
                     <button class="btn btn-info btn-block" onclick="refreshStatus()">
                         <i class="fas fa-sync"></i> Refresh Status
                     </button>
@@ -175,6 +178,38 @@
     </div>
 </div>
 
+<!-- Cleanup Progress Modal -->
+<div class="modal fade" id="cleanupModal" tabindex="-1" data-backdrop="static" data-keyboard="false">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-broom"></i> Database Cleanup & Optimization
+                </h5>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle"></i> This will remove old logs, test data, and optimize the database. This action cannot be undone!
+                </div>
+                <div id="cleanupProgress">
+                    <div class="text-center">
+                        <div class="spinner-border text-warning" role="status">
+                            <span class="sr-only">Processing...</span>
+                        </div>
+                        <p class="mt-2">Running cleanup and optimization...</p>
+                    </div>
+                </div>
+                <div id="cleanupResults" style="display: none;">
+                    <!-- Results will be shown here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal" id="cleanupCloseBtn" style="display: none;">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 let migrationStatus = null;
 
@@ -192,29 +227,45 @@ function refreshStatus() {
             'Authorization': 'Bearer ' + localStorage.getItem('access_token')
         }
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
     .then(data => {
         migrationStatus = data;
-        updateDiskUsage(data.disk_info);
-        updateDatabaseStatus(data);
-        updatePendingMigrations(data.pending_migrations);
-        updateTablesStatus(data.tables);
-        updateMigrationHistory(data.migration_history);
+        updateDiskUsage(data.disk_info || {});
+        updateDatabaseStatus(data || {});
+        updatePendingMigrations(data.pending_migrations || []);
+        updateTablesStatus(data.tables || {});
+        updateMigrationHistory(data.migration_history || []);
     })
     .catch(error => {
         console.error('Error loading migration status:', error);
-        showAlert('Failed to load migration status', 'danger');
+        showAlert('Failed to load migration status: ' + error.message, 'danger');
+        // Show error in each section
+        $('#diskUsage').html('<div class="alert alert-danger">Failed to load disk usage</div>');
+        $('#databaseStatus').html('<div class="alert alert-danger">Failed to load database status</div>');
+        $('#pendingMigrations').html('<div class="alert alert-danger">Failed to load pending migrations</div>');
+        $('#tablesStatus').html('<div class="alert alert-danger">Failed to load tables status</div>');
+        $('#migrationHistory').html('<div class="alert alert-danger">Failed to load migration history</div>');
     });
 }
 
 function updateDiskUsage(diskInfo) {
+    if (!diskInfo || !diskInfo.percent) {
+        $('#diskUsage').html('<div class="alert alert-warning">Disk usage data not available</div>');
+        return;
+    }
+    
     const percentUsed = diskInfo.percent;
     const color = percentUsed > 90 ? 'danger' : percentUsed > 70 ? 'warning' : 'success';
     
     $('#diskUsage').html(`
         <div class="mb-3">
-            <h5 class="mb-0">${diskInfo.used_gb} GB / ${diskInfo.total_gb} GB</h5>
-            <small class="text-muted">${diskInfo.free_gb} GB free</small>
+            <h5 class="mb-0">${diskInfo.used_gb || 0} GB / ${diskInfo.total_gb || 0} GB</h5>
+            <small class="text-muted">${diskInfo.free_gb || 0} GB free</small>
         </div>
         <div class="progress" style="height: 25px;">
             <div class="progress-bar bg-${color}" style="width: ${percentUsed}%">
@@ -225,22 +276,28 @@ function updateDiskUsage(diskInfo) {
 }
 
 function updateDatabaseStatus(data) {
-    const tablesHealth = data.tables.missing.length === 0 && data.tables.issues.length === 0;
+    if (!data || !data.tables) {
+        $('#databaseStatus').html('<div class="alert alert-danger">No database status available</div>');
+        return;
+    }
+    
+    const tablesHealth = (!data.tables.missing || data.tables.missing.length === 0) && 
+                        (!data.tables.issues || data.tables.issues.length === 0);
     const statusColor = tablesHealth ? 'success' : 'danger';
     const statusText = tablesHealth ? 'Healthy' : 'Issues Detected';
     
     $('#databaseStatus').html(`
         <div class="mb-2">
-            <strong>Size:</strong> ${data.database_size_mb} MB
+            <strong>Size:</strong> ${data.database_size_mb || 0} MB
         </div>
         <div class="mb-2">
-            <strong>Tables:</strong> ${data.tables.total_existing} / ${data.tables.total_expected}
+            <strong>Tables:</strong> ${data.tables.total_existing || 0} / ${data.tables.total_expected || 0}
         </div>
         <div class="mb-2">
             <strong>Status:</strong> 
             <span class="badge badge-${statusColor}">${statusText}</span>
         </div>
-        <small class="text-muted">Last check: ${new Date(data.last_check).toLocaleString()}</small>
+        <small class="text-muted">Last check: ${data.last_check ? new Date(data.last_check).toLocaleString() : 'Never'}</small>
     `);
 }
 
@@ -270,32 +327,47 @@ function updatePendingMigrations(pendingMigrations) {
 }
 
 function updateTablesStatus(tables) {
+    if (!tables) {
+        $('#tablesStatus').html('<div class="alert alert-danger">No table data available</div>');
+        return;
+    }
+    
     let html = '<div class="row">';
     
     // Existing tables
-    html += '<div class="col-md-6"><h6>Existing Tables</h6><ul class="list-group">';
-    tables.existing.forEach(table => {
-        html += `<li class="list-group-item list-group-item-success">${table}</li>`;
-    });
-    html += '</ul></div>';
+    html += '<div class="col-md-6"><h6>Existing Tables</h6>';
+    if (tables.existing && tables.existing.length > 0) {
+        html += '<ul class="list-group">';
+        tables.existing.forEach(table => {
+            html += `<li class="list-group-item list-group-item-success"><i class="fas fa-check-circle"></i> ${table}</li>`;
+        });
+        html += '</ul>';
+    } else {
+        html += '<p class="text-muted">No tables found</p>';
+    }
+    html += '</div>';
     
     // Missing tables and issues
     html += '<div class="col-md-6">';
     
-    if (tables.missing.length > 0) {
+    if (tables.missing && tables.missing.length > 0) {
         html += '<h6>Missing Tables</h6><ul class="list-group mb-3">';
         tables.missing.forEach(table => {
-            html += `<li class="list-group-item list-group-item-danger">${table}</li>`;
+            html += `<li class="list-group-item list-group-item-danger"><i class="fas fa-times-circle"></i> ${table}</li>`;
         });
         html += '</ul>';
     }
     
-    if (tables.issues.length > 0) {
+    if (tables.issues && tables.issues.length > 0) {
         html += '<h6>Table Issues</h6><ul class="list-group">';
         tables.issues.forEach(issue => {
-            html += `<li class="list-group-item list-group-item-warning">${issue.table}: ${issue.issue}</li>`;
+            html += `<li class="list-group-item list-group-item-warning"><i class="fas fa-exclamation-triangle"></i> ${issue.table}: ${issue.issue}</li>`;
         });
         html += '</ul>';
+    }
+    
+    if ((!tables.missing || tables.missing.length === 0) && (!tables.issues || tables.issues.length === 0)) {
+        html += '<div class="alert alert-success"><i class="fas fa-check-circle"></i> No issues detected</div>';
     }
     
     html += '</div></div>';
@@ -387,15 +459,23 @@ function runMigrations() {
 
 function analyzeSchema() {
     $('#analysisModal').modal('show');
-    $('#analysisResults').html('<div class="text-center"><div class="spinner-border"></div></div>');
+    $('#analysisResults').html('<div class="text-center"><div class="spinner-border"></div><p class="mt-2">Analyzing schema...</p></div>');
     
     fetch('/api/migrations/analyze', {
         method: 'POST',
         headers: {
-            'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+            'Authorization': 'Bearer ' + localStorage.getItem('access_token'),
+            'Content-Type': 'application/json'
         }
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => {
+                throw new Error(err.detail || `HTTP error! status: ${response.status}`);
+            });
+        }
+        return response.json();
+    })
     .then(data => {
         let html = '<div class="accordion" id="schemaAccordion">';
         
@@ -404,51 +484,243 @@ function analyzeSchema() {
             html += `
                 <div class="card mb-3">
                     <div class="card-header bg-warning">
-                        <h5>Recommendations</h5>
+                        <h5><i class="fas fa-lightbulb"></i> Recommendations</h5>
                     </div>
                     <div class="card-body">
-                        <ul>
-                            ${data.recommendations.map(r => `<li>${r.table}.${r.column}: ${r.reason}</li>`).join('')}
+                        <ul class="list-unstyled">
+                            ${data.recommendations.map(r => `
+                                <li class="mb-2">
+                                    <i class="fas fa-info-circle text-warning"></i> 
+                                    <strong>${r.table}.${r.column}:</strong> ${r.reason}
+                                </li>
+                            `).join('')}
                         </ul>
                     </div>
+                </div>
+            `;
+        } else {
+            html += `
+                <div class="alert alert-success mb-3">
+                    <i class="fas fa-check-circle"></i> No optimization recommendations found. Schema looks good!
                 </div>
             `;
         }
         
         // Tables
-        Object.entries(data.tables).forEach(([tableName, tableInfo], index) => {
-            html += `
-                <div class="card">
-                    <div class="card-header" id="heading${index}">
-                        <h2 class="mb-0">
-                            <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#collapse${index}">
-                                ${tableName}
-                            </button>
-                        </h2>
-                    </div>
-                    <div id="collapse${index}" class="collapse" data-parent="#schemaAccordion">
-                        <div class="card-body">
-                            <h6>Columns</h6>
-                            <ul>
-                                ${tableInfo.columns.map(c => `<li>${c.name} (${c.type})</li>`).join('')}
-                            </ul>
-                            ${tableInfo.indexes.length > 0 ? `
-                                <h6>Indexes</h6>
-                                <ul>
-                                    ${tableInfo.indexes.map(i => `<li>${i.name}: ${i.column_names.join(', ')}</li>`).join('')}
-                                </ul>
-                            ` : ''}
+        if (data.tables && Object.keys(data.tables).length > 0) {
+            Object.entries(data.tables).forEach(([tableName, tableInfo], index) => {
+                const hasError = tableInfo.error;
+                const headerClass = hasError ? 'bg-danger text-white' : '';
+                
+                html += `
+                    <div class="card mb-2">
+                        <div class="card-header ${headerClass}" id="heading${index}">
+                            <h2 class="mb-0">
+                                <button class="btn btn-link ${hasError ? 'text-white' : ''}" type="button" data-toggle="collapse" data-target="#collapse${index}">
+                                    <i class="fas fa-table"></i> ${tableName}
+                                    ${hasError ? '<span class="badge badge-danger ml-2">Error</span>' : ''}
+                                </button>
+                            </h2>
                         </div>
-                    </div>
-                </div>
-            `;
-        });
+                        <div id="collapse${index}" class="collapse" data-parent="#schemaAccordion">
+                            <div class="card-body">
+                `;
+                
+                if (hasError) {
+                    html += `<div class="alert alert-danger">Error analyzing table: ${tableInfo.error}</div>`;
+                } else {
+                    // Columns
+                    if (tableInfo.columns && tableInfo.columns.length > 0) {
+                        html += '<h6><i class="fas fa-columns"></i> Columns</h6><div class="table-responsive"><table class="table table-sm"><thead><tr><th>Name</th><th>Type</th><th>Nullable</th><th>Default</th></tr></thead><tbody>';
+                        tableInfo.columns.forEach(c => {
+                            html += `<tr>
+                                <td><code>${c.name}</code></td>
+                                <td><span class="badge badge-secondary">${c.type}</span></td>
+                                <td>${c.nullable ? '<i class="fas fa-check text-success"></i>' : '<i class="fas fa-times text-danger"></i>'}</td>
+                                <td>${c.default || '<span class="text-muted">None</span>'}</td>
+                            </tr>`;
+                        });
+                        html += '</tbody></table></div>';
+                    }
+                    
+                    // Indexes
+                    if (tableInfo.indexes && tableInfo.indexes.length > 0) {
+                        html += '<h6 class="mt-3"><i class="fas fa-key"></i> Indexes</h6><ul class="list-group">';
+                        tableInfo.indexes.forEach(i => {
+                            html += `<li class="list-group-item">
+                                <strong>${i.name}:</strong> 
+                                <code>${i.column_names ? i.column_names.join(', ') : 'N/A'}</code>
+                                ${i.unique ? '<span class="badge badge-info ml-2">Unique</span>' : ''}
+                            </li>`;
+                        });
+                        html += '</ul>';
+                    }
+                    
+                    // Foreign Keys
+                    if (tableInfo.foreign_keys && tableInfo.foreign_keys.length > 0) {
+                        html += '<h6 class="mt-3"><i class="fas fa-link"></i> Foreign Keys</h6><ul class="list-group">';
+                        tableInfo.foreign_keys.forEach(fk => {
+                            html += `<li class="list-group-item">
+                                <code>${fk.constrained_columns ? fk.constrained_columns.join(', ') : 'N/A'}</code> → 
+                                <strong>${fk.referred_table}</strong>.<code>${fk.referred_columns ? fk.referred_columns.join(', ') : 'N/A'}</code>
+                            </li>`;
+                        });
+                        html += '</ul>';
+                    }
+                }
+                
+                html += '</div></div></div>';
+            });
+        } else {
+            html += '<div class="alert alert-warning">No tables found in the database.</div>';
+        }
         
         html += '</div>';
         $('#analysisResults').html(html);
     })
     .catch(error => {
-        $('#analysisResults').html(`<div class="alert alert-danger">Failed to analyze schema: ${error.message}</div>`);
+        console.error('Schema analysis error:', error);
+        $('#analysisResults').html(`
+            <div class="alert alert-danger">
+                <h6><i class="fas fa-exclamation-triangle"></i> Failed to analyze schema</h6>
+                <p class="mb-0">${error.message}</p>
+                <small class="text-muted">Check the console for more details.</small>
+            </div>
+        `);
+    });
+}
+
+function runCleanup() {
+    if (!confirm('Are you sure you want to clean up the database? This will remove:\n- Test users and bot instances\n- Activity logs older than 30 days\n- Error logs older than 30 days\n- Balance history older than 90 days\n- Failed migration records\n\nThis action cannot be undone!')) {
+        return;
+    }
+    
+    $('#cleanupModal').modal('show');
+    $('#cleanupProgress').show();
+    $('#cleanupResults').hide();
+    $('#cleanupCloseBtn').hide();
+
+    // First get storage analysis before cleanup
+    fetch('/api/migrations/storage-analysis', {
+        headers: {
+            'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+        }
+    })
+    .then(response => response.json())
+    .then(beforeData => {
+        const beforeSize = beforeData.total_database_size_pretty || 'Unknown';
+        
+        // Now run cleanup
+        return fetch('/api/migrations/cleanup', {
+            method: 'POST',
+            headers: {
+                'Authorization': 'Bearer ' + localStorage.getItem('access_token'),
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const stats = data.stats || {};
+                
+                // Get storage analysis after cleanup
+                return fetch('/api/migrations/storage-analysis', {
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                    }
+                })
+                .then(response => response.json())
+                .then(afterData => {
+                    const afterSize = afterData.total_database_size_pretty || 'Unknown';
+                    
+                    $('#cleanupProgress').hide();
+                    $('#cleanupResults').show();
+                    
+                    let resultsHtml = '<div class="alert alert-success"><h6><i class="fas fa-check-circle"></i> Database Cleanup Completed!</h6></div>';
+                    
+                    resultsHtml += '<div class="row">';
+                    
+                    // Cleanup statistics
+                    resultsHtml += '<div class="col-md-6">';
+                    resultsHtml += '<h6>Cleanup Statistics:</h6>';
+                    resultsHtml += '<ul class="list-group">';
+                    
+                    if (stats.test_users_removed > 0) {
+                        resultsHtml += `<li class="list-group-item"><i class="fas fa-user-times text-danger"></i> Test users removed: ${stats.test_users_removed}</li>`;
+                    }
+                    if (stats.test_bots_removed > 0) {
+                        resultsHtml += `<li class="list-group-item"><i class="fas fa-robot text-danger"></i> Test bots removed: ${stats.test_bots_removed}</li>`;
+                    }
+                    if (stats.old_logs_removed > 0) {
+                        resultsHtml += `<li class="list-group-item"><i class="fas fa-file-alt text-warning"></i> Old activity logs removed: ${stats.old_logs_removed}</li>`;
+                    }
+                    if (stats.old_errors_removed > 0) {
+                        resultsHtml += `<li class="list-group-item"><i class="fas fa-exclamation-circle text-warning"></i> Old error logs removed: ${stats.old_errors_removed}</li>`;
+                    }
+                    if (stats.old_balance_removed > 0) {
+                        resultsHtml += `<li class="list-group-item"><i class="fas fa-chart-line text-warning"></i> Old balance records removed: ${stats.old_balance_removed}</li>`;
+                    }
+                    if (stats.failed_migrations_removed > 0) {
+                        resultsHtml += `<li class="list-group-item"><i class="fas fa-times-circle text-danger"></i> Failed migrations removed: ${stats.failed_migrations_removed}</li>`;
+                    }
+                    
+                    const totalRemoved = stats.test_users_removed + stats.test_bots_removed + 
+                                       stats.old_logs_removed + stats.old_errors_removed + 
+                                       stats.old_balance_removed + stats.failed_migrations_removed;
+                    
+                    if (totalRemoved === 0) {
+                        resultsHtml += '<li class="list-group-item text-muted">No data to clean up</li>';
+                    }
+                    
+                    resultsHtml += '</ul>';
+                    resultsHtml += '</div>';
+                    
+                    // Database optimization
+                    resultsHtml += '<div class="col-md-6">';
+                    resultsHtml += '<h6>Database Optimization:</h6>';
+                    resultsHtml += '<ul class="list-group">';
+                    resultsHtml += `<li class="list-group-item"><i class="fas fa-database"></i> Database type: ${afterData.database_type}</li>`;
+                    resultsHtml += `<li class="list-group-item"><i class="fas fa-compress"></i> Optimization: ${stats.database_optimized ? '<span class="text-success">Completed</span>' : '<span class="text-danger">Failed</span>'}</li>`;
+                    resultsHtml += `<li class="list-group-item"><i class="fas fa-hdd"></i> Size before: ${beforeSize}</li>`;
+                    resultsHtml += `<li class="list-group-item"><i class="fas fa-hdd"></i> Size after: ${afterSize}</li>`;
+                    resultsHtml += '</ul>';
+                    
+                    if (stats.errors && stats.errors.length > 0) {
+                        resultsHtml += '<div class="alert alert-warning mt-2">';
+                        resultsHtml += '<h6>Warnings:</h6>';
+                        resultsHtml += '<ul>';
+                        stats.errors.forEach(error => {
+                            resultsHtml += `<li>${error}</li>`;
+                        });
+                        resultsHtml += '</ul></div>';
+                    }
+                    
+                    resultsHtml += '</div>';
+                    resultsHtml += '</div>';
+                    
+                    $('#cleanupResults').html(resultsHtml);
+                    $('#cleanupCloseBtn').show();
+                    
+                    // Refresh status after 2 seconds
+                    setTimeout(() => {
+                        refreshStatus();
+                    }, 2000);
+                });
+            } else {
+                throw new Error(data.error || 'Cleanup failed');
+            }
+        });
+    })
+    .catch(error => {
+        $('#cleanupProgress').hide();
+        $('#cleanupResults').show();
+        $('#cleanupResults').html(`
+            <div class="alert alert-danger">
+                <h6><i class="fas fa-times-circle"></i> Database Cleanup Failed!</h6>
+                <p class="mb-0">${error.message}</p>
+            </div>
+        `);
+        $('#cleanupCloseBtn').show();
     });
 }
 
