@@ -67,14 +67,23 @@ class StrategyMonitorService:
             PollState.timestamp >= since
         ).order_by(desc(PollState.timestamp)).all()
         
-        # Group by symbol and get latest position for each
+        # Group by (instance_id, symbol) and get latest position for each
         latest_positions = {}
         symbol_pnl = defaultdict(float)
+        instance_positions = defaultdict(list)  # Track positions per instance
         
         for pos in positions:
             symbol = pos.symbol
-            if symbol not in latest_positions:
-                latest_positions[symbol] = pos.data
+            instance_id = pos.instance_id
+            position_key = f"{instance_id}_{symbol}"
+            
+            if position_key not in latest_positions:
+                latest_positions[position_key] = {
+                    'data': pos.data,
+                    'symbol': symbol,
+                    'instance_id': instance_id
+                }
+                instance_positions[instance_id].append(pos.data)
                 
                 # Calculate PnL
                 pnl = pos.data.get('unrealizedPnl', 0) if pos.data else 0
@@ -83,6 +92,7 @@ class StrategyMonitorService:
         
         return {
             'positions': latest_positions,
+            'instance_positions': dict(instance_positions),
             'symbol_pnl': dict(symbol_pnl),
             'total_pnl': sum(symbol_pnl.values())
         }
@@ -306,15 +316,28 @@ class StrategyMonitorService:
         
         # Active Positions
         if positions_data['positions']:
-            report += f"\n🎯 **Active Positions** ({len(positions_data['positions'])})\n```\n"
-            for symbol, pos in list(positions_data['positions'].items())[:self.monitor_config.max_recent_positions]:
+            total_positions = len(positions_data['positions'])
+            report += f"\n🎯 **Active Positions** ({total_positions})\n```\n"
+            
+            # Group positions by instance for better display
+            instance_names = {instance.id: instance.name for instance in instances}
+            
+            for position_key, position_info in list(positions_data['positions'].items())[:self.monitor_config.max_recent_positions]:
+                pos = position_info['data']
+                symbol = position_info['symbol']
+                instance_id = position_info['instance_id']
+                instance_name = instance_names.get(instance_id, f"Instance_{instance_id}")
+                
                 side = pos.get('side', 'N/A')
                 size = float(pos.get('contracts', 0) or 0)
                 entry_price = float(pos.get('entryPrice', 0) or 0)
                 unrealized_pnl = float(pos.get('unrealizedPnl', 0) or 0)
                 
                 side_emoji = "🟢" if side == 'long' else "🔴" if side == 'short' else "⚪"
-                report += f"{side_emoji} {symbol:<12} {side:<5} {size:>8.4f} @${entry_price:>8.4f}\n"
+                pnl_formatted = self._format_currency(unrealized_pnl)
+                pnl_sign = "🟢" if unrealized_pnl > 0 else "🔴" if unrealized_pnl < 0 else "⚪"
+                
+                report += f"{side_emoji} {instance_name:<10} {symbol:<10} {side:<5} {size:>8.4f} @${entry_price:>8.4f} {pnl_sign}${pnl_formatted}\n"
                 
             report += "```\n"
         

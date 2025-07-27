@@ -83,18 +83,31 @@ class BotInstance(Base):
             Session = sessionmaker(bind=engine)
             db = Session()
             try:
-                credential = db.query(ApiCredential).filter(ApiCredential.id == self.api_credential_id).first()
+                credential = db.query(ApiCredential).filter(
+                    ApiCredential.id == self.api_credential_id,
+                    ApiCredential.user_id == self.user_id,  # Ensure user owns the credential
+                    ApiCredential.is_active == True
+                ).first()
                 if credential:
                     return credential.get_full_credentials()
+                else:
+                    # Log warning if credential not found or not accessible
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.warning(f"API credential {self.api_credential_id} not found or not accessible for user {self.user_id} in instance {self.id}")
+                    return None
             finally:
                 db.close()
         
         # Fallback to direct credentials for backward compatibility
-        return {
+        if self.api_key and self.api_secret:
+            return {
                 'api_key': self.api_key,
                 'api_secret': self.api_secret,
                 'api_passphrase': self.api_passphrase
             }
+        
+        return None
 
 class PollState(Base):
     __tablename__ = "poll_states"

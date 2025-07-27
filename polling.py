@@ -30,7 +30,11 @@ class ExchangePoller:
         # Get API credentials (either from library or direct)
         self.api_credentials = self.instance.get_api_credentials()
         if not self.api_credentials or not self.api_credentials.get('api_key') or not self.api_credentials.get('api_secret'):
-            raise ValueError(f"Bot instance {instance_id} has no valid API credentials")
+            error_msg = f"Bot instance {instance_id} (user_id: {self.instance.user_id}) has no valid or accessible API credentials"
+            logger.error(error_msg)
+            # Log this error to the instance's error log
+            self._log_error("api_credentials", error_msg)
+            raise ValueError(error_msg)
         
         self.exchange = self._init_exchange()
         self.telegram_bot = self._init_telegram()
