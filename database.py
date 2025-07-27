@@ -270,8 +270,10 @@ def init_db():
     from validator_node_model import ValidatorNode, ValidatorReward
     Base.metadata.create_all(bind=engine)
     
-    try:
-        from role_migration import run_migration
-        run_migration()
-    except Exception as e:
-        print(f"Role migration failed: {e}")
+    # AUTOMATIC ROLE MIGRATION DISABLED
+    # Only run migrations manually via terminal commands
+    # try:
+    #     from role_migration import run_migration
+    #     run_migration()
+    # except Exception as e:
+    #     print(f"Role migration failed: {e}")

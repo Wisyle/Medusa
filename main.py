@@ -38,11 +38,14 @@ from strategic_monitors import strategy_monitor
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Migrations are now optional - controlled by RUN_MIGRATIONS env var
-# This allows for faster deployments by default
+# Migrations are now MANUAL ONLY - no automatic migrations on deployment
+# Use terminal commands for migrations: python migration.py or web interface
 
 async def run_smart_migrations():
-    """Smart migration system that only applies missing changes"""
+    """
+    MANUAL MIGRATION SYSTEM - Only run when explicitly called
+    This function is no longer called automatically on startup
+    """
     try:
         # Skip migrations if disabled via environment variable
         if os.getenv("SKIP_MIGRATIONS", "false").lower() == "true":
@@ -189,13 +192,16 @@ async def lifespan(app: FastAPI):
             logger.info("📊 Initializing database...")
             await asyncio.to_thread(init_db)
             
+            # AUTOMATIC MIGRATIONS DISABLED
             # Smart auto-migration - only apply missing changes
-            logger.info("🔄 Running smart auto-migrations...")
-            success = await run_smart_migrations()
-            if success:
-                logger.info("✅ Smart migrations completed successfully")
-            else:
-                logger.warning("⚠️ Some migrations were skipped or failed (this may be normal)")
+            # logger.info("🔄 Running smart auto-migrations...")
+            # success = await run_smart_migrations()
+            # if success:
+            #     logger.info("✅ Smart migrations completed successfully")
+            # else:
+            #     logger.warning("⚠️ Some migrations were skipped or failed (this may be normal)")
+            
+            logger.info("⏩ Automatic migrations disabled - use terminal commands for migrations")
         except Exception as e:
             logger.error(f"❌ Startup tasks failed: {e}")
             # Don't crash the app, continue anyway
