@@ -1,0 +1,467 @@
+{% extends "base.html" %}
+
+{% block title %}Migrations Management{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="h2 mb-4">
+                <i class="fas fa-database"></i> Migrations Management
+            </h1>
+        </div>
+    </div>
+
+    <!-- System Status Row -->
+    <div class="row mb-4">
+        <!-- Disk Usage Card -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <i class="fas fa-hdd"></i> Disk Storage
+                </div>
+                <div class="card-body">
+                    <div id="diskUsage">
+                        <div class="text-center">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="sr-only">Loading...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Database Status Card -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <i class="fas fa-database"></i> Database Status
+                </div>
+                <div class="card-body">
+                    <div id="databaseStatus">
+                        <div class="text-center">
+                            <div class="spinner-border text-info" role="status">
+                                <span class="sr-only">Loading...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Migration Actions Card -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <i class="fas fa-tools"></i> Migration Actions
+                </div>
+                <div class="card-body">
+                    <button id="runMigrationsBtn" class="btn btn-success btn-block mb-2" onclick="runMigrations()">
+                        <i class="fas fa-play"></i> Run Migrations
+                    </button>
+                    <button class="btn btn-secondary btn-block mb-2" onclick="analyzeSchema()">
+                        <i class="fas fa-microscope"></i> Analyze Schema
+                    </button>
+                    <button class="btn btn-info btn-block" onclick="refreshStatus()">
+                        <i class="fas fa-sync"></i> Refresh Status
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pending Migrations Row -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-warning">
+                    <i class="fas fa-exclamation-triangle"></i> Pending Migrations & Issues
+                </div>
+                <div class="card-body">
+                    <div id="pendingMigrations">
+                        <div class="text-center">
+                            <div class="spinner-border text-warning" role="status">
+                                <span class="sr-only">Loading...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tables Status Row -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-table"></i> Tables Status
+                </div>
+                <div class="card-body">
+                    <div id="tablesStatus">
+                        <div class="text-center">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="sr-only">Loading...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Migration History Row -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-history"></i> Migration History
+                </div>
+                <div class="card-body">
+                    <div id="migrationHistory">
+                        <div class="text-center">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="sr-only">Loading...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Migration Progress Modal -->
+<div class="modal fade" id="migrationModal" tabindex="-1" data-backdrop="static" data-keyboard="false">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-spinner fa-spin"></i> Running Migrations
+                </h5>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i> Migrations are running. The service will restart automatically when complete.
+                </div>
+                <div id="migrationProgress">
+                    <div class="progress mb-3">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated" style="width: 100%"></div>
+                    </div>
+                    <div id="migrationLog"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Schema Analysis Modal -->
+<div class="modal fade" id="analysisModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-microscope"></i> Schema Analysis
+                </h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div id="analysisResults"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let migrationStatus = null;
+
+// Load migration status on page load
+$(document).ready(function() {
+    refreshStatus();
+    
+    // Auto-refresh every 30 seconds
+    setInterval(refreshStatus, 30000);
+});
+
+function refreshStatus() {
+    fetch('/api/migrations/status', {
+        headers: {
+            'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        migrationStatus = data;
+        updateDiskUsage(data.disk_info);
+        updateDatabaseStatus(data);
+        updatePendingMigrations(data.pending_migrations);
+        updateTablesStatus(data.tables);
+        updateMigrationHistory(data.migration_history);
+    })
+    .catch(error => {
+        console.error('Error loading migration status:', error);
+        showAlert('Failed to load migration status', 'danger');
+    });
+}
+
+function updateDiskUsage(diskInfo) {
+    const percentUsed = diskInfo.percent;
+    const color = percentUsed > 90 ? 'danger' : percentUsed > 70 ? 'warning' : 'success';
+    
+    $('#diskUsage').html(`
+        <div class="mb-3">
+            <h5 class="mb-0">${diskInfo.used_gb} GB / ${diskInfo.total_gb} GB</h5>
+            <small class="text-muted">${diskInfo.free_gb} GB free</small>
+        </div>
+        <div class="progress" style="height: 25px;">
+            <div class="progress-bar bg-${color}" style="width: ${percentUsed}%">
+                ${percentUsed.toFixed(1)}%
+            </div>
+        </div>
+    `);
+}
+
+function updateDatabaseStatus(data) {
+    const tablesHealth = data.tables.missing.length === 0 && data.tables.issues.length === 0;
+    const statusColor = tablesHealth ? 'success' : 'danger';
+    const statusText = tablesHealth ? 'Healthy' : 'Issues Detected';
+    
+    $('#databaseStatus').html(`
+        <div class="mb-2">
+            <strong>Size:</strong> ${data.database_size_mb} MB
+        </div>
+        <div class="mb-2">
+            <strong>Tables:</strong> ${data.tables.total_existing} / ${data.tables.total_expected}
+        </div>
+        <div class="mb-2">
+            <strong>Status:</strong> 
+            <span class="badge badge-${statusColor}">${statusText}</span>
+        </div>
+        <small class="text-muted">Last check: ${new Date(data.last_check).toLocaleString()}</small>
+    `);
+}
+
+function updatePendingMigrations(pendingMigrations) {
+    if (pendingMigrations.length === 0) {
+        $('#pendingMigrations').html(`
+            <div class="alert alert-success mb-0">
+                <i class="fas fa-check-circle"></i> No pending migrations. Database is up to date!
+            </div>
+        `);
+        return;
+    }
+    
+    let html = '<div class="list-group">';
+    pendingMigrations.forEach(migration => {
+        html += `
+            <div class="list-group-item list-group-item-warning">
+                <h6 class="mb-1">${migration.description}</h6>
+                ${migration.tables ? `<small>Tables: ${migration.tables.join(', ')}</small>` : ''}
+                ${migration.issues ? `<small>Issues: ${migration.issues.map(i => i.table + ': ' + i.issue).join(', ')}</small>` : ''}
+            </div>
+        `;
+    });
+    html += '</div>';
+    
+    $('#pendingMigrations').html(html);
+}
+
+function updateTablesStatus(tables) {
+    let html = '<div class="row">';
+    
+    // Existing tables
+    html += '<div class="col-md-6"><h6>Existing Tables</h6><ul class="list-group">';
+    tables.existing.forEach(table => {
+        html += `<li class="list-group-item list-group-item-success">${table}</li>`;
+    });
+    html += '</ul></div>';
+    
+    // Missing tables and issues
+    html += '<div class="col-md-6">';
+    
+    if (tables.missing.length > 0) {
+        html += '<h6>Missing Tables</h6><ul class="list-group mb-3">';
+        tables.missing.forEach(table => {
+            html += `<li class="list-group-item list-group-item-danger">${table}</li>`;
+        });
+        html += '</ul>';
+    }
+    
+    if (tables.issues.length > 0) {
+        html += '<h6>Table Issues</h6><ul class="list-group">';
+        tables.issues.forEach(issue => {
+            html += `<li class="list-group-item list-group-item-warning">${issue.table}: ${issue.issue}</li>`;
+        });
+        html += '</ul>';
+    }
+    
+    html += '</div></div>';
+    
+    $('#tablesStatus').html(html);
+}
+
+function updateMigrationHistory(history) {
+    if (history.length === 0) {
+        $('#migrationHistory').html(`
+            <div class="alert alert-info mb-0">
+                <i class="fas fa-info-circle"></i> No migration history available.
+            </div>
+        `);
+        return;
+    }
+    
+    let html = '<div class="table-responsive"><table class="table table-sm">';
+    html += '<thead><tr><th>Name</th><th>Status</th><th>Applied</th><th>Completed</th><th>Changes</th></tr></thead><tbody>';
+    
+    history.forEach(migration => {
+        const statusBadge = migration.status === 'completed' ? 'success' : 
+                          migration.status === 'failed' ? 'danger' : 'warning';
+        html += `
+            <tr>
+                <td>${migration.name}</td>
+                <td><span class="badge badge-${statusBadge}">${migration.status}</span></td>
+                <td>${new Date(migration.applied_at).toLocaleString()}</td>
+                <td>${migration.completed_at ? new Date(migration.completed_at).toLocaleString() : '-'}</td>
+                <td>
+                    ${migration.changes_made ? migration.changes_made.join(', ') : '-'}
+                    ${migration.error_message ? `<span class="text-danger">${migration.error_message}</span>` : ''}
+                </td>
+            </tr>
+        `;
+    });
+    
+    html += '</tbody></table></div>';
+    $('#migrationHistory').html(html);
+}
+
+function runMigrations() {
+    if (!confirm('Are you sure you want to run migrations? This will restart the service.')) {
+        return;
+    }
+    
+    $('#migrationModal').modal('show');
+    $('#migrationLog').html('<p>Starting migrations...</p>');
+    
+    fetch('/api/migrations/run', {
+        method: 'POST',
+        headers: {
+            'Authorization': 'Bearer ' + localStorage.getItem('access_token'),
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            $('#migrationLog').html(`
+                <div class="alert alert-success">
+                    <h6>Migrations completed successfully!</h6>
+                    <p>Changes made:</p>
+                    <ul>
+                        ${data.changes.map(c => `<li>${c}</li>`).join('')}
+                    </ul>
+                    ${data.restart_triggered ? '<p>Service restart has been triggered.</p>' : ''}
+                </div>
+            `);
+            
+            // Refresh status after 5 seconds
+            setTimeout(() => {
+                $('#migrationModal').modal('hide');
+                refreshStatus();
+            }, 5000);
+        } else {
+            throw new Error(data.error || 'Migration failed');
+        }
+    })
+    .catch(error => {
+        $('#migrationLog').html(`
+            <div class="alert alert-danger">
+                <h6>Migration failed!</h6>
+                <p>${error.message}</p>
+            </div>
+        `);
+    });
+}
+
+function analyzeSchema() {
+    $('#analysisModal').modal('show');
+    $('#analysisResults').html('<div class="text-center"><div class="spinner-border"></div></div>');
+    
+    fetch('/api/migrations/analyze', {
+        method: 'POST',
+        headers: {
+            'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        let html = '<div class="accordion" id="schemaAccordion">';
+        
+        // Recommendations
+        if (data.recommendations && data.recommendations.length > 0) {
+            html += `
+                <div class="card mb-3">
+                    <div class="card-header bg-warning">
+                        <h5>Recommendations</h5>
+                    </div>
+                    <div class="card-body">
+                        <ul>
+                            ${data.recommendations.map(r => `<li>${r.table}.${r.column}: ${r.reason}</li>`).join('')}
+                        </ul>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Tables
+        Object.entries(data.tables).forEach(([tableName, tableInfo], index) => {
+            html += `
+                <div class="card">
+                    <div class="card-header" id="heading${index}">
+                        <h2 class="mb-0">
+                            <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#collapse${index}">
+                                ${tableName}
+                            </button>
+                        </h2>
+                    </div>
+                    <div id="collapse${index}" class="collapse" data-parent="#schemaAccordion">
+                        <div class="card-body">
+                            <h6>Columns</h6>
+                            <ul>
+                                ${tableInfo.columns.map(c => `<li>${c.name} (${c.type})</li>`).join('')}
+                            </ul>
+                            ${tableInfo.indexes.length > 0 ? `
+                                <h6>Indexes</h6>
+                                <ul>
+                                    ${tableInfo.indexes.map(i => `<li>${i.name}: ${i.column_names.join(', ')}</li>`).join('')}
+                                </ul>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += '</div>';
+        $('#analysisResults').html(html);
+    })
+    .catch(error => {
+        $('#analysisResults').html(`<div class="alert alert-danger">Failed to analyze schema: ${error.message}</div>`);
+    });
+}
+
+function showAlert(message, type) {
+    const alertHtml = `
+        <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+            ${message}
+            <button type="button" class="close" data-dismiss="alert">
+                <span>&times;</span>
+            </button>
+        </div>
+    `;
+    $('.container-fluid').prepend(alertHtml);
+}
+</script>
+{% endblock %} 

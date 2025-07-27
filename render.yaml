@@ -14,7 +14,7 @@ services:
     buildCommand: "pip install -r requirements.txt"
     startCommand: "uvicorn main:app --host 0.0.0.0 --port $PORT --timeout-keep-alive 120"
     autoDeploy: true
-    healthCheckPath: /api/health
+    healthCheckPath: /health
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -42,6 +42,10 @@ services:
         value: "singapore"
       - key: CLOUDFRONT_BYPASS_REGION
         value: "sg"
+      - key: SKIP_MIGRATIONS
+        value: "true"
+      - key: PYTHONUNBUFFERED
+        value: "1"
 
   # Background Worker Service - Polling & Monitoring
   - type: worker

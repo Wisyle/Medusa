@@ -43,19 +43,40 @@ logger = logging.getLogger(__name__)
 async def run_smart_migrations():
     """Smart migration system that only applies missing changes"""
     try:
+        # Skip migrations if disabled via environment variable
+        if os.getenv("SKIP_MIGRATIONS", "false").lower() == "true":
+            logger.info("⏭️ Skipping migrations (SKIP_MIGRATIONS=true)")
+            return True
+            
         from sqlalchemy import text, inspect
         
         logger.info("🔍 Checking database schema...")
         
-        # Create inspector to check existing structure
-        inspector = inspect(engine)
+        # Add timeout for database operations
+        import asyncio
         
-        # Check if we're using PostgreSQL or SQLite
-        is_postgresql = str(engine.url).startswith('postgresql')
-        logger.info(f"📊 Database type: {'PostgreSQL' if is_postgresql else 'SQLite'}")
+        async def check_database_with_timeout():
+            # Create inspector to check existing structure
+            inspector = inspect(engine)
+            
+            # Check if we're using PostgreSQL or SQLite
+            is_postgresql = str(engine.url).startswith('postgresql')
+            logger.info(f"📊 Database type: {'PostgreSQL' if is_postgresql else 'SQLite'}")
+            
+            db = SessionLocal()
+            migration_success = True
+            
+            return inspector, is_postgresql, db, migration_success
         
-        db = SessionLocal()
-        migration_success = True
+        # Timeout after 10 seconds to prevent hanging
+        try:
+            inspector, is_postgresql, db, migration_success = await asyncio.wait_for(
+                check_database_with_timeout(),
+                timeout=10.0
+            )
+        except asyncio.TimeoutError:
+            logger.error("❌ Database connection timeout during migration check")
+            return False
         
         try:
             # 1. Check and add balance_enabled column to bot_instances
@@ -160,19 +181,33 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info("🚀 Initializing application...")
     
-    # Create tables first
-    init_db()
+    # Run startup tasks in background to not block the app
+    async def startup_tasks():
+        try:
+            # Create tables first
+            logger.info("📊 Initializing database...")
+            await asyncio.to_thread(init_db)
+            
+            # Smart auto-migration - only apply missing changes
+            logger.info("🔄 Running smart auto-migrations...")
+            success = await run_smart_migrations()
+            if success:
+                logger.info("✅ Smart migrations completed successfully")
+            else:
+                logger.warning("⚠️ Some migrations were skipped or failed (this may be normal)")
+        except Exception as e:
+            logger.error(f"❌ Startup tasks failed: {e}")
+            # Don't crash the app, continue anyway
     
-    # Smart auto-migration - only apply missing changes
-    logger.info("🔄 Running smart auto-migrations...")
-    success = await run_smart_migrations()
-    if success:
-        logger.info("✅ Smart migrations completed successfully")
-    else:
-        logger.warning("⚠️ Some migrations were skipped or failed (this may be normal)")
+    # Start startup tasks in background
+    startup_task = asyncio.create_task(startup_tasks())
     
-    # Start monitoring instances
-    monitor_task = asyncio.create_task(monitor_instances())
+    # Start monitoring instances after a delay to ensure DB is ready
+    async def delayed_monitor_start():
+        await asyncio.sleep(5)  # Wait 5 seconds for DB to be ready
+        await monitor_instances()
+    
+    monitor_task = asyncio.create_task(delayed_monitor_start())
     
     yield
     
@@ -263,6 +298,9 @@ app.include_router(dex_arbitrage_router)
 
 from validator_node_routes import router as validator_node_router
 app.include_router(validator_node_router)
+
+from migration_routes import router as migration_router
+app.include_router(migration_router)
 
 templates = Jinja2Templates(directory="templates")
 
@@ -518,6 +556,15 @@ async def get_current_user_info(request: Request, current_user: User = Depends(g
         has_passphrase=has_passphrase,
         created_at=current_user.created_at or datetime.utcnow()
     )
+
+@app.get("/health")
+async def simple_health_check():
+    """Simple health check for Render that bypasses startup dependencies"""
+    return {
+        "status": "healthy",
+        "timestamp": datetime.utcnow().isoformat(),
+        "message": "Service is responsive"
+    }
 
 @app.get("/api/health")
 async def health_check(db: Session = Depends(get_db)):
@@ -1842,38 +1889,53 @@ async def get_instance_signals(
 
 async def monitor_instances():
     """Monitor and restart failed instances"""
+    # Wait for initial startup to complete
+    await asyncio.sleep(10)
+    
     while True:
         try:
             # Import here to avoid circular imports
             from database import SessionLocal
             
-            # Create a proper database session
-            db = SessionLocal()
-            try:
-                active_instances = db.query(BotInstance).filter(BotInstance.is_active == True).all()
+            # Run DB operations in thread pool to avoid blocking
+            async def check_instances():
+                db = SessionLocal()
+                try:
+                    active_instances = await asyncio.to_thread(
+                        lambda: db.query(BotInstance).filter(BotInstance.is_active == True).all()
+                    )
+                    return active_instances
+                except Exception as e:
+                    logger.error(f"Failed to query instances: {e}")
+                    return []
+                finally:
+                    db.close()
+            
+            active_instances = await check_instances()
+            
+            # Process instances without blocking
+            for instance in active_instances:
+                if instance.id not in active_processes:
+                    try:
+                        process = multiprocessing.Process(target=_run_poller_sync, args=(instance.id,))
+                        process.start()
+                        active_processes[instance.id] = process
+                        logger.info(f"Started monitoring instance {instance.id}")
+                    except Exception as e:
+                        logger.error(f"Failed to start instance {instance.id}: {e}")
                 
-                for instance in active_instances:
-                    if instance.id not in active_processes:
-                        try:
-                            process = multiprocessing.Process(target=_run_poller_sync, args=(instance.id,))
-                            process.start()
-                            active_processes[instance.id] = process
-                        except Exception as e:
-                            print(f"Failed to restart instance {instance.id}: {e}")
-                    
-                    elif not active_processes[instance.id].is_alive():
-                        try:
-                            del active_processes[instance.id]
-                            process = multiprocessing.Process(target=_run_poller_sync, args=(instance.id,))
-                            process.start()
-                            active_processes[instance.id] = process
-                        except Exception as e:
-                            print(f"Failed to restart dead instance {instance.id}: {e}")
-            finally:
-                db.close()
+                elif not active_processes[instance.id].is_alive():
+                    try:
+                        del active_processes[instance.id]
+                        process = multiprocessing.Process(target=_run_poller_sync, args=(instance.id,))
+                        process.start()
+                        active_processes[instance.id] = process
+                        logger.info(f"Restarted dead instance {instance.id}")
+                    except Exception as e:
+                        logger.error(f"Failed to restart dead instance {instance.id}: {e}")
             
         except Exception as e:
-            print(f"Monitor error: {e}")
+            logger.error(f"Monitor error: {e}")
         
         await asyncio.sleep(30)  # Check every 30 seconds
 

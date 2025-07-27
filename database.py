@@ -12,18 +12,23 @@ connect_args = {}
 if settings.database_url.startswith('postgresql'):
     connect_args = {
         'sslmode': 'require',
-        'connect_timeout': 30,
-        'application_name': 'tgl_medusa_worker'
+        'connect_timeout': 10,  # Reduced from 30 to fail faster
+        'application_name': 'tgl_medusa_worker',
+        'keepalives': 1,
+        'keepalives_idle': 30,
+        'keepalives_interval': 10,
+        'keepalives_count': 5
     }
 
 engine = create_engine(
     settings.database_url, 
-    echo=settings.debug,
+    echo=False,  # Disable debug logging in production
     connect_args=connect_args,
-    pool_size=10,
-    pool_recycle=3600,
+    pool_size=5,  # Reduced pool size for better resource usage
+    max_overflow=10,  # Allow temporary connections when needed
+    pool_recycle=300,  # Recycle connections every 5 minutes
     pool_pre_ping=True,
-    pool_timeout=30
+    pool_timeout=10  # Reduced timeout to fail faster
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
