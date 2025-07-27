@@ -512,3 +512,43 @@ async def analyze_storage(current_user: User = Depends(get_current_user)):
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         db.close() 
+
+@router.post("/api/migrations/enable-balance-tracking")
+async def enable_balance_tracking_endpoint(current_user: dict = Depends(get_current_user)):
+    """Enable balance tracking for all bot instances"""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Superuser access required")
+    
+    db = SessionLocal()
+    try:
+        # Get all instances where balance_enabled is False
+        instances = db.query(BotInstance).filter(BotInstance.balance_enabled == False).all()
+        
+        if not instances:
+            return {
+                'success': True,
+                'message': 'All instances already have balance tracking enabled',
+                'updated_count': 0
+            }
+        
+        # Enable balance tracking for all instances
+        updated_instances = []
+        for instance in instances:
+            instance.balance_enabled = True
+            updated_instances.append(instance.name)
+        
+        db.commit()
+        
+        return {
+            'success': True,
+            'message': f'Successfully enabled balance tracking for {len(instances)} instances',
+            'updated_count': len(instances),
+            'updated_instances': updated_instances
+        }
+        
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Failed to enable balance tracking: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        db.close() 

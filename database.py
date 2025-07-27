@@ -66,7 +66,7 @@ class BotInstance(Base):
     telegram_chat_id = Column(String(100), nullable=True)
     telegram_topic_id = Column(String(100), nullable=True)
     trading_pair = Column(String(20), nullable=True)
-    balance_enabled = Column(Boolean, default=False)  # Toggle for balance tracking and notifications
+    balance_enabled = Column(Boolean, default=True)  # Toggle for balance tracking and notifications
     
     is_active = Column(Boolean, default=False)
     last_poll = Column(DateTime, nullable=True)

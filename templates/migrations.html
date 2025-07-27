@@ -66,6 +66,9 @@
                     <button class="btn btn-warning btn-block mb-2" onclick="runCleanup()">
                         <i class="fas fa-broom"></i> Clean & Optimize
                     </button>
+                    <button class="btn btn-info btn-block" onclick="enableBalanceTracking()">
+                        <i class="fas fa-wallet"></i> Enable Balance Tracking
+                    </button>
                     <button class="btn btn-info btn-block" onclick="refreshStatus()">
                         <i class="fas fa-sync"></i> Refresh Status
                     </button>
@@ -727,6 +730,56 @@ function runCleanup() {
             </div>
         `);
         $('#cleanupCloseBtn').show();
+    });
+}
+
+function enableBalanceTracking() {
+    if (!confirm('Enable balance tracking for all bot instances?\n\nThis will allow Telegram updates to include balance information.')) {
+        return;
+    }
+
+    $('#migrationModal').modal('show');
+    $('#migrationLog').html('<p>Enabling balance tracking...</p>');
+
+    fetch('/api/migrations/enable-balance-tracking', {
+        method: 'POST',
+        headers: {
+            'Authorization': 'Bearer ' + localStorage.getItem('access_token'),
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            $('#migrationLog').html(`
+                <div class="alert alert-success">
+                    <h6>✅ Balance tracking enabled!</h6>
+                    <p><strong>Message:</strong> ${data.message}</p>
+                    <p><strong>Updated Instances:</strong> ${data.updated_count}</p>
+                    ${data.updated_instances && data.updated_instances.length > 0 ? 
+                        `<p><strong>Instances:</strong> ${data.updated_instances.join(', ')}</p>` : 
+                        ''
+                    }
+                    <p>💰 Bot instances will now include balance information in Telegram updates!</p>
+                </div>
+            `);
+            
+            // Refresh status after 3 seconds
+            setTimeout(() => {
+                $('#migrationModal').modal('hide');
+                refreshStatus();
+            }, 3000);
+        } else {
+            throw new Error(data.error || 'Failed to enable balance tracking');
+        }
+    })
+    .catch(error => {
+        $('#migrationLog').html(`
+            <div class="alert alert-danger">
+                <h6>❌ Failed to enable balance tracking!</h6>
+                <p>${error.message}</p>
+            </div>
+        `);
     });
 }
 
