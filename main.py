@@ -1167,7 +1167,7 @@ async def create_instance(
     telegram_chat_id: str = Form(""),
     telegram_topic_id: str = Form(""),
     trading_pair: str = Form(""),
-    balance_enabled: bool = Form(False),
+    balance_enabled: bool = Form(True),  # Default to True for better monitoring
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):

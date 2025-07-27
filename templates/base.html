@@ -390,28 +390,56 @@
             transform: scale(1.05);
             box-shadow: 0 4px 12px rgba(255, 215, 0, 0.2);
         }
-        /* Modal fixes */
+        /* Comprehensive Modal fixes */
         .modal-backdrop {
             z-index: 1040 !important;
+            opacity: 0.5 !important;
+            background-color: #000 !important;
+        }
+        
+        .modal-backdrop.show {
+            opacity: 0.5 !important;
         }
         
         .modal {
             z-index: 1050 !important;
+            background: transparent !important;
         }
         
         .modal-dialog {
             z-index: 1060 !important;
+            margin: 1.75rem auto;
         }
         
-        /* Ensure modals are clickable */
-        .modal.show .modal-dialog {
-            pointer-events: auto;
+        .modal-content {
+            position: relative;
+            background-color: #fff;
+            border: 1px solid rgba(0, 0, 0, 0.2);
+            border-radius: 0.3rem;
+            box-shadow: 0 3px 9px rgba(0, 0, 0, 0.5);
+        }
+        
+        /* Ensure modals and their content are clickable */
+        .modal.show {
+            display: block !important;
+        }
+        
+        .modal.show .modal-dialog,
+        .modal.show .modal-content,
+        .modal.show .modal-body,
+        .modal.show .modal-header,
+        .modal.show .modal-footer {
+            pointer-events: auto !important;
+            user-select: auto !important;
+            -webkit-user-select: auto !important;
+            -moz-user-select: auto !important;
+            -ms-user-select: auto !important;
         }
         
         /* Fix modal close button styling */
         .modal .close {
-            color: #fff;
-            opacity: 0.8;
+            color: #000;
+            opacity: 0.5;
             font-size: 1.5rem;
             font-weight: bold;
             line-height: 1;
@@ -419,21 +447,51 @@
             border: 0;
             padding: 0;
             cursor: pointer;
+            text-shadow: none;
         }
         
-        .modal .close:hover {
-            opacity: 1;
-            color: #fff;
+        .modal .close:hover,
+        .modal .close:focus {
+            opacity: 0.8;
+            color: #000;
+            text-decoration: none;
+        }
+        
+        /* Fix modal header text color */
+        .modal-header {
+            color: #333;
         }
         
         /* Prevent modal from blocking page interaction */
         body.modal-open {
             overflow: hidden;
+            padding-right: 0 !important;
         }
         
         .modal-open .modal {
             overflow-x: hidden;
             overflow-y: auto;
+        }
+        
+        /* Ensure form inputs in modals are interactive */
+        .modal input,
+        .modal select,
+        .modal textarea,
+        .modal button {
+            pointer-events: auto !important;
+            cursor: auto !important;
+        }
+        
+        .modal button {
+            cursor: pointer !important;
+        }
+        
+        /* Remove any blur effects */
+        .modal *,
+        .modal-backdrop * {
+            filter: none !important;
+            backdrop-filter: none !important;
+            -webkit-filter: none !important;
         }
     </style>
 </head>
