@@ -1081,8 +1081,11 @@ async def broadcast_message(message: dict, current_user: User = Depends(get_curr
 async def get_instances(db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
     """Get bot instances for current user"""
     instances = db.query(BotInstance).filter(BotInstance.user_id == current_user.id).all()
-    return [
-        {
+    
+    # Get latest balance for each instance
+    result = []
+    for instance in instances:
+        instance_data = {
             "id": instance.id,
             "name": instance.name,
             "exchange": instance.exchange,
@@ -1100,10 +1103,30 @@ async def get_instances(db: Session = Depends(get_db), current_user: User = Depe
             "telegram_bot_token": instance.telegram_bot_token,
             "telegram_chat_id": instance.telegram_chat_id,
             "telegram_topic_id": instance.telegram_topic_id,
-            "trading_pair": instance.trading_pair
+            "trading_pair": instance.trading_pair,
+            "balance_enabled": instance.balance_enabled
         }
-        for instance in instances
-    ]
+        
+        # Add latest balance if enabled
+        if instance.balance_enabled:
+            latest_balance = db.query(BalanceHistory).filter(
+                BalanceHistory.instance_id == instance.id
+            ).order_by(BalanceHistory.timestamp.desc()).first()
+            
+            if latest_balance:
+                instance_data["latest_balance"] = {
+                    "total_usdt": latest_balance.total_balance_usdt,
+                    "timestamp": latest_balance.timestamp.isoformat(),
+                    "data": latest_balance.balance_data
+                }
+            else:
+                instance_data["latest_balance"] = None
+        else:
+            instance_data["latest_balance"] = None
+            
+        result.append(instance_data)
+    
+    return result
 
 def validate_instance_data(name: str, exchange: str, api_key: str, api_secret: str, trading_pair: Optional[str] = None):
     """Validate instance creation data"""
@@ -2034,7 +2057,8 @@ async def update_strategy_monitor(
     include_pnl: Optional[bool] = Form(None),
     max_recent_positions: Optional[int] = Form(None),
     is_active: Optional[bool] = Form(None),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
 ):
     """Update strategy monitor configuration"""
     
@@ -2070,7 +2094,7 @@ async def update_strategy_monitor(
     return {"message": f"Strategy monitor updated for '{monitor.strategy_name}'"}
 
 @app.delete("/strategy-monitors/{monitor_id}")
-async def delete_strategy_monitor(monitor_id: int, db: Session = Depends(get_db)):
+async def delete_strategy_monitor(monitor_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
     """Delete strategy monitor"""
     
     monitor = db.query(StrategyMonitor).filter(StrategyMonitor.id == monitor_id).first()
@@ -2084,7 +2108,7 @@ async def delete_strategy_monitor(monitor_id: int, db: Session = Depends(get_db)
     return {"message": f"Strategy monitor deleted for '{strategy_name}'"}
 
 @app.post("/strategy-monitors/{monitor_id}/toggle")
-async def toggle_strategy_monitor(monitor_id: int, db: Session = Depends(get_db)):
+async def toggle_strategy_monitor(monitor_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
     """Toggle strategy monitor active status"""
     
     monitor = db.query(StrategyMonitor).filter(StrategyMonitor.id == monitor_id).first()
@@ -2131,7 +2155,7 @@ async def get_available_strategies(db: Session = Depends(get_db)):
     return {"strategies": sorted(all_strategies)}
 
 @app.get("/api/strategy-monitors")
-async def get_strategy_monitors(db: Session = Depends(get_db)):
+async def get_strategy_monitors(db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
     """Get all strategy monitors"""
     monitors = db.query(StrategyMonitor).order_by(StrategyMonitor.strategy_name).all()
     

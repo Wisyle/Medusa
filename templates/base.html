@@ -395,6 +395,8 @@
             z-index: 1040 !important;
             opacity: 0.5 !important;
             background-color: #000 !important;
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
         }
         
         .modal-backdrop.show {
@@ -404,11 +406,15 @@
         .modal {
             z-index: 1050 !important;
             background: transparent !important;
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
         }
         
         .modal-dialog {
             z-index: 1060 !important;
             margin: 1.75rem auto;
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
         }
         
         .modal-content {
@@ -417,11 +423,25 @@
             border: 1px solid rgba(0, 0, 0, 0.2);
             border-radius: 0.3rem;
             box-shadow: 0 3px 9px rgba(0, 0, 0, 0.5);
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+        }
+        
+        /* Override any card blur effects inside modals */
+        .modal .card,
+        .modal-content .card,
+        .modal-dialog .card,
+        .modal-body .card {
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+            filter: none !important;
+            -webkit-filter: none !important;
         }
         
         /* Ensure modals and their content are clickable */
         .modal.show {
             display: block !important;
+            pointer-events: auto !important;
         }
         
         .modal.show .modal-dialog,
@@ -468,7 +488,7 @@
             padding-right: 0 !important;
         }
         
-        .modal-open .modal {
+        body.modal-open .modal {
             overflow-x: hidden;
             overflow-y: auto;
         }
@@ -486,12 +506,30 @@
             cursor: pointer !important;
         }
         
-        /* Remove any blur effects */
+        /* Remove any blur effects from all modal elements */
         .modal *,
-        .modal-backdrop * {
+        .modal-backdrop *,
+        .modal-dialog *,
+        .modal-content *,
+        body.modal-open * {
             filter: none !important;
             backdrop-filter: none !important;
             -webkit-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+        }
+        
+        /* Fix notification popups specifically */
+        .alert.position-fixed {
+            z-index: 1070 !important;
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+            filter: none !important;
+            pointer-events: auto !important;
+        }
+        
+        /* Ensure page remains interactive when notifications show */
+        body:not(.modal-open) * {
+            pointer-events: auto !important;
         }
     </style>
 </head>

@@ -35,18 +35,20 @@
             <table class="table table-bordered" id="instances-table">
                 <thead>
                     <tr>
-                        <th>Name</th>
+                        <th>Instance</th>
                         <th>Exchange</th>
                         <th>Strategies</th>
                         <th>Status</th>
-                        <th>Polling Interval</th>
+                        <th>Balance</th>
+                        <th>Interval</th>
                         <th>Last Poll</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id="instancesTableBody">
+                    <!-- Instances will be loaded here -->
                     <tr>
-                        <td colspan="7" class="text-center">
+                        <td colspan="8" class="text-center">
                             <i class="fas fa-spinner fa-spin"></i>
                             Loading instances...
                         </td>
@@ -97,7 +99,7 @@ function updateInstancesTable() {
     if (instances.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="7" class="text-center text-muted">
+                <td colspan="8" class="text-center text-muted">
                     <i class="fas fa-robot"></i>
                     No bot instances configured yet.
                     <br><br>
@@ -134,6 +136,14 @@ function updateInstancesTable() {
                 ${instance.last_error ? 
                     '<br><span class="badge bg-danger"><i class="fas fa-exclamation-triangle"></i> Error</span>' : ''
                 }
+            </td>
+            <td>
+                ${instance.balance_enabled ? (
+                    instance.latest_balance ? 
+                        `<span class="text-success">$${parseFloat(instance.latest_balance.total_usdt).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                        <br><small class="text-muted">${new Date(instance.latest_balance.timestamp).toLocaleTimeString()}</small>` :
+                        '<span class="text-warning"><i class="fas fa-sync-alt"></i> Waiting...</span>'
+                ) : '<span class="text-muted">Disabled</span>'}
             </td>
             <td>
                 <span class="badge bg-light text-dark">${instance.polling_interval}s</span>
