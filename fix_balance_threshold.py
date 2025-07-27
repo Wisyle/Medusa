@@ -23,18 +23,32 @@ def fix_balance_display():
     try:
         print("🔍 CHECKING BALANCE DISPLAY ISSUE...")
         
+        # Detect database type
+        database_url = os.getenv('DATABASE_URL', 'sqlite:///medusa.db')
+        is_postgresql = database_url.startswith('postgresql')
+        
+        # Use appropriate datetime function for database type
+        if is_postgresql:
+            datetime_clause = "bh.timestamp >= NOW() - INTERVAL '1 day'"
+            error_datetime_clause = "el.timestamp >= NOW() - INTERVAL '1 day'"
+        else:
+            datetime_clause = "bh.timestamp >= datetime('now', '-1 day')"
+            error_datetime_clause = "el.timestamp >= datetime('now', '-1 day')"
+        
         # Check recent balance history for both instances
         print("\n=== RECENT BALANCE HISTORY ===")
-        recent_balances = db.execute(text("""
+        balance_query = f"""
             SELECT bi.name, bi.user_id, u.email, u.is_superuser,
                    bh.timestamp, bh.balance_data, bh.total_value_usd
             FROM balance_history bh
             JOIN bot_instances bi ON bh.instance_id = bi.id
             LEFT JOIN users u ON bi.user_id = u.id
-            WHERE bh.timestamp >= datetime('now', '-1 day')
+            WHERE {datetime_clause}
             ORDER BY bh.timestamp DESC
             LIMIT 20
-        """)).fetchall()
+        """
+        
+        recent_balances = db.execute(text(balance_query)).fetchall()
         
         if recent_balances:
             print("Recent balance entries:")
@@ -58,16 +72,18 @@ def fix_balance_display():
         
         # Check if there are polling errors for non-super users
         print("\n=== RECENT ERRORS FOR NON-SUPER USERS ===")
-        recent_errors = db.execute(text("""
+        error_query = f"""
             SELECT bi.name, u.email, u.is_superuser, el.timestamp, el.error_message
             FROM error_logs el
             JOIN bot_instances bi ON el.instance_id = bi.id
             LEFT JOIN users u ON bi.user_id = u.id
             WHERE u.is_superuser = FALSE 
-            AND el.timestamp >= datetime('now', '-1 day')
+            AND {error_datetime_clause}
             ORDER BY el.timestamp DESC
             LIMIT 10
-        """)).fetchall()
+        """
+        
+        recent_errors = db.execute(text(error_query)).fetchall()
         
         if recent_errors:
             print("Recent errors for regular users:")
