@@ -868,6 +868,7 @@ class ExchangePoller:
 
     async def _fetch_bitget_futures_balance(self) -> Dict:
         """Fetch Bitget futures balance with specific parameters for isolated mode"""
+        # Fixed indentation issues - v2
         try:
             # Get the trading pair, default to BTCUSDT if not specified
             symbol = self.instance.trading_pair or 'BTCUSDT'
@@ -906,28 +907,28 @@ class ExchangePoller:
                     return balance
             except Exception as e1:
                 logger.warning(f"fetch_balance with params failed: {e1}")
-             
-             # Approach 1.5: Check if we can get the raw response from CCXT after the empty result
-             try:
-                 if hasattr(self.exchange, 'last_json_response') and self.exchange.last_json_response:
-                     logger.info("Trying to parse CCXT's last_json_response")
-                     raw_response = self.exchange.last_json_response
-                     if raw_response and 'data' in raw_response:
-                         bitget_balance = self._parse_bitget_balance_response(raw_response)
-                         if bitget_balance:
-                             logger.info("Successfully parsed raw response from CCXT")
-                             return bitget_balance
-             except Exception as e1_5:
-                 logger.warning(f"Could not parse CCXT last_json_response: {e1_5}")
-             
-             # Approach 2: Try direct API call using different method names
-             method_names = [
-                 'mixGetAccount', 
-                 'privateGetMixAccountAccount', 
-                 'privateGetApiV2MixAccountAccount',
-                 'privateGetAccount',
-                 'private_get_api_v2_mix_account_account'
-             ]
+            
+            # Approach 1.5: Check if we can get the raw response from CCXT after the empty result
+            try:
+                if hasattr(self.exchange, 'last_json_response') and self.exchange.last_json_response:
+                    logger.info("Trying to parse CCXT's last_json_response")
+                    raw_response = self.exchange.last_json_response
+                    if raw_response and 'data' in raw_response:
+                        bitget_balance = self._parse_bitget_balance_response(raw_response)
+                        if bitget_balance:
+                            logger.info("Successfully parsed raw response from CCXT")
+                            return bitget_balance
+            except Exception as e1_5:
+                logger.warning(f"Could not parse CCXT last_json_response: {e1_5}")
+            
+            # Approach 2: Try direct API call using different method names
+            method_names = [
+                'mixGetAccount', 
+                'privateGetMixAccountAccount', 
+                'privateGetApiV2MixAccountAccount',
+                'privateGetAccount',
+                'private_get_api_v2_mix_account_account'
+            ]
             
             for method_name in method_names:
                 try:
