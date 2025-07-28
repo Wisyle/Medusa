@@ -41,20 +41,39 @@ class ExchangePoller:
         
         # Initialize Bitget REST client for futures instances to bypass CCXT issues
         self.bitget_rest_client = None
+        
+        # Debug: Log the API credentials structure
+        logger.info(f"🔍 [DEBUG] API credentials for instance {instance_id}: {dict(self.api_credentials) if self.api_credentials else None}")
+        
+        # Check for both 'passphrase' and 'api_passphrase' to support both direct and library credentials
+        passphrase = self.api_credentials.get('passphrase') or self.api_credentials.get('api_passphrase')
+        logger.info(f"🔍 [DEBUG] Passphrase found: {bool(passphrase)} (length: {len(passphrase) if passphrase else 0})")
+        
         if (self.instance.exchange.lower() == 'bitget' and 
             self.instance.market_type == 'futures' and 
-            self.api_credentials.get('passphrase')):
+            passphrase):
             try:
                 from rest_client import BitgetRESTClient
                 self.bitget_rest_client = BitgetRESTClient(
                     self.api_credentials['api_key'],
                     self.api_credentials['api_secret'],
-                    self.api_credentials.get('passphrase', '')
+                    passphrase
                 )
                 logger.info("✅ [BITGET REST CLIENT] Initialized successfully")
             except Exception as e:
                 logger.warning(f"Failed to initialize Bitget REST client: {e}")
                 self.bitget_rest_client = None
+        else:
+            # Debug: Log why the condition failed
+            if self.instance.exchange.lower() != 'bitget':
+                logger.info(f"🔍 [DEBUG] Exchange is {self.instance.exchange.lower()}, not 'bitget'")
+            elif self.instance.market_type != 'futures':
+                logger.info(f"🔍 [DEBUG] Market type is {self.instance.market_type}, not 'futures'")
+            elif not self.api_credentials.get('passphrase'):
+                passphrase_value = self.api_credentials.get('passphrase') if self.api_credentials else 'N/A'
+                logger.info(f"🔍 [DEBUG] No passphrase found. Value: '{passphrase_value}'")
+            
+            logger.warning("Bitget REST client not initialized, falling back to CCXT")
         
     def _init_exchange(self) -> ccxt.Exchange:
         """Initialize exchange connection with advanced CloudFront bypass"""
