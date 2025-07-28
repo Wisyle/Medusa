@@ -837,7 +837,14 @@ class ExchangePoller:
             return {}
             
         try:
-            balance = self.exchange.fetch_balance()
+            exchange_name = self.instance.exchange.lower()
+            
+            # Handle Bitget isolated futures specifically
+            if exchange_name == 'bitget' and self.instance.market_type == 'futures':
+                balance = await self._fetch_bitget_futures_balance()
+            else:
+                # Use standard CCXT method for other exchanges
+                balance = self.exchange.fetch_balance()
             
             # Filter out zero balances and format for notification
             filtered_balance = {}
@@ -857,6 +864,156 @@ class ExchangePoller:
             return filtered_balance
         except Exception as e:
             self._log_error("fetch_balance", str(e))
+            return {}
+
+    async def _fetch_bitget_futures_balance(self) -> Dict:
+        """Fetch Bitget futures balance with specific parameters for isolated mode"""
+        try:
+            # Get the trading pair, default to BTCUSDT if not specified
+            symbol = self.instance.trading_pair or 'BTCUSDT'
+            # Convert BTC/USDT format to BTCUSDT format expected by Bitget
+            if '/' in symbol:
+                symbol = symbol.replace('/', '')
+            
+            logger.info(f"Attempting to fetch Bitget balance for symbol: {symbol}")
+            
+            # Try multiple approaches to get the balance
+            
+            # Approach 1: Try using CCXT's fetch_balance with specific parameters
+            try:
+                params = {
+                    'symbol': symbol,
+                    'productType': 'USDT-FUTURES',
+                    'marginCoin': 'USDT'
+                }
+                logger.info(f"Trying fetch_balance with params: {params}")
+                balance = self.exchange.fetch_balance(params)
+                logger.info(f"fetch_balance with params succeeded: {balance}")
+                return balance
+            except Exception as e1:
+                logger.warning(f"fetch_balance with params failed: {e1}")
+            
+            # Approach 2: Try direct API call using different method names
+            method_names = ['mixGetAccount', 'privateGetMixAccountAccount', 'privateGetApiV2MixAccountAccount']
+            
+            for method_name in method_names:
+                try:
+                    if hasattr(self.exchange, method_name):
+                        params = {
+                            'symbol': symbol,
+                            'productType': 'USDT-FUTURES',
+                            'marginCoin': 'USDT'
+                        }
+                        logger.info(f"Trying {method_name} with params: {params}")
+                        method = getattr(self.exchange, method_name)
+                        response = method(params)
+                        
+                        # Parse the Bitget response into CCXT format
+                        bitget_balance = self._parse_bitget_balance_response(response)
+                        logger.info(f"Successfully fetched balance using {method_name}")
+                        return bitget_balance
+                except Exception as e2:
+                    logger.warning(f"Method {method_name} failed: {e2}")
+                    continue
+            
+            # Approach 3: Try to set exchange options for Bitget and use standard fetch_balance
+            try:
+                # Store original options
+                original_options = getattr(self.exchange, 'options', {}).copy()
+                
+                # Set Bitget-specific options
+                if not hasattr(self.exchange, 'options'):
+                    self.exchange.options = {}
+                
+                self.exchange.options.update({
+                    'symbol': symbol,
+                    'productType': 'USDT-FUTURES', 
+                    'marginCoin': 'USDT'
+                })
+                
+                logger.info(f"Trying fetch_balance with exchange options: {self.exchange.options}")
+                balance = self.exchange.fetch_balance()
+                
+                # Restore original options
+                self.exchange.options = original_options
+                
+                logger.info(f"fetch_balance with options succeeded: {balance}")
+                return balance
+                
+            except Exception as e3:
+                logger.warning(f"fetch_balance with options failed: {e3}")
+                # Restore original options on error
+                if 'original_options' in locals():
+                    self.exchange.options = original_options
+            
+            logger.error("All Bitget-specific balance fetch approaches failed, falling back to standard method")
+            
+            # Final fallback: Use standard CCXT fetch_balance
+            try:
+                logger.info("Using final fallback: standard CCXT fetch_balance")
+                return self.exchange.fetch_balance()
+            except Exception as fallback_error:
+                logger.error(f"Final fallback also failed: {fallback_error}")
+                return {}
+            
+        except Exception as e:
+            logger.error(f"Failed to fetch Bitget futures balance: {e}")
+            # Even in case of unexpected errors, try the standard method
+            try:
+                return self.exchange.fetch_balance()
+            except:
+                return {}
+
+    def _parse_bitget_balance_response(self, response: Dict) -> Dict:
+        """Parse Bitget API response into CCXT balance format"""
+        try:
+            balance = {}
+            
+            if 'data' in response and response['data']:
+                data = response['data']
+                
+                # Extract balance information from Bitget response
+                # Bitget returns balance data in a specific format
+                if isinstance(data, list) and len(data) > 0:
+                    account_data = data[0]
+                elif isinstance(data, dict):
+                    account_data = data
+                else:
+                    return {}
+                
+                # Parse margin coin balance (usually USDT for USDT futures)
+                margin_coin = account_data.get('marginCoin', 'USDT')
+                
+                # Extract balance values
+                available = float(account_data.get('available', 0))
+                locked = float(account_data.get('locked', 0))
+                total = available + locked
+                
+                if total > 0:
+                    balance[margin_coin] = {
+                        'free': available,
+                        'used': locked, 
+                        'total': total
+                    }
+                
+                # Also include any other balance fields that might be present
+                for key in ['equity', 'unrealizedPL', 'margin']:
+                    if key in account_data:
+                        value = float(account_data.get(key, 0))
+                        if value != 0:
+                            # Create entries for these special Bitget fields
+                            balance[f"{margin_coin}_{key}"] = {
+                                'free': value,
+                                'used': 0,
+                                'total': value
+                            }
+                
+                logger.info(f"Parsed Bitget balance: {balance}")
+            
+            return balance
+            
+        except Exception as e:
+            logger.error(f"Error parsing Bitget balance response: {e}")
             return {}
 
     def _save_balance_history(self, balance: Dict):
