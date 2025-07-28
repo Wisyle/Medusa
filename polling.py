@@ -817,6 +817,35 @@ class ExchangePoller:
     async def fetch_positions(self) -> List[Dict]:
         """Fetch current positions"""
         try:
+            exchange_name = self.instance.exchange.lower()
+            
+            # Handle Bitget isolated futures specifically using REST client
+            if exchange_name == 'bitget' and self.instance.market_type == 'futures':
+                try:
+                    from rest_client import BitgetRESTClient
+                    
+                    rest_client = BitgetRESTClient(
+                        self.instance.api_key,
+                        self.instance.api_secret,
+                        self.instance.api_passphrase or ""
+                    )
+                    
+                    positions_response = rest_client.get_positions(
+                        product_type='USDT-FUTURES',
+                        margin_coin='USDT'
+                    )
+                    
+                    if positions_response and positions_response.get('code') == '00000':
+                        positions_data = positions_response.get('data', [])
+                        logger.info(f"REST client fetched {len(positions_data)} positions")
+                        return self._parse_bitget_positions(positions_data)
+                    else:
+                        logger.warning(f"REST client positions failed: {positions_response}")
+                        
+                except Exception as rest_error:
+                    logger.warning(f"REST client positions failed, falling back to CCXT: {rest_error}")
+            
+            # Fallback to standard CCXT method
             positions = self.exchange.fetch_positions()
             return [pos for pos in positions if pos['contracts'] > 0]  # Only open positions
         except Exception as e:
@@ -826,6 +855,42 @@ class ExchangePoller:
     async def fetch_open_orders(self) -> List[Dict]:
         """Fetch open orders"""
         try:
+            exchange_name = self.instance.exchange.lower()
+            
+            # Handle Bitget isolated futures specifically using REST client
+            if exchange_name == 'bitget' and self.instance.market_type == 'futures':
+                try:
+                    from rest_client import BitgetRESTClient
+                    
+                    rest_client = BitgetRESTClient(
+                        self.instance.api_key,
+                        self.instance.api_secret,
+                        self.instance.api_passphrase or ""
+                    )
+                    
+                    # Get trading pair for symbol filtering if specified
+                    symbol = None
+                    if self.instance.trading_pair:
+                        symbol = self.instance.trading_pair
+                        if '/' in symbol:
+                            symbol = symbol.replace('/', '')
+                    
+                    orders_response = rest_client.get_pending_orders(
+                        product_type='USDT-FUTURES',
+                        symbol=symbol.lower() if symbol else None
+                    )
+                    
+                    if orders_response and orders_response.get('code') == '00000':
+                        orders_data = orders_response.get('data', {}).get('entrustedList', [])
+                        logger.info(f"REST client fetched {len(orders_data)} pending orders")
+                        return self._parse_bitget_orders(orders_data)
+                    else:
+                        logger.warning(f"REST client orders failed: {orders_response}")
+                        
+                except Exception as rest_error:
+                    logger.warning(f"REST client orders failed, falling back to CCXT: {rest_error}")
+            
+            # Fallback to standard CCXT method
             return self.exchange.fetch_open_orders()
         except Exception as e:
             self._log_error("fetch_open_orders", str(e))
@@ -867,120 +932,70 @@ class ExchangePoller:
             return {}
 
     async def _fetch_bitget_futures_balance(self) -> Dict:
-        """Fetch Bitget futures balance with specific parameters for isolated mode"""
-        # Fixed indentation issues - v2
+        """Fetch Bitget futures balance using custom REST client to bypass CCXT issues"""
         try:
+            from rest_client import BitgetRESTClient
+            
             # Get the trading pair, default to BTCUSDT if not specified
             symbol = self.instance.trading_pair or 'BTCUSDT'
             # Convert BTC/USDT format to BTCUSDT format expected by Bitget
             if '/' in symbol:
                 symbol = symbol.replace('/', '')
             
-            logger.info(f"Attempting to fetch Bitget balance for symbol: {symbol}")
+            logger.info(f"Using custom REST client to fetch Bitget balance for symbol: {symbol}")
             
-            # Try multiple approaches to get the balance
+            # Create REST client with instance credentials
+            rest_client = BitgetRESTClient(
+                self.instance.api_key,
+                self.instance.api_secret,
+                self.instance.api_passphrase or ""
+            )
             
-            # Approach 1: Try using CCXT's fetch_balance with specific parameters
+            # Use synchronous call to get account data
+            try:
+                account_response = rest_client.get_account(
+                    symbol=symbol.lower(),
+                    product_type='USDT-FUTURES',
+                    margin_coin='USDT'
+                )
+                
+                logger.info(f"REST client account response: {account_response}")
+                
+                if account_response and account_response.get('code') == '00000':
+                    # Parse the successful response
+                    bitget_balance = self._parse_bitget_balance_response(account_response)
+                    if bitget_balance:
+                        logger.info("Successfully fetched balance using custom REST client")
+                        return bitget_balance
+                    else:
+                        logger.warning("REST client returned successful response but parsing failed")
+                else:
+                    logger.warning(f"REST client returned error: {account_response}")
+                    
+            except Exception as rest_error:
+                logger.error(f"REST client get_account failed: {rest_error}")
+            
+            # Fallback to CCXT if REST client fails
+            logger.warning("REST client failed, falling back to CCXT methods")
+            
+            # Try CCXT with specific parameters
             try:
                 params = {
                     'symbol': symbol,
                     'productType': 'USDT-FUTURES',
                     'marginCoin': 'USDT'
                 }
-                logger.info(f"Trying fetch_balance with params: {params}")
+                logger.info(f"Fallback: Trying CCXT fetch_balance with params: {params}")
                 balance = self.exchange.fetch_balance(params)
-                logger.info(f"fetch_balance with params succeeded: {balance}")
                 
-                # Check if CCXT returned empty balance but the API call succeeded
-                if balance and 'info' in balance and balance['info']:
-                    # CCXT parsed it correctly
+                if balance and any(isinstance(v, dict) and v.get('total', 0) > 0 for v in balance.values()):
+                    logger.info("CCXT fallback succeeded")
                     return balance
-                elif balance and 'info' in balance and isinstance(balance['info'], list) and not balance['info']:
-                    # CCXT got the response but returned empty info list
-                    logger.warning("CCXT returned empty info list, trying direct API calls")
-                    # Fall through to try direct API methods
-                elif balance and sum(len(v) if isinstance(v, dict) else 0 for v in balance.values() if isinstance(v, dict)) == 0:
-                    # CCXT returned empty balances
-                    logger.warning("CCXT returned empty balances, trying direct API calls")
-                    # Fall through to try direct API methods 
                 else:
-                    return balance
-            except Exception as e1:
-                logger.warning(f"fetch_balance with params failed: {e1}")
-            
-            # Approach 1.5: Check if we can get the raw response from CCXT after the empty result
-            try:
-                if hasattr(self.exchange, 'last_json_response') and self.exchange.last_json_response:
-                    logger.info("Trying to parse CCXT's last_json_response")
-                    raw_response = self.exchange.last_json_response
-                    if raw_response and 'data' in raw_response:
-                        bitget_balance = self._parse_bitget_balance_response(raw_response)
-                        if bitget_balance:
-                            logger.info("Successfully parsed raw response from CCXT")
-                            return bitget_balance
-            except Exception as e1_5:
-                logger.warning(f"Could not parse CCXT last_json_response: {e1_5}")
-            
-            # Approach 2: Try direct API call using different method names
-            method_names = [
-                'mixGetAccount', 
-                'privateGetMixAccountAccount', 
-                'privateGetApiV2MixAccountAccount',
-                'privateGetAccount',
-                'private_get_api_v2_mix_account_account'
-            ]
-            
-            for method_name in method_names:
-                try:
-                    if hasattr(self.exchange, method_name):
-                        params = {
-                            'symbol': symbol,
-                            'productType': 'USDT-FUTURES',
-                            'marginCoin': 'USDT'
-                        }
-                        logger.info(f"Trying {method_name} with params: {params}")
-                        method = getattr(self.exchange, method_name)
-                        response = method(params)
-                        
-                        # Parse the Bitget response into CCXT format
-                        bitget_balance = self._parse_bitget_balance_response(response)
-                        logger.info(f"Successfully fetched balance using {method_name}")
-                        return bitget_balance
-                except Exception as e2:
-                    logger.warning(f"Method {method_name} failed: {e2}")
-                    continue
-            
-            # Approach 3: Try to set exchange options for Bitget and use standard fetch_balance
-            try:
-                # Store original options
-                original_options = getattr(self.exchange, 'options', {}).copy()
-                
-                # Set Bitget-specific options
-                if not hasattr(self.exchange, 'options'):
-                    self.exchange.options = {}
-                
-                self.exchange.options.update({
-                    'symbol': symbol,
-                    'productType': 'USDT-FUTURES', 
-                    'marginCoin': 'USDT'
-                })
-                
-                logger.info(f"Trying fetch_balance with exchange options: {self.exchange.options}")
-                balance = self.exchange.fetch_balance()
-                
-                # Restore original options
-                self.exchange.options = original_options
-                
-                logger.info(f"fetch_balance with options succeeded: {balance}")
-                return balance
-                
-            except Exception as e3:
-                logger.warning(f"fetch_balance with options failed: {e3}")
-                # Restore original options on error
-                if 'original_options' in locals():
-                    self.exchange.options = original_options
-            
-            logger.error("All Bitget-specific balance fetch approaches failed, falling back to standard method")
+                    logger.warning("CCXT returned empty balance")
+                    
+            except Exception as ccxt_error:
+                logger.warning(f"CCXT fallback failed: {ccxt_error}")
             
             # Final fallback: Use standard CCXT fetch_balance
             try:
@@ -992,11 +1007,7 @@ class ExchangePoller:
             
         except Exception as e:
             logger.error(f"Failed to fetch Bitget futures balance: {e}")
-            # Even in case of unexpected errors, try the standard method
-            try:
-                return self.exchange.fetch_balance()
-            except:
-                return {}
+            return {}
 
     def _parse_bitget_balance_response(self, response: Dict) -> Dict:
         """Parse Bitget API response into CCXT balance format"""
@@ -1057,6 +1068,82 @@ class ExchangePoller:
             logger.error(f"Error parsing Bitget balance response: {e}")
             logger.error(f"Response was: {response}")
             return {}
+
+    def _parse_bitget_positions(self, positions_data: List[Dict]) -> List[Dict]:
+        """Parse Bitget positions response into CCXT format"""
+        try:
+            ccxt_positions = []
+            
+            for position in positions_data:
+                # Only include positions with actual size > 0
+                if float(position.get('total', 0)) > 0:
+                    ccxt_position = {
+                        'symbol': position.get('symbol', ''),
+                        'side': position.get('holdSide', ''),
+                        'contracts': float(position.get('total', 0)),
+                        'contractSize': float(position.get('contractSize', 1)),
+                        'unrealizedPnl': float(position.get('unrealizedPL', 0)),
+                        'percentage': float(position.get('unrealizedPLR', 0)) * 100,
+                        'notional': float(position.get('margin', 0)),
+                        'markPrice': float(position.get('markPrice', 0)),
+                        'entryPrice': float(position.get('averageOpenPrice', 0)),
+                        'timestamp': None,
+                        'datetime': None,
+                        'info': position
+                    }
+                    ccxt_positions.append(ccxt_position)
+                    logger.info(f"Parsed position: {ccxt_position['symbol']} {ccxt_position['side']} {ccxt_position['contracts']}")
+            
+            return ccxt_positions
+            
+        except Exception as e:
+            logger.error(f"Error parsing Bitget positions: {e}")
+            logger.error(f"Positions data was: {positions_data}")
+            return []
+
+    def _parse_bitget_orders(self, orders_data: List[Dict]) -> List[Dict]:
+        """Parse Bitget orders response into CCXT format"""
+        try:
+            ccxt_orders = []
+            
+            for order in orders_data:
+                ccxt_order = {
+                    'id': order.get('orderId', ''),
+                    'clientOrderId': order.get('clientOid', ''),
+                    'symbol': order.get('symbol', ''),
+                    'side': order.get('side', ''),
+                    'amount': float(order.get('size', 0)),
+                    'price': float(order.get('price', 0)) if order.get('price') else None,
+                    'type': order.get('orderType', '').lower(),
+                    'status': self._map_bitget_order_status(order.get('state', '')),
+                    'filled': float(order.get('filledQty', 0)),
+                    'remaining': float(order.get('size', 0)) - float(order.get('filledQty', 0)),
+                    'timestamp': int(order.get('cTime', 0)),
+                    'datetime': None,
+                    'fee': None,
+                    'trades': None,
+                    'info': order
+                }
+                ccxt_orders.append(ccxt_order)
+                logger.info(f"Parsed order: {ccxt_order['symbol']} {ccxt_order['side']} {ccxt_order['amount']} @ {ccxt_order['price']}")
+            
+            return ccxt_orders
+            
+        except Exception as e:
+            logger.error(f"Error parsing Bitget orders: {e}")
+            logger.error(f"Orders data was: {orders_data}")
+            return []
+
+    def _map_bitget_order_status(self, bitget_status: str) -> str:
+        """Map Bitget order status to CCXT status"""
+        status_mapping = {
+            'new': 'open',
+            'partial-fill': 'open',
+            'full-fill': 'closed',
+            'cancelled': 'canceled',
+            'live': 'open'
+        }
+        return status_mapping.get(bitget_status.lower(), 'open')
 
     def _save_balance_history(self, balance: Dict):
         """Save balance snapshot to history"""
