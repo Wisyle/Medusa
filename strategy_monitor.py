@@ -63,7 +63,7 @@ class StrategyMonitorService:
         
         positions = self.db.query(PollState).filter(
             PollState.instance_id.in_(instance_ids),
-            PollState.data_type == 'position',
+            PollState.data_type.like('position_%'),
             PollState.timestamp >= since
         ).order_by(desc(PollState.timestamp)).all()
         
