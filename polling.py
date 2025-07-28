@@ -889,12 +889,45 @@ class ExchangePoller:
                 logger.info(f"Trying fetch_balance with params: {params}")
                 balance = self.exchange.fetch_balance(params)
                 logger.info(f"fetch_balance with params succeeded: {balance}")
-                return balance
+                
+                # Check if CCXT returned empty balance but the API call succeeded
+                if balance and 'info' in balance and balance['info']:
+                    # CCXT parsed it correctly
+                    return balance
+                elif balance and 'info' in balance and isinstance(balance['info'], list) and not balance['info']:
+                    # CCXT got the response but returned empty info list
+                    logger.warning("CCXT returned empty info list, trying direct API calls")
+                    # Fall through to try direct API methods
+                elif balance and sum(len(v) if isinstance(v, dict) else 0 for v in balance.values() if isinstance(v, dict)) == 0:
+                    # CCXT returned empty balances
+                    logger.warning("CCXT returned empty balances, trying direct API calls")
+                    # Fall through to try direct API methods 
+                else:
+                    return balance
             except Exception as e1:
                 logger.warning(f"fetch_balance with params failed: {e1}")
-            
-            # Approach 2: Try direct API call using different method names
-            method_names = ['mixGetAccount', 'privateGetMixAccountAccount', 'privateGetApiV2MixAccountAccount']
+             
+             # Approach 1.5: Check if we can get the raw response from CCXT after the empty result
+             try:
+                 if hasattr(self.exchange, 'last_json_response') and self.exchange.last_json_response:
+                     logger.info("Trying to parse CCXT's last_json_response")
+                     raw_response = self.exchange.last_json_response
+                     if raw_response and 'data' in raw_response:
+                         bitget_balance = self._parse_bitget_balance_response(raw_response)
+                         if bitget_balance:
+                             logger.info("Successfully parsed raw response from CCXT")
+                             return bitget_balance
+             except Exception as e1_5:
+                 logger.warning(f"Could not parse CCXT last_json_response: {e1_5}")
+             
+             # Approach 2: Try direct API call using different method names
+             method_names = [
+                 'mixGetAccount', 
+                 'privateGetMixAccountAccount', 
+                 'privateGetApiV2MixAccountAccount',
+                 'privateGetAccount',
+                 'private_get_api_v2_mix_account_account'
+             ]
             
             for method_name in method_names:
                 try:
@@ -968,23 +1001,16 @@ class ExchangePoller:
         """Parse Bitget API response into CCXT balance format"""
         try:
             balance = {}
+            logger.info(f"Parsing Bitget response: {response}")
             
-            if 'data' in response and response['data']:
-                data = response['data']
-                
-                # Extract balance information from Bitget response
-                # Bitget returns balance data in a specific format
-                if isinstance(data, list) and len(data) > 0:
-                    account_data = data[0]
-                elif isinstance(data, dict):
-                    account_data = data
-                else:
-                    return {}
+            # Handle the exact Bitget response format from the user's working API call
+            if 'data' in response and response['data'] and response.get('code') == '00000':
+                account_data = response['data']
                 
                 # Parse margin coin balance (usually USDT for USDT futures)
                 margin_coin = account_data.get('marginCoin', 'USDT')
                 
-                # Extract balance values
+                # Extract balance values using the exact field names from Bitget API
                 available = float(account_data.get('available', 0))
                 locked = float(account_data.get('locked', 0))
                 total = available + locked
@@ -995,25 +1021,40 @@ class ExchangePoller:
                         'used': locked, 
                         'total': total
                     }
+                    logger.info(f"Added {margin_coin} balance: free={available}, used={locked}, total={total}")
                 
-                # Also include any other balance fields that might be present
-                for key in ['equity', 'unrealizedPL', 'margin']:
-                    if key in account_data:
-                        value = float(account_data.get(key, 0))
-                        if value != 0:
-                            # Create entries for these special Bitget fields
-                            balance[f"{margin_coin}_{key}"] = {
-                                'free': value,
-                                'used': 0,
-                                'total': value
-                            }
+                # Include account equity as a separate entry
+                account_equity = account_data.get('accountEquity')
+                if account_equity:
+                    equity_value = float(account_equity)
+                    balance[f"{margin_coin}_Equity"] = {
+                        'free': equity_value,
+                        'used': 0,
+                        'total': equity_value
+                    }
+                    logger.info(f"Added {margin_coin}_Equity: {equity_value}")
                 
-                logger.info(f"Parsed Bitget balance: {balance}")
+                # Include unrealized P&L
+                unrealized_pl = account_data.get('unrealizedPL')
+                if unrealized_pl:
+                    pl_value = float(unrealized_pl)
+                    if pl_value != 0:  # Only show if non-zero
+                        balance[f"{margin_coin}_UnrealizedPL"] = {
+                            'free': pl_value,
+                            'used': 0,
+                            'total': pl_value
+                        }
+                        logger.info(f"Added {margin_coin}_UnrealizedPL: {pl_value}")
+                
+                logger.info(f"Final parsed Bitget balance: {balance}")
+            else:
+                logger.warning(f"Unexpected Bitget response format: {response}")
             
             return balance
             
         except Exception as e:
             logger.error(f"Error parsing Bitget balance response: {e}")
+            logger.error(f"Response was: {response}")
             return {}
 
     def _save_balance_history(self, balance: Dict):
