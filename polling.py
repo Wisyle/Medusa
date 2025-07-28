@@ -39,6 +39,23 @@ class ExchangePoller:
         self.exchange = self._init_exchange()
         self.telegram_bot = self._init_telegram()
         
+        # Initialize Bitget REST client for futures instances to bypass CCXT issues
+        self.bitget_rest_client = None
+        if (self.instance.exchange.lower() == 'bitget' and 
+            self.instance.market_type == 'futures' and 
+            self.api_credentials.get('passphrase')):
+            try:
+                from rest_client import BitgetRESTClient
+                self.bitget_rest_client = BitgetRESTClient(
+                    self.api_credentials['api_key'],
+                    self.api_credentials['api_secret'],
+                    self.api_credentials.get('passphrase', '')
+                )
+                logger.info("✅ [BITGET REST CLIENT] Initialized successfully")
+            except Exception as e:
+                logger.warning(f"Failed to initialize Bitget REST client: {e}")
+                self.bitget_rest_client = None
+        
     def _init_exchange(self) -> ccxt.Exchange:
         """Initialize exchange connection with advanced CloudFront bypass"""
         import os
@@ -820,17 +837,9 @@ class ExchangePoller:
             exchange_name = self.instance.exchange.lower()
             
             # Handle Bitget isolated futures specifically using REST client
-            if exchange_name == 'bitget' and self.instance.market_type == 'futures':
+            if exchange_name == 'bitget' and self.instance.market_type == 'futures' and self.bitget_rest_client:
                 try:
-                    from rest_client import BitgetRESTClient
-                    
-                    rest_client = BitgetRESTClient(
-                        self.instance.api_key,
-                        self.instance.api_secret,
-                        self.instance.api_passphrase or ""
-                    )
-                    
-                    positions_response = rest_client.get_positions(
+                    positions_response = self.bitget_rest_client.get_positions(
                         product_type='USDT-FUTURES',
                         margin_coin='USDT'
                     )
@@ -858,16 +867,8 @@ class ExchangePoller:
             exchange_name = self.instance.exchange.lower()
             
             # Handle Bitget isolated futures specifically using REST client
-            if exchange_name == 'bitget' and self.instance.market_type == 'futures':
+            if exchange_name == 'bitget' and self.instance.market_type == 'futures' and self.bitget_rest_client:
                 try:
-                    from rest_client import BitgetRESTClient
-                    
-                    rest_client = BitgetRESTClient(
-                        self.instance.api_key,
-                        self.instance.api_secret,
-                        self.instance.api_passphrase or ""
-                    )
-                    
                     # Get trading pair for symbol filtering if specified
                     symbol = None
                     if self.instance.trading_pair:
@@ -875,7 +876,7 @@ class ExchangePoller:
                         if '/' in symbol:
                             symbol = symbol.replace('/', '')
                     
-                    orders_response = rest_client.get_pending_orders(
+                    orders_response = self.bitget_rest_client.get_pending_orders(
                         product_type='USDT-FUTURES',
                         symbol=symbol.lower() if symbol else None
                     )
@@ -934,7 +935,9 @@ class ExchangePoller:
     async def _fetch_bitget_futures_balance(self) -> Dict:
         """Fetch Bitget futures balance using custom REST client to bypass CCXT issues"""
         try:
-            from rest_client import BitgetRESTClient
+            if not self.bitget_rest_client:
+                logger.warning("Bitget REST client not initialized, falling back to CCXT")
+                return {}
             
             # Get the trading pair, default to BTCUSDT if not specified
             symbol = self.instance.trading_pair or 'BTCUSDT'
@@ -944,16 +947,9 @@ class ExchangePoller:
             
             logger.info(f"Using custom REST client to fetch Bitget balance for symbol: {symbol}")
             
-            # Create REST client with instance credentials
-            rest_client = BitgetRESTClient(
-                self.instance.api_key,
-                self.instance.api_secret,
-                self.instance.api_passphrase or ""
-            )
-            
             # Use synchronous call to get account data
             try:
-                account_response = rest_client.get_account(
+                account_response = self.bitget_rest_client.get_account(
                     symbol=symbol.lower(),
                     product_type='USDT-FUTURES',
                     margin_coin='USDT'
