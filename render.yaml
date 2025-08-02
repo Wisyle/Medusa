@@ -103,4 +103,38 @@ services:
       - key: CLOUDFRONT_BYPASS_REGION
         value: "sg"
 
+  # Decter Engine Service - Internal Trading Bot Service
+  - type: worker
+    name: tar-dashboard-decter-engine
+    env: python
+    plan: starter
+    region: singapore
+    buildCommand: "pip install -r requirements.txt && pip install -r Decter/requirements.txt"
+    startCommand: "sleep 90 && python -c 'import sys; sys.path.insert(0, \"Decter\"); from main import main; main()'"
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: tar-dashboard-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ALGORITHM
+        value: "HS256"
+      - key: APP_NAME
+        value: "TAR Global Strategies Dashboard"
+      - key: DEBUG
+        value: "false"
+      - key: ENVIRONMENT
+        value: "production"
+      - key: SERVER_REGION
+        value: "singapore"
+      - key: CLOUDFRONT_BYPASS_REGION
+        value: "sg"
+      - key: DECTER_ENGINE_NAME
+        value: "Decter Engine (ACCU)"
+      - key: DECTER_INTERNAL_MODE
+        value: "true"
+      - key: PYTHONPATH
+        value: "/opt/render/project/src:/opt/render/project/src/Decter"
+
 

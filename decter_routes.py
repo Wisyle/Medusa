@@ -1,0 +1,403 @@
+"""
+Decter 001 API Routes for TARC Lighthouse Integration
+FastAPI routes for controlling Decter 001 trading bot
+"""
+
+from fastapi import APIRouter, HTTPException, Depends, Form
+from fastapi.responses import JSONResponse
+from typing import Dict, List, Optional, Any
+from pydantic import BaseModel, Field
+from datetime import datetime
+import logging
+
+from decter_controller import decter_controller, DecterConfig, DecterStatus
+from auth import get_current_active_user
+
+logger = logging.getLogger(__name__)
+
+# Create router for Decter 001 endpoints
+decter_router = APIRouter(prefix="/api/decter", tags=["Decter 001"])
+
+
+# Pydantic models for request/response
+class DecterConfigRequest(BaseModel):
+    stake: float = Field(..., gt=0, description="Stake amount (minimum 0.4)")
+    growth_rate: float = Field(..., gt=0, le=5, description="Growth rate percentage (1-5%)")
+    take_profit: float = Field(..., gt=0, description="Take profit percentage")
+    index: str = Field(..., description="Trading index (e.g., R_10, R_25)")
+    currency: str = Field(..., description="Currency (XRP, BTC, ETH, etc.)")
+    max_loss_amount: float = Field(..., gt=0, description="Maximum loss amount")
+    max_win_amount: float = Field(..., gt=0, description="Maximum win amount")
+
+
+class DecterCommandRequest(BaseModel):
+    command: str = Field(..., description="Telegram command to send")
+
+
+class TelegramConfigRequest(BaseModel):
+    bot_token: str = Field(..., description="Telegram bot token")
+    group_id: str = Field(..., description="Telegram group/chat ID")
+    topic_id: Optional[str] = Field(None, description="Telegram topic ID (optional)")
+
+
+class TransactionLogRequest(BaseModel):
+    message: str = Field(..., description="Notification message")
+    transaction_type: Optional[str] = Field(None, description="Transaction type")
+    amount: Optional[float] = Field(None, description="Transaction amount")
+    result: Optional[str] = Field(None, description="Transaction result")
+
+
+class DecterStatusResponse(BaseModel):
+    status: str
+    is_running: bool
+    process_id: Optional[int] = None
+    uptime_seconds: Optional[int] = None
+    stats: Optional[Dict[str, Any]] = None
+    config: Optional[Dict[str, Any]] = None
+
+
+# Health check endpoint
+@decter_router.get("/health")
+async def decter_health():
+    """Health check for Decter 001 integration"""
+    return {
+        "service": "decter-001-integration",
+        "status": "healthy",
+        "controller_initialized": decter_controller is not None
+    }
+
+
+# Status endpoints
+@decter_router.get("/status", response_model=DecterStatusResponse)
+async def get_decter_status(current_user: Dict = Depends(get_current_active_user)):
+    """Get comprehensive Decter 001 status"""
+    try:
+        status = decter_controller.get_status()
+        return JSONResponse(content=status)
+    except Exception as e:
+        logger.error(f"❌ Error getting Decter status: {e}")
+        raise HTTPException(status_code=500, detail=f"Error getting status: {str(e)}")
+
+
+@decter_router.get("/performance")
+async def get_decter_performance(current_user: Dict = Depends(get_current_active_user)):
+    """Get Decter 001 performance summary"""
+    try:
+        performance = decter_controller.get_performance_summary()
+        return JSONResponse(content=performance)
+    except Exception as e:
+        logger.error(f"❌ Error getting Decter performance: {e}")
+        raise HTTPException(status_code=500, detail=f"Error getting performance: {str(e)}")
+
+
+# Control endpoints
+@decter_router.post("/start")
+async def start_decter(current_user: Dict = Depends(get_current_active_user)):
+    """Start Decter 001 bot"""
+    try:
+        result = decter_controller.start()
+        if result["success"]:
+            logger.info(f"✅ Decter 001 started by user: {current_user.get('username', 'unknown')}")
+            return JSONResponse(content=result)
+        else:
+            logger.warning(f"⚠️ Failed to start Decter 001: {result['message']}")
+            raise HTTPException(status_code=400, detail=result["message"])
+    except Exception as e:
+        logger.error(f"❌ Error starting Decter: {e}")
+        raise HTTPException(status_code=500, detail=f"Error starting Decter: {str(e)}")
+
+
+@decter_router.post("/stop")
+async def stop_decter(current_user: Dict = Depends(get_current_active_user)):
+    """Stop Decter 001 bot"""
+    try:
+        result = decter_controller.stop()
+        if result["success"]:
+            logger.info(f"✅ Decter 001 stopped by user: {current_user.get('username', 'unknown')}")
+            return JSONResponse(content=result)
+        else:
+            logger.warning(f"⚠️ Failed to stop Decter 001: {result['message']}")
+            raise HTTPException(status_code=400, detail=result["message"])
+    except Exception as e:
+        logger.error(f"❌ Error stopping Decter: {e}")
+        raise HTTPException(status_code=500, detail=f"Error stopping Decter: {str(e)}")
+
+
+@decter_router.post("/restart")
+async def restart_decter(current_user: Dict = Depends(get_current_active_user)):
+    """Restart Decter 001 bot"""
+    try:
+        result = decter_controller.restart()
+        if result["success"]:
+            logger.info(f"✅ Decter 001 restarted by user: {current_user.get('username', 'unknown')}")
+            return JSONResponse(content=result)
+        else:
+            logger.warning(f"⚠️ Failed to restart Decter 001: {result['message']}")
+            raise HTTPException(status_code=400, detail=result["message"])
+    except Exception as e:
+        logger.error(f"❌ Error restarting Decter: {e}")
+        raise HTTPException(status_code=500, detail=f"Error restarting Decter: {str(e)}")
+
+
+# Configuration endpoints
+@decter_router.post("/config")
+async def set_decter_config(
+    config: DecterConfigRequest,
+    current_user: Dict = Depends(get_current_active_user)
+):
+    """Set Decter 001 trading parameters"""
+    try:
+        decter_config = DecterConfig(
+            stake=config.stake,
+            growth_rate=config.growth_rate,
+            take_profit=config.take_profit,
+            index=config.index,
+            currency=config.currency,
+            max_loss_amount=config.max_loss_amount,
+            max_win_amount=config.max_win_amount
+        )
+        
+        result = decter_controller.set_parameters(decter_config)
+        if result["success"]:
+            logger.info(f"✅ Decter 001 config updated by user: {current_user.get('username', 'unknown')}")
+            return JSONResponse(content=result)
+        else:
+            logger.warning(f"⚠️ Failed to update Decter config: {result['message']}")
+            raise HTTPException(status_code=400, detail=result["message"])
+    except Exception as e:
+        logger.error(f"❌ Error setting Decter config: {e}")
+        raise HTTPException(status_code=500, detail=f"Error setting config: {str(e)}")
+
+
+@decter_router.get("/config")
+async def get_decter_config(current_user: Dict = Depends(get_current_active_user)):
+    """Get current Decter 001 configuration"""
+    try:
+        config = decter_controller._get_current_config()
+        return JSONResponse(content=config or {})
+    except Exception as e:
+        logger.error(f"❌ Error getting Decter config: {e}")
+        raise HTTPException(status_code=500, detail=f"Error getting config: {str(e)}")
+
+
+# Trading data endpoints
+@decter_router.get("/trades")
+async def get_decter_trades(
+    limit: int = 50,
+    current_user: Dict = Depends(get_current_active_user)
+):
+    """Get Decter 001 trade history"""
+    try:
+        trades = decter_controller.get_trade_history(limit)
+        return JSONResponse(content={"trades": trades, "count": len(trades)})
+    except Exception as e:
+        logger.error(f"❌ Error getting Decter trades: {e}")
+        raise HTTPException(status_code=500, detail=f"Error getting trades: {str(e)}")
+
+
+@decter_router.get("/stats")
+async def get_decter_stats(current_user: Dict = Depends(get_current_active_user)):
+    """Get detailed Decter 001 statistics"""
+    try:
+        stats = decter_controller.get_stats()
+        if stats:
+            return JSONResponse(content=stats.__dict__)
+        else:
+            return JSONResponse(content={})
+    except Exception as e:
+        logger.error(f"❌ Error getting Decter stats: {e}")
+        raise HTTPException(status_code=500, detail=f"Error getting stats: {str(e)}")
+
+
+# Command endpoints
+@decter_router.post("/command")
+async def send_decter_command(
+    command_req: DecterCommandRequest,
+    current_user: Dict = Depends(get_current_active_user)
+):
+    """Send command to Decter 001"""
+    try:
+        result = decter_controller.send_telegram_command(command_req.command)
+        if result["success"]:
+            logger.info(f"✅ Command sent to Decter by user: {current_user.get('username', 'unknown')}: {command_req.command}")
+            return JSONResponse(content=result)
+        else:
+            logger.warning(f"⚠️ Failed to send command: {result['message']}")
+            raise HTTPException(status_code=400, detail=result["message"])
+    except Exception as e:
+        logger.error(f"❌ Error sending command: {e}")
+        raise HTTPException(status_code=500, detail=f"Error sending command: {str(e)}")
+
+
+# Information endpoints
+@decter_router.get("/indices")
+async def get_available_indices(current_user: Dict = Depends(get_current_active_user)):
+    """Get available trading indices"""
+    try:
+        indices = decter_controller._get_available_indices()
+        return JSONResponse(content={"indices": indices})
+    except Exception as e:
+        logger.error(f"❌ Error getting indices: {e}")
+        raise HTTPException(status_code=500, detail=f"Error getting indices: {str(e)}")
+
+
+@decter_router.get("/currencies")
+async def get_available_currencies(current_user: Dict = Depends(get_current_active_user)):
+    """Get available currencies"""
+    try:
+        currencies = decter_controller._get_available_currencies()
+        return JSONResponse(content={"currencies": currencies})
+    except Exception as e:
+        logger.error(f"❌ Error getting currencies: {e}")
+        raise HTTPException(status_code=500, detail=f"Error getting currencies: {str(e)}")
+
+
+@decter_router.get("/logs")
+async def get_decter_logs(
+    lines: int = 50,
+    current_user: Dict = Depends(get_current_active_user)
+):
+    """Get recent Decter 001 logs"""
+    try:
+        logs = decter_controller._get_recent_logs(lines)
+        return JSONResponse(content={"logs": logs, "count": len(logs)})
+    except Exception as e:
+        logger.error(f"❌ Error getting Decter logs: {e}")
+        raise HTTPException(status_code=500, detail=f"Error getting logs: {str(e)}")
+
+
+# Form-based endpoints for web interface
+@decter_router.post("/config/form")
+async def set_decter_config_form(
+    stake: float = Form(...),
+    growth_rate: float = Form(...),
+    take_profit: float = Form(...),
+    index: str = Form(...),
+    currency: str = Form(...),
+    max_loss_amount: float = Form(...),
+    max_win_amount: float = Form(...),
+    current_user: Dict = Depends(get_current_active_user)
+):
+    """Set Decter 001 config via form submission"""
+    try:
+        config = DecterConfigRequest(
+            stake=stake,
+            growth_rate=growth_rate,
+            take_profit=take_profit,
+            index=index,
+            currency=currency,
+            max_loss_amount=max_loss_amount,
+            max_win_amount=max_win_amount
+        )
+        return await set_decter_config(config, current_user)
+    except Exception as e:
+        logger.error(f"❌ Error in form config submission: {e}")
+        raise HTTPException(status_code=400, detail=f"Invalid form data: {str(e)}")
+
+
+@decter_router.post("/command/form")
+async def send_decter_command_form(
+    command: str = Form(...),
+    current_user: Dict = Depends(get_current_active_user)
+):
+    """Send command via form submission"""
+    try:
+        command_req = DecterCommandRequest(command=command)
+        return await send_decter_command(command_req, current_user)
+    except Exception as e:
+        logger.error(f"❌ Error in form command submission: {e}")
+        raise HTTPException(status_code=400, detail=f"Invalid command: {str(e)}")
+
+
+# Telegram configuration endpoints
+@decter_router.post("/telegram/config")
+async def set_telegram_config(
+    config_req: TelegramConfigRequest,
+    current_user: Dict = Depends(get_current_active_user)
+):
+    """Set Telegram bot configuration"""
+    try:
+        result = decter_controller.set_telegram_config(
+            config_req.bot_token,
+            config_req.group_id,
+            config_req.topic_id
+        )
+        if result["success"]:
+            logger.info(f"✅ Telegram config updated by user: {current_user.get('username', 'unknown')}")
+            return JSONResponse(content=result)
+        else:
+            raise HTTPException(status_code=400, detail=result["message"])
+    except Exception as e:
+        logger.error(f"❌ Error setting Telegram config: {e}")
+        raise HTTPException(status_code=500, detail=f"Error setting Telegram config: {str(e)}")
+
+
+@decter_router.get("/telegram/config")
+async def get_telegram_config(current_user: Dict = Depends(get_current_active_user)):
+    """Get current Telegram configuration"""
+    try:
+        config = decter_controller.get_telegram_config()
+        # Mask bot token for security
+        if 'telegram_bot_token' in config:
+            config['telegram_bot_token'] = '***MASKED***'
+        return JSONResponse(content=config)
+    except Exception as e:
+        logger.error(f"❌ Error getting Telegram config: {e}")
+        raise HTTPException(status_code=500, detail=f"Error getting Telegram config: {str(e)}")
+
+
+@decter_router.post("/telegram/notify")
+async def send_telegram_notification(
+    notify_req: TransactionLogRequest,
+    current_user: Dict = Depends(get_current_active_user)
+):
+    """Send Telegram notification with transaction logging"""
+    try:
+        transaction_data = None
+        if notify_req.transaction_type or notify_req.amount or notify_req.result:
+            transaction_data = {
+                "type": notify_req.transaction_type,
+                "amount": notify_req.amount,
+                "result": notify_req.result,
+                "timestamp": datetime.now().isoformat()
+            }
+        
+        result = decter_controller.send_telegram_notification(
+            notify_req.message,
+            transaction_data
+        )
+        
+        if result["success"]:
+            logger.info(f"✅ Telegram notification sent by user: {current_user.get('username', 'unknown')}")
+            return JSONResponse(content=result)
+        else:
+            raise HTTPException(status_code=400, detail=result["message"])
+    except Exception as e:
+        logger.error(f"❌ Error sending Telegram notification: {e}")
+        raise HTTPException(status_code=500, detail=f"Error sending notification: {str(e)}")
+
+
+@decter_router.post("/telegram/config/form")
+async def set_telegram_config_form(
+    bot_token: str = Form(...),
+    group_id: str = Form(...),
+    topic_id: str = Form(None),
+    current_user: Dict = Depends(get_current_active_user)
+):
+    """Set Telegram config via form submission"""
+    try:
+        config_req = TelegramConfigRequest(
+            bot_token=bot_token,
+            group_id=group_id,
+            topic_id=topic_id if topic_id else None
+        )
+        return await set_telegram_config(config_req, current_user)
+    except Exception as e:
+        logger.error(f"❌ Error in form Telegram config submission: {e}")
+        raise HTTPException(status_code=400, detail=f"Invalid form data: {str(e)}")
+
+
+def add_decter_routes(app):
+    """Add Decter routes to the main FastAPI app"""
+    app.include_router(decter_router)
+    logger.info("🤖 Decter 001 routes added to TARC Lighthouse")
