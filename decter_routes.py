@@ -57,6 +57,32 @@ class DerivConfigRequest(BaseModel):
     usd_api_token: Optional[str] = Field(None, description="USD API token")
 
 
+class EngineConfigRequest(BaseModel):
+    # Multi-currency settings
+    selected_currency: Optional[str] = Field("XRP", description="Currently selected trading currency")
+    supported_currencies: Optional[List[str]] = Field(["XRP", "BTC", "ETH", "LTC", "USDT", "USD"], description="Supported currencies")
+    
+    # Continuous Engine parameters
+    consecutive_wins_threshold: Optional[int] = Field(10, description="Consecutive wins before risk reduction")
+    max_profit_cap: Optional[float] = Field(1000.0, description="Maximum profit before stopping")
+    risk_reduction_factor: Optional[float] = Field(0.7, description="Risk reduction factor after win streak")
+    
+    # Decision Engine parameters
+    max_loss_threshold: Optional[float] = Field(100.0, description="Maximum loss before recovery mode")
+    drawdown_threshold: Optional[float] = Field(0.15, description="Drawdown percentage threshold")
+    volatility_lookback_periods: Optional[int] = Field(1800, description="Periods for volatility analysis")
+    recovery_risk_multiplier: Optional[float] = Field(1.8, description="Risk multiplier for recovery trades")
+    
+    # Engine control
+    enable_continuous_engine: Optional[bool] = Field(True, description="Enable continuous monitoring engine")
+    enable_decision_engine: Optional[bool] = Field(True, description="Enable decision/recovery engine")
+    diagnostic_logging: Optional[bool] = Field(True, description="Enable detailed diagnostic logging")
+
+
+class CurrencySwitchRequest(BaseModel):
+    currency: str = Field(..., description="Currency to switch to")
+
+
 class DecterStatusResponse(BaseModel):
     status: str
     is_running: bool
@@ -474,6 +500,163 @@ async def set_deriv_config_form(
     except Exception as e:
         logger.error(f"❌ Error in form Deriv config submission: {e}")
         raise HTTPException(status_code=400, detail=f"Invalid form data: {str(e)}")
+
+
+# Engine configuration and control endpoints
+@decter_router.post("/engine/config")
+async def set_engine_config(
+    config_req: EngineConfigRequest,
+    current_user: Dict = Depends(get_current_active_user)
+):
+    """Set engine behavior and risk parameters"""
+    try:
+        config_dict = config_req.dict(exclude_unset=True)
+        result = decter_controller.set_engine_config(config_dict)
+        
+        if result["success"]:
+            logger.info(f"✅ Engine config updated by user: {current_user.get('username', 'unknown')}")
+            return JSONResponse(content=result)
+        else:
+            raise HTTPException(status_code=400, detail=result["message"])
+    except Exception as e:
+        logger.error(f"❌ Error setting engine config: {e}")
+        raise HTTPException(status_code=500, detail=f"Error setting engine config: {str(e)}")
+
+
+@decter_router.get("/engine/config")
+async def get_engine_config(current_user: Dict = Depends(get_current_active_user)):
+    """Get current engine configuration"""
+    try:
+        config = decter_controller.get_engine_config()
+        return JSONResponse(content=config)
+    except Exception as e:
+        logger.error(f"❌ Error getting engine config: {e}")
+        raise HTTPException(status_code=500, detail=f"Error getting engine config: {str(e)}")
+
+
+@decter_router.get("/engine/diagnostics")
+async def get_engine_diagnostics(current_user: Dict = Depends(get_current_active_user)):
+    """Get comprehensive engine diagnostics and state"""
+    try:
+        diagnostics = decter_controller.get_engine_diagnostics()
+        return JSONResponse(content=diagnostics)
+    except Exception as e:
+        logger.error(f"❌ Error getting engine diagnostics: {e}")
+        raise HTTPException(status_code=500, detail=f"Error getting diagnostics: {str(e)}")
+
+
+@decter_router.post("/currency/switch")
+async def switch_currency(
+    switch_req: CurrencySwitchRequest,
+    current_user: Dict = Depends(get_current_active_user)
+):
+    """Switch active trading currency"""
+    try:
+        result = decter_controller.switch_currency(switch_req.currency)
+        
+        if result["success"]:
+            logger.info(f"✅ Currency switched by user: {current_user.get('username', 'unknown')} to {switch_req.currency}")
+            return JSONResponse(content=result)
+        else:
+            raise HTTPException(status_code=400, detail=result["message"])
+    except Exception as e:
+        logger.error(f"❌ Error switching currency: {e}")
+        raise HTTPException(status_code=500, detail=f"Error switching currency: {str(e)}")
+
+
+@decter_router.get("/currencies")
+async def get_supported_currencies(current_user: Dict = Depends(get_current_active_user)):
+    """Get list of supported currencies"""
+    try:
+        engine_config = decter_controller.get_engine_config()
+        currencies = engine_config.get("supported_currencies", ["XRP", "BTC", "ETH", "LTC", "USDT", "USD"])
+        active_currency = engine_config.get("selected_currency", "XRP")
+        
+        return JSONResponse(content={
+            "supported_currencies": currencies,
+            "active_currency": active_currency,
+            "total_count": len(currencies)
+        })
+    except Exception as e:
+        logger.error(f"❌ Error getting currencies: {e}")
+        raise HTTPException(status_code=500, detail=f"Error getting currencies: {str(e)}")
+
+
+# Engine control endpoints
+@decter_router.post("/engine/continuous/start")
+async def start_continuous_engine(current_user: Dict = Depends(get_current_active_user)):
+    """Start the continuous monitoring engine"""
+    try:
+        # Update engine config to enable continuous engine
+        config = decter_controller.get_engine_config()
+        config["enable_continuous_engine"] = True
+        result = decter_controller.set_engine_config(config)
+        
+        if result["success"]:
+            logger.info(f"✅ Continuous engine started by user: {current_user.get('username', 'unknown')}")
+            return JSONResponse(content={"success": True, "message": "Continuous engine started"})
+        else:
+            raise HTTPException(status_code=400, detail=result["message"])
+    except Exception as e:
+        logger.error(f"❌ Error starting continuous engine: {e}")
+        raise HTTPException(status_code=500, detail=f"Error starting continuous engine: {str(e)}")
+
+
+@decter_router.post("/engine/continuous/stop")
+async def stop_continuous_engine(current_user: Dict = Depends(get_current_active_user)):
+    """Stop the continuous monitoring engine"""
+    try:
+        # Update engine config to disable continuous engine
+        config = decter_controller.get_engine_config()
+        config["enable_continuous_engine"] = False
+        result = decter_controller.set_engine_config(config)
+        
+        if result["success"]:
+            logger.info(f"✅ Continuous engine stopped by user: {current_user.get('username', 'unknown')}")
+            return JSONResponse(content={"success": True, "message": "Continuous engine stopped"})
+        else:
+            raise HTTPException(status_code=400, detail=result["message"])
+    except Exception as e:
+        logger.error(f"❌ Error stopping continuous engine: {e}")
+        raise HTTPException(status_code=500, detail=f"Error stopping continuous engine: {str(e)}")
+
+
+@decter_router.post("/engine/decision/start")
+async def start_decision_engine(current_user: Dict = Depends(get_current_active_user)):
+    """Start the decision/recovery engine"""
+    try:
+        # Update engine config to enable decision engine
+        config = decter_controller.get_engine_config()
+        config["enable_decision_engine"] = True
+        result = decter_controller.set_engine_config(config)
+        
+        if result["success"]:
+            logger.info(f"✅ Decision engine started by user: {current_user.get('username', 'unknown')}")
+            return JSONResponse(content={"success": True, "message": "Decision engine started"})
+        else:
+            raise HTTPException(status_code=400, detail=result["message"])
+    except Exception as e:
+        logger.error(f"❌ Error starting decision engine: {e}")
+        raise HTTPException(status_code=500, detail=f"Error starting decision engine: {str(e)}")
+
+
+@decter_router.post("/engine/decision/stop")
+async def stop_decision_engine(current_user: Dict = Depends(get_current_active_user)):
+    """Stop the decision/recovery engine"""
+    try:
+        # Update engine config to disable decision engine
+        config = decter_controller.get_engine_config()
+        config["enable_decision_engine"] = False
+        result = decter_controller.set_engine_config(config)
+        
+        if result["success"]:
+            logger.info(f"✅ Decision engine stopped by user: {current_user.get('username', 'unknown')}")
+            return JSONResponse(content={"success": True, "message": "Decision engine stopped"})
+        else:
+            raise HTTPException(status_code=400, detail=result["message"])
+    except Exception as e:
+        logger.error(f"❌ Error stopping decision engine: {e}")
+        raise HTTPException(status_code=500, detail=f"Error stopping decision engine: {str(e)}")
 
 
 def add_decter_routes(app):

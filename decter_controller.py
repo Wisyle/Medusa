@@ -576,6 +576,160 @@ class DecterController:
             logger.error(f"❌ Error getting Deriv config: {e}")
             return {}
 
+    def set_engine_config(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        """Set engine behavior and risk parameters"""
+        try:
+            engine_config = {
+                # Multi-currency settings
+                "selected_currency": config.get("selected_currency", "XRP"),
+                "supported_currencies": config.get("supported_currencies", ["XRP", "BTC", "ETH", "LTC", "USDT", "USD"]),
+                
+                # Continuous Engine parameters
+                "consecutive_wins_threshold": config.get("consecutive_wins_threshold", 10),
+                "max_profit_cap": config.get("max_profit_cap", 1000.0),
+                "risk_reduction_factor": config.get("risk_reduction_factor", 0.7),
+                
+                # Decision Engine parameters
+                "max_loss_threshold": config.get("max_loss_threshold", 100.0),
+                "drawdown_threshold": config.get("drawdown_threshold", 0.15),
+                "volatility_lookback_periods": config.get("volatility_lookback_periods", 1800),
+                "recovery_risk_multiplier": config.get("recovery_risk_multiplier", 1.8),
+                
+                # General settings
+                "enable_continuous_engine": config.get("enable_continuous_engine", True),
+                "enable_decision_engine": config.get("enable_decision_engine", True),
+                "diagnostic_logging": config.get("diagnostic_logging", True)
+            }
+            
+            # Save to engine config file
+            config_file = self.data_dir / "engine_config.json"
+            with open(config_file, 'w') as f:
+                json.dump(engine_config, f, indent=2)
+            
+            logger.info(f"⚙️ Engine configuration updated: Currency {engine_config['selected_currency']}")
+            
+            return {
+                "success": True,
+                "message": "Engine configuration updated successfully",
+                "config": engine_config
+            }
+            
+        except Exception as e:
+            logger.error(f"❌ Error setting engine config: {e}")
+            return {
+                "success": False,
+                "message": f"Error setting engine config: {str(e)}"
+            }
+
+    def get_engine_config(self) -> Dict[str, Any]:
+        """Get current engine configuration"""
+        try:
+            config_file = self.data_dir / "engine_config.json"
+            if config_file.exists():
+                with open(config_file, 'r') as f:
+                    return json.load(f)
+            
+            # Return default configuration
+            return {
+                "selected_currency": "XRP",
+                "supported_currencies": ["XRP", "BTC", "ETH", "LTC", "USDT", "USD"],
+                "consecutive_wins_threshold": 10,
+                "max_profit_cap": 1000.0,
+                "risk_reduction_factor": 0.7,
+                "max_loss_threshold": 100.0,
+                "drawdown_threshold": 0.15,
+                "volatility_lookback_periods": 1800,
+                "recovery_risk_multiplier": 1.8,
+                "enable_continuous_engine": True,
+                "enable_decision_engine": True,
+                "diagnostic_logging": True
+            }
+        except Exception as e:
+            logger.error(f"❌ Error getting engine config: {e}")
+            return {}
+
+    def get_engine_diagnostics(self) -> Dict[str, Any]:
+        """Get comprehensive engine diagnostics and state"""
+        try:
+            diagnostics = {
+                "continuous_engine": {
+                    "status": "unknown",
+                    "consecutive_wins": 0,
+                    "current_profit": 0.0,
+                    "last_activity": None,
+                    "risk_level": "normal"
+                },
+                "decision_engine": {
+                    "status": "unknown", 
+                    "current_loss": 0.0,
+                    "drawdown_percentage": 0.0,
+                    "selected_asset": None,
+                    "volatility_analysis": {},
+                    "last_decision": None
+                },
+                "api_routing": {
+                    "active_currency": self.get_engine_config().get("selected_currency", "XRP"),
+                    "api_status": {},
+                    "last_api_call": None
+                },
+                "system": {
+                    "uptime": self._get_uptime(),
+                    "memory_usage": "N/A",
+                    "last_error": None,
+                    "configuration_status": "loaded"
+                }
+            }
+            
+            # Try to load real diagnostics from diagnostic log file
+            diag_file = self.data_dir / "engine_diagnostics.json"
+            if diag_file.exists():
+                with open(diag_file, 'r') as f:
+                    stored_diagnostics = json.load(f)
+                    # Merge with defaults
+                    for category in diagnostics:
+                        if category in stored_diagnostics:
+                            diagnostics[category].update(stored_diagnostics[category])
+            
+            return diagnostics
+            
+        except Exception as e:
+            logger.error(f"❌ Error getting engine diagnostics: {e}")
+            return {"error": str(e)}
+
+    def switch_currency(self, new_currency: str) -> Dict[str, Any]:
+        """Switch active trading currency and update API routing"""
+        try:
+            # Validate currency is supported
+            engine_config = self.get_engine_config()
+            supported_currencies = engine_config.get("supported_currencies", [])
+            
+            if new_currency not in supported_currencies:
+                return {
+                    "success": False,
+                    "message": f"Currency {new_currency} not supported. Available: {', '.join(supported_currencies)}"
+                }
+            
+            # Update engine configuration
+            engine_config["selected_currency"] = new_currency
+            result = self.set_engine_config(engine_config)
+            
+            if result["success"]:
+                logger.info(f"💱 Currency switched to {new_currency}")
+                return {
+                    "success": True,
+                    "message": f"Successfully switched to {new_currency}",
+                    "active_currency": new_currency
+                }
+            else:
+                return result
+                
+        except Exception as e:
+            logger.error(f"❌ Error switching currency: {e}")
+            return {
+                "success": False,
+                "message": f"Error switching currency: {str(e)}"
+            }
+
     def send_telegram_notification(self, message: str, transaction_data: Dict = None) -> Dict[str, Any]:
         """Send notification to Telegram with transaction logging"""
         try:
