@@ -77,22 +77,39 @@ UNIVERSE_INDICES = [
 RETURN_DEFINITION = "simple"  # "simple" for (price_t - price_{t-1}) / price_{t-1}
 
 # --- File & Directory Paths ---
-# Use appropriate data directory based on environment
-if os.getenv("ENVIRONMENT") == "production":
-    # For Render and other cloud platforms, use a relative data directory
-    DATA_DIR = Path("data")
-else:
-    # For development, use the original data directory
-    DATA_DIR = Path(os.getenv("DATA_DIR", "data"))
+# Use appropriate data directory based on environment with robust error handling
+import tempfile
 
-# Ensure the data directory exists with proper error handling
-try:
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
-except PermissionError:
-    # If we can't create the data directory, use a temporary directory
-    import tempfile
-    DATA_DIR = Path(tempfile.mkdtemp(prefix="decter_data_"))
-    print(f"Warning: Using temporary data directory: {DATA_DIR}")
+def setup_data_directory():
+    """Set up data directory with comprehensive error handling"""
+    # Try different directory options in order of preference
+    directory_options = [
+        ("relative_data", Path("data")),
+        ("home_data", Path.home() / ".decter_data"),
+        ("tmp_data", Path("/tmp/decter_data")),
+        ("temp_data", Path(tempfile.gettempdir()) / "decter_data")
+    ]
+    
+    for option_name, data_path in directory_options:
+        try:
+            data_path.mkdir(parents=True, exist_ok=True)
+            # Test write permissions
+            test_file = data_path / "test_write.tmp"
+            test_file.write_text("test")
+            test_file.unlink()
+            print(f"✅ Using data directory ({option_name}): {data_path}")
+            return data_path
+        except (PermissionError, OSError) as e:
+            print(f"⚠️ Cannot use {option_name} ({data_path}): {e}")
+            continue
+    
+    # Final fallback: use temporary directory
+    temp_dir = Path(tempfile.mkdtemp(prefix="decter_data_"))
+    print(f"🔄 Fallback: Using temporary data directory: {temp_dir}")
+    return temp_dir
+
+# Set up data directory
+DATA_DIR = setup_data_directory()
 
 TRADING_STATS_FILE = DATA_DIR / 'trading_stats.json'
 TRADE_RECORDS_FILE = DATA_DIR / 'trade_records.json'
