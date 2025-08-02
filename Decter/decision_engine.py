@@ -11,6 +11,7 @@ import numpy as np
 from datetime import datetime, timedelta
 from typing import Dict, Any, Optional, List, Tuple
 from pathlib import Path
+from enum import Enum
 
 logger = logging.getLogger(__name__)
 
