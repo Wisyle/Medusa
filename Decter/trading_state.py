@@ -11,7 +11,7 @@ from telegram import Bot
 import config
 import utils
 from deriv_api import DerivAPI, Trade
-from decision_engine import RefinedDecisionEngine
+from decision_engine import DecisionEngine
 from decision_engine import TradingMode, EngineState
 
 # Initialize the logger from the utils module
@@ -93,7 +93,7 @@ class TradingState:
         self.current_comment_index = 0
         
         # Initialize Refined Decision Engine
-        self.decision_engine = RefinedDecisionEngine(api, telegram_bot=bot, trading_state=self)
+        self.decision_engine = DecisionEngine(config.DATA_DIR)
         
         logger.info("Trading state initialized.")
 

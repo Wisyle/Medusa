@@ -14,6 +14,28 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
+class TradingMode(Enum):
+    """Trading mode enumeration"""
+    CONTINUOUS = "continuous"
+    RECOVERY = "recovery"
+
+class EngineState(Enum):
+    """Engine state enumeration"""
+    INACTIVE = "inactive"
+    ACTIVE = "active"
+    ANALYZING = "analyzing"
+    TRADING = "trading"
+
+class AnalysisData:
+    """Container for analysis data"""
+    def __init__(self):
+        self.state = EngineState.INACTIVE
+        self.recovery_failures = 0
+        self.recovery_risk_reduction = 1.0
+        self.proposed_params = None
+        self.confirmation_deadline = None
+        self.session_start_balance = 0.0
+
 class DecisionEngine:
     """
     Advanced decision engine for recovery trading with volatility analysis and asset selection
@@ -28,6 +50,8 @@ class DecisionEngine:
         self.selected_asset = None
         self.volatility_analysis = {}
         self.last_decision = None
+        self.analysis_data = AnalysisData()
+        self.current_mode = TradingMode.CONTINUOUS
         
         # Configuration
         self.config = self._load_config()
@@ -545,6 +569,102 @@ class DecisionEngine:
                 "recovery_risk_multiplier": self.config.get("recovery_risk_multiplier", 1.8)
             }
         }
+    
+    # Compatibility methods for legacy trading_state.py integration
+    def get_current_mode(self) -> TradingMode:
+        """Get current trading mode"""
+        return self.current_mode
+    
+    def is_active(self) -> bool:
+        """Check if engine is active"""
+        return self.is_running
+    
+    def switch_to_continuous_mode(self, reason: str = None) -> None:
+        """Switch to continuous mode"""
+        self.current_mode = TradingMode.CONTINUOUS
+        self.recovery_mode = False
+        if reason:
+            logger.info(f"🔄 Switched to continuous mode: {reason}")
+    
+    def reset_engine(self) -> None:
+        """Reset engine state"""
+        self.analysis_data = AnalysisData()
+        self.current_mode = TradingMode.CONTINUOUS
+        self.recovery_mode = False
+        logger.info("🔄 Engine reset")
+    
+    def _save_analysis_data(self) -> None:
+        """Save analysis data to file"""
+        try:
+            analysis_file = self.data_dir / "analysis_data.json"
+            analysis_dict = {
+                "state": self.analysis_data.state.value,
+                "recovery_failures": self.analysis_data.recovery_failures,
+                "recovery_risk_reduction": self.analysis_data.recovery_risk_reduction,
+                "session_start_balance": self.analysis_data.session_start_balance,
+                "confirmation_deadline": self.analysis_data.confirmation_deadline.isoformat() if self.analysis_data.confirmation_deadline else None,
+                "updated_at": datetime.now().isoformat()
+            }
+            
+            with open(analysis_file, 'w') as f:
+                json.dump(analysis_dict, f, indent=2)
+                
+        except Exception as e:
+            logger.error(f"❌ Error saving analysis data: {e}")
+    
+    async def handle_recovery_success(self) -> None:
+        """Handle successful recovery"""
+        logger.info("✅ Recovery success handled")
+        self.analysis_data.recovery_failures = 0
+        self.analysis_data.recovery_risk_reduction = 1.0
+        self.switch_to_continuous_mode("Recovery successful")
+        self._save_analysis_data()
+    
+    async def handle_recovery_failure(self) -> None:
+        """Handle recovery failure"""
+        self.analysis_data.recovery_failures += 1
+        self.analysis_data.recovery_risk_reduction *= 0.8  # Reduce risk by 20%
+        logger.warning(f"❌ Recovery failure #{self.analysis_data.recovery_failures}")
+        self._save_analysis_data()
+    
+    async def check_continuous_mode_conditions(self, *args, **kwargs) -> bool:
+        """Check if continuous mode conditions are met"""
+        return True  # Simplified implementation
+    
+    def apply_continuous_mode_adjustments(self, params):
+        """Apply continuous mode adjustments to parameters"""
+        return params  # Return unchanged for now
+    
+    async def trigger_drawdown_analysis(self, *args, **kwargs) -> None:
+        """Trigger drawdown analysis"""
+        self.current_mode = TradingMode.RECOVERY
+        self.recovery_mode = True
+        self.analysis_data.state = EngineState.ANALYZING
+        logger.info("🚨 Drawdown analysis triggered")
+        self._save_analysis_data()
+    
+    def get_proposed_parameters(self):
+        """Get proposed parameters"""
+        return self.analysis_data.proposed_params
+    
+    def apply_recovery_risk_reduction(self, params):
+        """Apply risk reduction to recovery parameters"""
+        if hasattr(params, 'stake'):
+            reduced_params = params.copy() if hasattr(params, 'copy') else params
+            if hasattr(reduced_params, 'stake'):
+                reduced_params.stake *= self.analysis_data.recovery_risk_reduction
+            return reduced_params
+        return params
+    
+    async def _execute_confirmation(self, confirmed: bool, auto_confirmed: bool = False) -> None:
+        """Execute confirmation decision"""
+        if confirmed:
+            self.analysis_data.state = EngineState.ACTIVE
+            logger.info(f"✅ Recovery confirmed {'(auto)' if auto_confirmed else '(manual)'}")
+        else:
+            self.analysis_data.state = EngineState.INACTIVE
+            logger.info("❌ Recovery declined")
+        self._save_analysis_data()
 
 # Global instance
 decision_engine: Optional[DecisionEngine] = None
