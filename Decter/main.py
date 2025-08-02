@@ -1485,7 +1485,14 @@ async def main():
         utils.bump_bot_version("")
         # Reload the version for display
         BOT_VERSION = utils.get_bot_version()
-        config.validate_env_vars()
+        # Check configuration and wait if not ready
+        while not config.validate_env_vars():
+            logger.info("⏳ Waiting for configuration... retrying in 30 seconds")
+            await asyncio.sleep(30)
+            # Reload configuration
+            import importlib
+            importlib.reload(config)
+        
         logger.info(f"--- Bot Version {BOT_VERSION} Starting ---")
         
         bot = Bot(token=config.BOT_TOKEN)

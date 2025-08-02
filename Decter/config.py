@@ -5,22 +5,8 @@ from dotenv import load_dotenv
 # Load environment variables from a .env file if it exists
 load_dotenv()
 
-# --- Core Configuration ---
-BOT_TOKEN: str = os.getenv("BOT_TOKEN")
-DERIV_APP_ID: str = os.getenv("DERIV_APP_ID")
-GROUP_ID: str = os.getenv("GROUP_ID")
-TOPIC_ID: str = os.getenv("TOPIC_ID")
-
-# --- API Tokens for different currencies ---
-# It's good practice to keep related items in a dictionary
-CURRENCY_API_TOKENS: dict[str, str] = {
-    'XRP': os.getenv("XRP_API_TOKEN"),
-    'BTC': os.getenv("BTC_API_TOKEN"),
-    'ETH': os.getenv("ETH_API_TOKEN"),
-    'LTC': os.getenv("LTC_API_TOKEN"),
-    'USDT': os.getenv("USDT_API_TOKEN"),
-    'USD': os.getenv("USD_API_TOKEN")
-}
+# --- Placeholder for later configuration loading ---
+# Will be loaded after DATA_DIR is set up
 
 # --- Server & Socket Configuration ---
 SOCKET_HOST: str = '0.0.0.0'
@@ -111,6 +97,62 @@ def setup_data_directory():
 # Set up data directory
 DATA_DIR = setup_data_directory()
 
+# --- Configuration Loading Functions ---
+import json
+
+def load_web_config():
+    """Load configuration from web interface settings"""
+    try:
+        # Try to load from telegram_config.json (set via web interface)
+        config_file = DATA_DIR / "telegram_config.json"
+        if config_file.exists():
+            with open(config_file, 'r') as f:
+                web_config = json.load(f)
+            return web_config
+    except Exception:
+        pass
+    return {}
+
+def load_deriv_config():
+    """Load Deriv API configuration from web interface"""
+    try:
+        # Try to load from deriv_config.json (set via web interface)
+        config_file = DATA_DIR / "deriv_config.json"
+        if config_file.exists():
+            with open(config_file, 'r') as f:
+                deriv_config = json.load(f)
+            return deriv_config
+    except Exception:
+        pass
+    return {}
+
+# Load configurations from web interface
+web_config = load_web_config()
+deriv_config = load_deriv_config()
+
+# --- Core Configuration ---
+# Priority: Web interface > Environment variables > Default values
+BOT_TOKEN: str = web_config.get("telegram_bot_token") or os.getenv("BOT_TOKEN") or ""
+GROUP_ID: str = web_config.get("telegram_group_id") or os.getenv("GROUP_ID") or ""
+TOPIC_ID: str = web_config.get("telegram_topic_id") or os.getenv("TOPIC_ID") or ""
+
+DERIV_APP_ID: str = deriv_config.get("deriv_app_id") or os.getenv("DERIV_APP_ID") or ""
+
+# --- API Tokens for different currencies ---
+# Load from web interface or environment variables
+def get_currency_token(currency: str) -> str:
+    """Get currency token from web interface or environment"""
+    return deriv_config.get(f"{currency.lower()}_api_token") or os.getenv(f"{currency}_API_TOKEN") or ""
+
+CURRENCY_API_TOKENS: dict[str, str] = {
+    'XRP': get_currency_token('XRP'),
+    'BTC': get_currency_token('BTC'),
+    'ETH': get_currency_token('ETH'),
+    'LTC': get_currency_token('LTC'),
+    'USDT': get_currency_token('USDT'),
+    'USD': get_currency_token('USD')
+}
+
 TRADING_STATS_FILE = DATA_DIR / 'trading_stats.json'
 TRADE_RECORDS_FILE = DATA_DIR / 'trade_records.json'
 SAVED_PARAMS_FILE = DATA_DIR / 'saved_params.json'
@@ -147,8 +189,8 @@ _STARTUP_LINES = [
 
 def validate_env_vars():
     """
-    Validates that all required environment variables are set.
-    Raises an EnvironmentError if any are missing.
+    Validates that all required configuration is set.
+    Returns True if valid, False if missing config.
     """
     required_vars = {
         "BOT_TOKEN": BOT_TOKEN,
@@ -160,10 +202,15 @@ def validate_env_vars():
 
     missing_vars = [var for var, value in required_vars.items() if not value]
     if missing_vars:
-        error_msg = f"Missing required environment variables: {', '.join(missing_vars)}"
-        # We will set up the logger separately, so for now, we'll print
-        print(f"ERROR: {error_msg}")
-        raise EnvironmentError(error_msg)
+        error_msg = f"Missing required configuration: {', '.join(missing_vars)}"
+        print(f"⚠️ WARNING: {error_msg}")
+        print("📝 Please configure these settings through the TARC Lighthouse web interface:")
+        print("   1. Navigate to Decter Engine in the sidebar")
+        print("   2. Set up Telegram configuration (Bot Token, Group ID, Topic ID)")
+        print("   3. Set up Deriv configuration (App ID and API tokens)")
+        print("   4. Restart the Decter Engine service")
+        print("🔄 Engine will retry every 30 seconds until configured...")
+        return False
 
     print("INFO: All required environment variables are set.")
 

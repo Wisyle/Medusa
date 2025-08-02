@@ -47,6 +47,16 @@ class TransactionLogRequest(BaseModel):
     result: Optional[str] = Field(None, description="Transaction result")
 
 
+class DerivConfigRequest(BaseModel):
+    deriv_app_id: str = Field(..., description="Deriv application ID")
+    xrp_api_token: Optional[str] = Field(None, description="XRP API token")
+    btc_api_token: Optional[str] = Field(None, description="BTC API token")
+    eth_api_token: Optional[str] = Field(None, description="ETH API token")
+    ltc_api_token: Optional[str] = Field(None, description="LTC API token")
+    usdt_api_token: Optional[str] = Field(None, description="USDT API token")
+    usd_api_token: Optional[str] = Field(None, description="USD API token")
+
+
 class DecterStatusResponse(BaseModel):
     status: str
     is_running: bool
@@ -394,6 +404,75 @@ async def set_telegram_config_form(
         return await set_telegram_config(config_req, current_user)
     except Exception as e:
         logger.error(f"❌ Error in form Telegram config submission: {e}")
+        raise HTTPException(status_code=400, detail=f"Invalid form data: {str(e)}")
+
+
+# Deriv configuration endpoints
+@decter_router.post("/deriv/config")
+async def set_deriv_config(
+    config_req: DerivConfigRequest,
+    current_user: Dict = Depends(get_current_active_user)
+):
+    """Set Deriv API configuration"""
+    try:
+        currency_tokens = {}
+        if config_req.xrp_api_token: currency_tokens['XRP'] = config_req.xrp_api_token
+        if config_req.btc_api_token: currency_tokens['BTC'] = config_req.btc_api_token
+        if config_req.eth_api_token: currency_tokens['ETH'] = config_req.eth_api_token
+        if config_req.ltc_api_token: currency_tokens['LTC'] = config_req.ltc_api_token
+        if config_req.usdt_api_token: currency_tokens['USDT'] = config_req.usdt_api_token
+        if config_req.usd_api_token: currency_tokens['USD'] = config_req.usd_api_token
+        
+        result = decter_controller.set_deriv_config(
+            config_req.deriv_app_id,
+            currency_tokens
+        )
+        if result["success"]:
+            logger.info(f"✅ Deriv config updated by user: {current_user.get('username', 'unknown')}")
+            return JSONResponse(content=result)
+        else:
+            raise HTTPException(status_code=400, detail=result["message"])
+    except Exception as e:
+        logger.error(f"❌ Error setting Deriv config: {e}")
+        raise HTTPException(status_code=500, detail=f"Error setting Deriv config: {str(e)}")
+
+
+@decter_router.get("/deriv/config")
+async def get_deriv_config(current_user: Dict = Depends(get_current_active_user)):
+    """Get current Deriv configuration"""
+    try:
+        config = decter_controller.get_deriv_config()
+        return JSONResponse(content=config)
+    except Exception as e:
+        logger.error(f"❌ Error getting Deriv config: {e}")
+        raise HTTPException(status_code=500, detail=f"Error getting Deriv config: {str(e)}")
+
+
+@decter_router.post("/deriv/config/form")
+async def set_deriv_config_form(
+    deriv_app_id: str = Form(...),
+    xrp_api_token: str = Form(""),
+    btc_api_token: str = Form(""),
+    eth_api_token: str = Form(""),
+    ltc_api_token: str = Form(""),
+    usdt_api_token: str = Form(""),
+    usd_api_token: str = Form(""),
+    current_user: Dict = Depends(get_current_active_user)
+):
+    """Set Deriv config via form submission"""
+    try:
+        config_req = DerivConfigRequest(
+            deriv_app_id=deriv_app_id,
+            xrp_api_token=xrp_api_token if xrp_api_token else None,
+            btc_api_token=btc_api_token if btc_api_token else None,
+            eth_api_token=eth_api_token if eth_api_token else None,
+            ltc_api_token=ltc_api_token if ltc_api_token else None,
+            usdt_api_token=usdt_api_token if usdt_api_token else None,
+            usd_api_token=usd_api_token if usd_api_token else None
+        )
+        return await set_deriv_config(config_req, current_user)
+    except Exception as e:
+        logger.error(f"❌ Error in form Deriv config submission: {e}")
         raise HTTPException(status_code=400, detail=f"Invalid form data: {str(e)}")
 
 

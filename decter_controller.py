@@ -496,8 +496,8 @@ class DecterController:
                 "telegram_topic_id": topic_id
             }
             
-            # Save config to Decter's config.py or a separate config file
-            config_file = self.decter_path / "telegram_config.json"
+            # Save config to Decter's data directory
+            config_file = self.data_dir / "telegram_config.json"
             with open(config_file, 'w') as f:
                 json.dump(telegram_config, f, indent=2)
             
@@ -519,13 +519,61 @@ class DecterController:
     def get_telegram_config(self) -> Dict[str, Any]:
         """Get current Telegram configuration"""
         try:
-            config_file = self.decter_path / "telegram_config.json"
+            config_file = self.data_dir / "telegram_config.json"
             if config_file.exists():
                 with open(config_file, 'r') as f:
                     return json.load(f)
             return {}
         except Exception as e:
             logger.error(f"❌ Error getting Telegram config: {e}")
+            return {}
+
+    def set_deriv_config(self, deriv_app_id: str, currency_tokens: Dict[str, str]) -> Dict[str, Any]:
+        """Set Deriv API configuration"""
+        try:
+            deriv_config = {
+                "deriv_app_id": deriv_app_id,
+                **{f"{currency.lower()}_api_token": token for currency, token in currency_tokens.items()}
+            }
+            
+            # Save config to Decter's data directory
+            config_file = self.data_dir / "deriv_config.json"
+            with open(config_file, 'w') as f:
+                json.dump(deriv_config, f, indent=2)
+            
+            logger.info(f"🔑 Deriv configuration updated: App ID {deriv_app_id[:8]}...")
+            
+            return {
+                "success": True,
+                "message": "Deriv configuration updated successfully",
+                "config": {k: v[:8] + "..." if k.endswith("_token") and v else v for k, v in deriv_config.items()}
+            }
+            
+        except Exception as e:
+            logger.error(f"❌ Error setting Deriv config: {e}")
+            return {
+                "success": False,
+                "message": f"Error setting Deriv config: {str(e)}"
+            }
+
+    def get_deriv_config(self) -> Dict[str, Any]:
+        """Get current Deriv configuration"""
+        try:
+            config_file = self.data_dir / "deriv_config.json"
+            if config_file.exists():
+                with open(config_file, 'r') as f:
+                    config = json.load(f)
+                # Mask sensitive tokens
+                masked_config = {}
+                for k, v in config.items():
+                    if k.endswith("_token") and v:
+                        masked_config[k] = v[:8] + "..." if len(v) > 8 else "***"
+                    else:
+                        masked_config[k] = v
+                return masked_config
+            return {}
+        except Exception as e:
+            logger.error(f"❌ Error getting Deriv config: {e}")
             return {}
 
     def send_telegram_notification(self, message: str, transaction_data: Dict = None) -> Dict[str, Any]:
