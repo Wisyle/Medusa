@@ -73,7 +73,14 @@ class DecterController:
     Controller class for managing Decter 001 bot from TARC Lighthouse
     """
     
-    def __init__(self, decter_path: str = "/mnt/c/users/rober/downloads/tarc/Decter"):
+    def __init__(self, decter_path: str = None):
+        # Use environment-appropriate path
+        if decter_path is None:
+            if os.getenv("ENVIRONMENT") == "production":
+                decter_path = "Decter"  # Relative path for Render
+            else:
+                decter_path = "/mnt/c/users/rober/downloads/tarc/Decter"  # Absolute for dev
+        
         self.decter_path = Path(decter_path)
         self.process: Optional[subprocess.Popen] = None
         self.status = DecterStatus.OFFLINE
@@ -91,8 +98,18 @@ class DecterController:
         self.params_file = self.data_dir / "saved_params.json"
         self.log_file = self.data_dir / "trading_bot.log"
         
-        # Ensure data directory exists
-        self.data_dir.mkdir(exist_ok=True)
+        # Ensure data directory exists with proper error handling
+        try:
+            self.data_dir.mkdir(parents=True, exist_ok=True)
+        except (PermissionError, FileNotFoundError, OSError) as e:
+            # If we can't create the data directory, use a temporary one
+            import tempfile
+            self.data_dir = Path(tempfile.mkdtemp(prefix="decter_controller_"))
+            logger.warning(f"Could not create data directory, using temporary: {self.data_dir}")
+            # Update file paths
+            self.stats_file = self.data_dir / "trading_stats.json"
+            self.params_file = self.data_dir / "saved_params.json"
+            self.log_file = self.data_dir / "trading_bot.log"
         
         # Try to set up internal service (direct imports)
         sys.path.insert(0, str(self.decter_path))
