@@ -310,6 +310,10 @@ app.include_router(validator_node_router)
 from migration_routes import router as migration_router
 app.include_router(migration_router)
 
+# Add Decter 001 routes
+from decter_routes import add_decter_routes
+add_decter_routes(app)
+
 templates = Jinja2Templates(directory="templates")
 
 if os.path.exists("static"):
@@ -1721,6 +1725,11 @@ async def edit_instance_page(request: Request, instance_id: int, current_user: U
 async def account_page(request: Request, current_user: User = Depends(get_current_user_html)):
     """Account settings page"""
     return templates.TemplateResponse("account.html", {"request": request, "current_user": current_user})
+
+@app.get("/decter-engine", response_class=HTMLResponse)
+async def decter_engine_page(request: Request, current_user: User = Depends(get_current_user_html)):
+    """Decter 001 Engine control page"""
+    return templates.TemplateResponse("decter_engine.html", {"request": request, "current_user": current_user})
 
 # Account Settings API Routes
 @app.get("/api/user/profile")

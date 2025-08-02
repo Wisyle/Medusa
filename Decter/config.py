@@ -77,9 +77,22 @@ UNIVERSE_INDICES = [
 RETURN_DEFINITION = "simple"  # "simple" for (price_t - price_{t-1}) / price_{t-1}
 
 # --- File & Directory Paths ---
-# Use /data for persistent storage on Render
-DATA_DIR = Path(os.getenv("DATA_DIR", "/data"))
-DATA_DIR.mkdir(parents=True, exist_ok=True)  # Ensures the data directory exists
+# Use appropriate data directory based on environment
+if os.getenv("ENVIRONMENT") == "production":
+    # For Render and other cloud platforms, use a relative data directory
+    DATA_DIR = Path("data")
+else:
+    # For development, use the original data directory
+    DATA_DIR = Path(os.getenv("DATA_DIR", "data"))
+
+# Ensure the data directory exists with proper error handling
+try:
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+except PermissionError:
+    # If we can't create the data directory, use a temporary directory
+    import tempfile
+    DATA_DIR = Path(tempfile.mkdtemp(prefix="decter_data_"))
+    print(f"Warning: Using temporary data directory: {DATA_DIR}")
 
 TRADING_STATS_FILE = DATA_DIR / 'trading_stats.json'
 TRADE_RECORDS_FILE = DATA_DIR / 'trade_records.json'

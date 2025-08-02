@@ -110,7 +110,7 @@ services:
     plan: starter
     region: singapore
     buildCommand: "pip install -r requirements.txt && pip install -r Decter/requirements.txt"
-    startCommand: "sleep 90 && python -c 'import sys; sys.path.insert(0, \"Decter\"); from main import main; main()'"
+    startCommand: "sleep 90 && cd Decter && python main.py"
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -134,7 +134,11 @@ services:
         value: "Decter Engine (ACCU)"
       - key: DECTER_INTERNAL_MODE
         value: "true"
+      - key: DATA_DIR
+        value: "data"
       - key: PYTHONPATH
         value: "/opt/render/project/src:/opt/render/project/src/Decter"
+      - key: PYTHONUNBUFFERED
+        value: "1"
 
 
