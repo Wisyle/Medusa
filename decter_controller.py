@@ -22,6 +22,16 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
+# Import enhanced modules
+try:
+    sys.path.insert(0, str(Path(__file__).parent / "Decter"))
+    from telegram_notifier import get_telegram_notifier
+    from trade_history import get_trade_history, TradeFilter, ExportFormat, TradeResult
+    ENHANCED_MODULES_AVAILABLE = True
+except ImportError as e:
+    logger.warning(f"Enhanced modules not available: {e}")
+    ENHANCED_MODULES_AVAILABLE = False
+
 
 class DecterStatus(Enum):
     OFFLINE = "offline"
@@ -731,7 +741,53 @@ class DecterController:
             }
 
     def send_telegram_notification(self, message: str, transaction_data: Dict = None) -> Dict[str, Any]:
-        """Send notification to Telegram with transaction logging"""
+        """Send notification to Telegram with enhanced structured formatting"""
+        try:
+            if not ENHANCED_MODULES_AVAILABLE:
+                # Fallback to basic notification
+                return self._send_basic_telegram_notification(message, transaction_data)
+            
+            # Use enhanced telegram notifier
+            telegram_notifier = get_telegram_notifier(self.data_dir)
+            
+            if transaction_data:
+                # Send as structured trade notification
+                trade_data = {
+                    "action": transaction_data.get("type", "unknown"),
+                    "asset_pair": transaction_data.get("asset_pair", "N/A"),
+                    "direction": transaction_data.get("direction", "N/A"),
+                    "entry_price": transaction_data.get("entry_price", 0.0),
+                    "exit_price": transaction_data.get("exit_price", 0.0),
+                    "pnl": transaction_data.get("amount", 0.0),
+                    "timestamp": transaction_data.get("timestamp", datetime.now()),
+                    "reason": message,
+                    "engine": transaction_data.get("engine", "continuous")
+                }
+                
+                result = asyncio.run(telegram_notifier.send_trade_notification(trade_data))
+            else:
+                # Send as engine alert
+                alert_data = {
+                    "engine": "decter",
+                    "event": "notification",
+                    "details": {"message": message}
+                }
+                
+                result = asyncio.run(telegram_notifier.send_engine_alert(alert_data))
+            
+            # Log transaction if provided
+            if transaction_data:
+                self._log_transaction(transaction_data)
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"❌ Error sending enhanced Telegram notification: {e}")
+            # Fallback to basic notification
+            return self._send_basic_telegram_notification(message, transaction_data)
+
+    def _send_basic_telegram_notification(self, message: str, transaction_data: Dict = None) -> Dict[str, Any]:
+        """Fallback basic Telegram notification"""
         try:
             if not self.telegram_bot_token or not self.telegram_group_id:
                 return {
@@ -764,7 +820,7 @@ class DecterController:
             }
             
         except Exception as e:
-            logger.error(f"❌ Error sending Telegram notification: {e}")
+            logger.error(f"❌ Error sending basic Telegram notification: {e}")
             return {
                 "success": False,
                 "message": f"Error sending notification: {str(e)}"
@@ -824,6 +880,258 @@ class DecterController:
         except Exception as e:
             logger.error(f"❌ Error getting performance summary: {e}")
             return {"error": str(e)}
+
+    def send_daily_summary(self) -> Dict[str, Any]:
+        """Send daily summary report via Telegram"""
+        try:
+            if not ENHANCED_MODULES_AVAILABLE:
+                return {
+                    "success": False,
+                    "message": "Enhanced modules not available"
+                }
+            
+            # Get trading statistics
+            stats = self.get_stats()
+            engine_config = self.get_engine_config()
+            engine_diagnostics = self.get_engine_diagnostics()
+            
+            if not stats:
+                return {
+                    "success": False,
+                    "message": "No trading statistics available"
+                }
+            
+            # Prepare summary data
+            summary_data = {
+                "date": datetime.now().strftime("%Y-%m-%d"),
+                "total_trades": stats.total_trades,
+                "wins": stats.wins,
+                "losses": stats.losses,
+                "net_pnl": stats.net_pl,
+                "win_rate": stats.win_rate,
+                "profit_factor": stats.wins / max(1, stats.losses),
+                "best_trade": 0.0,  # Would need to calculate from trade history
+                "worst_trade": 0.0,  # Would need to calculate from trade history
+                "active_currency": engine_config.get("selected_currency", "XRP"),
+                "engine_stats": {
+                    "continuous": engine_diagnostics.get("continuous_engine", {}),
+                    "decision": engine_diagnostics.get("decision_engine", {})
+                }
+            }
+            
+            # Send via enhanced notifier
+            telegram_notifier = get_telegram_notifier(self.data_dir)
+            result = asyncio.run(telegram_notifier.send_daily_summary(summary_data))
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"❌ Error sending daily summary: {e}")
+            return {
+                "success": False,
+                "message": f"Error sending daily summary: {str(e)}"
+            }
+
+    def get_filtered_trade_history(self, start_date: str = None, end_date: str = None, 
+                                 currency: str = None, engine: str = None, result: str = None,
+                                 asset_pair: str = None, limit: int = 50, offset: int = 0) -> Dict[str, Any]:
+        """Get filtered trade history"""
+        try:
+            if not ENHANCED_MODULES_AVAILABLE:
+                # Fallback to basic trade history
+                return {
+                    "trades": self.get_trade_history(limit),
+                    "total_count": limit,
+                    "filtered": False,
+                    "message": "Enhanced filtering not available"
+                }
+            
+            # Create filter criteria
+            filter_criteria = TradeFilter()
+            
+            if start_date:
+                filter_criteria.start_date = datetime.fromisoformat(start_date)
+            if end_date:
+                filter_criteria.end_date = datetime.fromisoformat(end_date)
+            if currency:
+                filter_criteria.currency = currency
+            if engine:
+                filter_criteria.engine = engine
+            if result:
+                filter_criteria.result = TradeResult(result)
+            if asset_pair:
+                filter_criteria.asset_pair = asset_pair
+            
+            # Get trade history instance
+            trade_history = get_trade_history(self.data_dir)
+            
+            # Get filtered trades
+            trades = trade_history.get_trades(filter_criteria, limit, offset)
+            
+            # Get total count (without pagination)
+            all_trades = trade_history.get_trades(filter_criteria)
+            total_count = len(all_trades)
+            
+            return {
+                "trades": trades,
+                "total_count": total_count,
+                "limit": limit,
+                "offset": offset,
+                "filtered": True,
+                "filter_criteria": {
+                    "start_date": start_date,
+                    "end_date": end_date,
+                    "currency": currency,
+                    "engine": engine,
+                    "result": result,
+                    "asset_pair": asset_pair
+                }
+            }
+            
+        except Exception as e:
+            logger.error(f"❌ Error getting filtered trade history: {e}")
+            return {
+                "trades": [],
+                "total_count": 0,
+                "error": str(e)
+            }
+
+    def get_trade_summary_stats(self, start_date: str = None, end_date: str = None,
+                              currency: str = None, engine: str = None) -> Dict[str, Any]:
+        """Get trade summary statistics"""
+        try:
+            if not ENHANCED_MODULES_AVAILABLE:
+                # Fallback to basic stats
+                stats = self.get_stats()
+                if stats:
+                    return {
+                        "total_trades": stats.total_trades,
+                        "wins": stats.wins,
+                        "losses": stats.losses,
+                        "win_rate": stats.win_rate,
+                        "net_pnl": stats.net_pl,
+                        "enhanced": False
+                    }
+                return {"error": "No statistics available"}
+            
+            # Create filter criteria
+            filter_criteria = TradeFilter()
+            
+            if start_date:
+                filter_criteria.start_date = datetime.fromisoformat(start_date)
+            if end_date:
+                filter_criteria.end_date = datetime.fromisoformat(end_date)
+            if currency:
+                filter_criteria.currency = currency
+            if engine:
+                filter_criteria.engine = engine
+            
+            # Get trade history instance
+            trade_history = get_trade_history(self.data_dir)
+            
+            # Get summary statistics
+            summary = trade_history.get_summary_stats(filter_criteria)
+            
+            return {
+                "total_trades": summary.total_trades,
+                "wins": summary.wins,
+                "losses": summary.losses,
+                "breakeven": summary.breakeven,
+                "win_rate": summary.win_rate,
+                "profit_factor": summary.profit_factor,
+                "total_pnl": summary.total_pnl,
+                "avg_pnl_per_trade": summary.avg_pnl_per_trade,
+                "best_trade": summary.best_trade,
+                "worst_trade": summary.worst_trade,
+                "avg_duration_minutes": summary.avg_duration_minutes,
+                "total_volume": summary.total_volume,
+                "sharpe_ratio": summary.sharpe_ratio,
+                "enhanced": True,
+                "filter_criteria": {
+                    "start_date": start_date,
+                    "end_date": end_date,
+                    "currency": currency,
+                    "engine": engine
+                }
+            }
+            
+        except Exception as e:
+            logger.error(f"❌ Error getting trade summary stats: {e}")
+            return {"error": str(e)}
+
+    def export_trade_history(self, export_format: str = "csv", start_date: str = None,
+                           end_date: str = None, currency: str = None, engine: str = None) -> Dict[str, Any]:
+        """Export trade history to specified format"""
+        try:
+            if not ENHANCED_MODULES_AVAILABLE:
+                return {
+                    "success": False,
+                    "message": "Enhanced export functionality not available"
+                }
+            
+            # Create filter criteria
+            filter_criteria = TradeFilter()
+            
+            if start_date:
+                filter_criteria.start_date = datetime.fromisoformat(start_date)
+            if end_date:
+                filter_criteria.end_date = datetime.fromisoformat(end_date)
+            if currency:
+                filter_criteria.currency = currency
+            if engine:
+                filter_criteria.engine = engine
+            
+            # Validate export format
+            try:
+                export_format_enum = ExportFormat(export_format.lower())
+            except ValueError:
+                return {
+                    "success": False,
+                    "message": f"Invalid export format: {export_format}. Supported: csv, json, pdf"
+                }
+            
+            # Get trade history instance
+            trade_history = get_trade_history(self.data_dir)
+            
+            # Export trades
+            result = trade_history.export_trades(filter_criteria, export_format_enum)
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"❌ Error exporting trade history: {e}")
+            return {
+                "success": False,
+                "message": f"Error exporting trades: {str(e)}"
+            }
+
+    def get_daily_trading_breakdown(self, days: int = 30) -> Dict[str, Any]:
+        """Get daily trading performance breakdown"""
+        try:
+            if not ENHANCED_MODULES_AVAILABLE:
+                return {
+                    "daily_data": [],
+                    "message": "Enhanced daily breakdown not available"
+                }
+            
+            # Get trade history instance
+            trade_history = get_trade_history(self.data_dir)
+            
+            # Get daily breakdown
+            daily_breakdown = trade_history.get_daily_breakdown(days)
+            
+            return {
+                "daily_data": daily_breakdown,
+                "days_requested": days,
+                "total_days_with_data": len(daily_breakdown)
+            }
+            
+        except Exception as e:
+            logger.error(f"❌ Error getting daily breakdown: {e}")
+            return {
+                "daily_data": [],
+                "error": str(e)
+            }
 
 
 # Global instance for use in API endpoints

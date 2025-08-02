@@ -83,6 +83,25 @@ class CurrencySwitchRequest(BaseModel):
     currency: str = Field(..., description="Currency to switch to")
 
 
+class TradeHistoryRequest(BaseModel):
+    start_date: Optional[str] = Field(None, description="Start date (YYYY-MM-DD)")
+    end_date: Optional[str] = Field(None, description="End date (YYYY-MM-DD)")
+    currency: Optional[str] = Field(None, description="Filter by currency")
+    engine: Optional[str] = Field(None, description="Filter by engine (continuous/decision)")
+    result: Optional[str] = Field(None, description="Filter by result (win/loss/breakeven)")
+    asset_pair: Optional[str] = Field(None, description="Filter by asset pair")
+    limit: Optional[int] = Field(50, description="Number of records to return")
+    offset: Optional[int] = Field(0, description="Number of records to skip")
+
+
+class ExportRequest(BaseModel):
+    format: str = Field("csv", description="Export format (csv, json, pdf)")
+    start_date: Optional[str] = Field(None, description="Start date (YYYY-MM-DD)")
+    end_date: Optional[str] = Field(None, description="End date (YYYY-MM-DD)")
+    currency: Optional[str] = Field(None, description="Filter by currency")
+    engine: Optional[str] = Field(None, description="Filter by engine")
+
+
 class DecterStatusResponse(BaseModel):
     status: str
     is_running: bool
@@ -413,6 +432,22 @@ async def send_telegram_notification(
         raise HTTPException(status_code=500, detail=f"Error sending notification: {str(e)}")
 
 
+@decter_router.post("/telegram/daily-summary")
+async def send_daily_summary(current_user: Dict = Depends(get_current_active_user)):
+    """Send daily trading summary via Telegram"""
+    try:
+        result = decter_controller.send_daily_summary()
+        
+        if result["success"]:
+            logger.info(f"✅ Daily summary sent by user: {current_user.get('username', 'unknown')}")
+            return JSONResponse(content=result)
+        else:
+            raise HTTPException(status_code=400, detail=result["message"])
+    except Exception as e:
+        logger.error(f"❌ Error sending daily summary: {e}")
+        raise HTTPException(status_code=500, detail=f"Error sending daily summary: {str(e)}")
+
+
 @decter_router.post("/telegram/config/form")
 async def set_telegram_config_form(
     bot_token: str = Form(...),
@@ -657,6 +692,93 @@ async def stop_decision_engine(current_user: Dict = Depends(get_current_active_u
     except Exception as e:
         logger.error(f"❌ Error stopping decision engine: {e}")
         raise HTTPException(status_code=500, detail=f"Error stopping decision engine: {str(e)}")
+
+
+# Trade History and Export endpoints
+@decter_router.post("/trades/history")
+async def get_trade_history(
+    history_req: TradeHistoryRequest,
+    current_user: Dict = Depends(get_current_active_user)
+):
+    """Get filtered trade history with pagination"""
+    try:
+        result = decter_controller.get_filtered_trade_history(
+            start_date=history_req.start_date,
+            end_date=history_req.end_date,
+            currency=history_req.currency,
+            engine=history_req.engine,
+            result=history_req.result,
+            asset_pair=history_req.asset_pair,
+            limit=history_req.limit,
+            offset=history_req.offset
+        )
+        
+        return JSONResponse(content=result)
+    except Exception as e:
+        logger.error(f"❌ Error getting trade history: {e}")
+        raise HTTPException(status_code=500, detail=f"Error getting trade history: {str(e)}")
+
+
+@decter_router.get("/trades/summary")
+async def get_trade_summary(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    currency: Optional[str] = None,
+    engine: Optional[str] = None,
+    current_user: Dict = Depends(get_current_active_user)
+):
+    """Get trade summary statistics"""
+    try:
+        result = decter_controller.get_trade_summary_stats(
+            start_date=start_date,
+            end_date=end_date,
+            currency=currency,
+            engine=engine
+        )
+        
+        return JSONResponse(content=result)
+    except Exception as e:
+        logger.error(f"❌ Error getting trade summary: {e}")
+        raise HTTPException(status_code=500, detail=f"Error getting trade summary: {str(e)}")
+
+
+@decter_router.post("/trades/export")
+async def export_trades(
+    export_req: ExportRequest,
+    current_user: Dict = Depends(get_current_active_user)
+):
+    """Export filtered trades to specified format"""
+    try:
+        result = decter_controller.export_trade_history(
+            export_format=export_req.format,
+            start_date=export_req.start_date,
+            end_date=export_req.end_date,
+            currency=export_req.currency,
+            engine=export_req.engine
+        )
+        
+        if result["success"]:
+            logger.info(f"✅ Trades exported by user: {current_user.get('username', 'unknown')} - Format: {export_req.format}")
+            return JSONResponse(content=result)
+        else:
+            raise HTTPException(status_code=400, detail=result["message"])
+    except Exception as e:
+        logger.error(f"❌ Error exporting trades: {e}")
+        raise HTTPException(status_code=500, detail=f"Error exporting trades: {str(e)}")
+
+
+@decter_router.get("/trades/daily-breakdown")
+async def get_daily_breakdown(
+    days: int = 30,
+    current_user: Dict = Depends(get_current_active_user)
+):
+    """Get daily trading performance breakdown"""
+    try:
+        result = decter_controller.get_daily_trading_breakdown(days)
+        return JSONResponse(content=result)
+    except Exception as e:
+        logger.error(f"❌ Error getting daily breakdown: {e}")
+        raise HTTPException(status_code=500, detail=f"Error getting daily breakdown: {str(e)}")
 
 
 def add_decter_routes(app):
