@@ -459,26 +459,32 @@
 <script>
 let refreshInterval;
 
-// Get authentication token from cookie for API calls
+// Get authentication token from localStorage for API calls
 function getAuthToken() {
-    const cookies = document.cookie.split(';');
-    for (let cookie of cookies) {
-        const [name, value] = cookie.trim().split('=');
-        if (name === 'access_token') {
-            return value;
-        }
+    // Try localStorage first (most common)
+    const token = localStorage.getItem('access_token');
+    if (token) {
+        return token;
     }
-    return null;
+    
+    // Fallback to sessionStorage
+    return sessionStorage.getItem('access_token');
 }
 
 // Helper function to make authenticated API calls
 async function authenticatedFetch(url, options = {}) {
     const token = getAuthToken();
     
+    // If no token found, show a more informative message but don't break the page
     if (!token) {
-        console.warn('No authentication token found, redirecting to login...');
-        window.location.href = '/login';
-        return;
+        console.warn('No authentication token found. User may need to login.');
+        showAlert('Please login to access Decter Engine features.', 'info');
+        // Return a mock response to prevent errors
+        return {
+            ok: false,
+            status: 401,
+            json: async () => ({ error: 'No authentication token' })
+        };
     }
     
     const defaultOptions = {
@@ -494,19 +500,25 @@ async function authenticatedFetch(url, options = {}) {
         defaultOptions.headers = { ...defaultOptions.headers, ...options.headers };
     }
     
-    const response = await fetch(url, defaultOptions);
-    
-    // Handle authentication errors
-    if (response.status === 401 || response.status === 403) {
-        console.warn('Authentication failed, redirecting to login...');
-        showAlert('Session expired. Redirecting to login...', 'warning');
-        setTimeout(() => {
-            window.location.href = '/login';
-        }, 2000);
+    try {
+        const response = await fetch(url, defaultOptions);
+        
+        // Handle authentication errors gracefully
+        if (response.status === 401 || response.status === 403) {
+            console.warn('Authentication failed for:', url);
+            showAlert('Session expired. Please refresh the page or login again.', 'warning');
+        }
+        
         return response;
+    } catch (error) {
+        console.error('Network error:', error);
+        showAlert('Network error. Please check your connection.', 'danger');
+        return {
+            ok: false,
+            status: 0,
+            json: async () => ({ error: 'Network error' })
+        };
     }
-    
-    return response;
 }
 
 // Initialize page
@@ -548,14 +560,21 @@ async function refreshAllData() {
 async function updateStatus() {
     try {
         const response = await authenticatedFetch('/api/decter/status');
+        
+        // Handle failed responses gracefully
+        if (!response.ok) {
+            console.warn('Failed to fetch status:', response.status);
+            return;
+        }
+        
         const data = await response.json();
         
         // Update status badge
         const statusBadge = document.getElementById('statusBadge');
-        const status = data.status.toLowerCase();
+        const status = data.status ? data.status.toLowerCase() : 'offline';
         
         statusBadge.className = `status-badge status-${status}`;
-        statusBadge.textContent = data.status.toUpperCase();
+        statusBadge.textContent = data.status ? data.status.toUpperCase() : 'OFFLINE';
         
         // Update uptime
         const uptimeDisplay = document.getElementById('uptimeDisplay');
@@ -568,16 +587,26 @@ async function updateStatus() {
         }
         
         // Update button states
-        updateControlButtons(data.is_running);
+        updateControlButtons(data.is_running || false);
         
     } catch (error) {
         console.error('Error updating status:', error);
+        // Set default values on error
+        document.getElementById('statusBadge').textContent = 'ERROR';
+        document.getElementById('statusBadge').className = 'status-badge status-error';
+        document.getElementById('uptimeDisplay').textContent = 'Uptime: --';
     }
 }
 
 async function updatePerformance() {
     try {
         const response = await authenticatedFetch('/api/decter/performance');
+        
+        if (!response.ok) {
+            console.warn('Failed to fetch performance:', response.status);
+            return;
+        }
+        
         const data = await response.json();
         
         document.getElementById('totalTrades').textContent = data.total_trades || '--';
@@ -587,6 +616,11 @@ async function updatePerformance() {
         
     } catch (error) {
         console.error('Error updating performance:', error);
+        // Set default values on error
+        document.getElementById('totalTrades').textContent = '--';
+        document.getElementById('winRate').textContent = '--%';
+        document.getElementById('netPnL').textContent = '--';
+        document.getElementById('growthRate').textContent = '--%';
     }
 }
 
