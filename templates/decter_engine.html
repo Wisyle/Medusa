@@ -285,7 +285,7 @@
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label class="form-label">Currency</label>
-                                    <select class="form-control" name="currency" required>
+                                    <select id="currencySelect" class="form-control" name="currency" required onchange="handleCurrencyChange(this.value)">
                                         <option value="XRP">XRP</option>
                                         <option value="BTC">BTC</option>
                                         <option value="ETH">ETH</option>
@@ -309,6 +309,91 @@
                         </div>
                         
                         <button type="submit" class="btn btn-primary w-100">💾 Save Configuration</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Credentials Configuration -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">🔐 API Credentials</h5>
+                </div>
+                <div class="card-body">
+                    <form id="credentialsForm" class="config-form">
+                        <!-- Telegram Configuration -->
+                        <h6 class="mb-3 text-warning">📱 Telegram Configuration</h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Bot Token</label>
+                                    <input type="password" class="form-control" name="telegram_bot_token" placeholder="Enter Telegram bot token" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Group/Chat ID</label>
+                                    <input type="text" class="form-control" name="telegram_group_id" placeholder="Enter group or chat ID" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Topic ID (Optional)</label>
+                            <input type="text" class="form-control" name="telegram_topic_id" placeholder="Enter topic ID for forum groups">
+                        </div>
+
+                        <!-- Deriv API Configuration -->
+                        <h6 class="mb-3 text-info">🏦 Deriv API Configuration</h6>
+                        <div class="mb-3">
+                            <label class="form-label">Application ID</label>
+                            <input type="text" class="form-control" name="deriv_app_id" placeholder="Enter Deriv application ID" required>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">XRP API Token</label>
+                                    <input type="password" class="form-control" name="xrp_api_token" placeholder="XRP trading token">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">BTC API Token</label>
+                                    <input type="password" class="form-control" name="btc_api_token" placeholder="BTC trading token">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">ETH API Token</label>
+                                    <input type="password" class="form-control" name="eth_api_token" placeholder="ETH trading token">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">LTC API Token</label>
+                                    <input type="password" class="form-control" name="ltc_api_token" placeholder="LTC trading token">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">USDT API Token</label>
+                                    <input type="password" class="form-control" name="usdt_api_token" placeholder="USDT trading token">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">USD API Token</label>
+                                    <input type="password" class="form-control" name="usd_api_token" placeholder="USD trading token">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-warning w-100">🔒 Save Credentials</button>
                     </form>
                 </div>
             </div>
@@ -379,9 +464,11 @@ document.addEventListener('DOMContentLoaded', function() {
     refreshAllData();
     startAutoRefresh();
     loadCurrentConfig();
+    loadCredentials();
     
     // Setup form submission
     document.getElementById('configForm').addEventListener('submit', saveConfiguration);
+    document.getElementById('credentialsForm').addEventListener('submit', saveCredentials);
 });
 
 function startAutoRefresh() {
@@ -663,6 +750,129 @@ function hideLoading() {
     const loadingDiv = document.getElementById('loadingIndicator');
     if (loadingDiv) {
         loadingDiv.remove();
+    }
+}
+
+async function handleCurrencyChange(newCurrency) {
+    try {
+        showLoading(`Switching currency to ${newCurrency}...`);
+        
+        const response = await fetch('/api/decter/currency/switch', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ currency: newCurrency })
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok && result.success) {
+            showAlert(`Currency switched to ${newCurrency} successfully!`, 'success');
+            // Update UI to reflect new currency
+            document.getElementById('netPnL').parentElement.querySelector('.metric-label').textContent = `Net P&L (${newCurrency})`;
+            document.querySelector('input[name="stake"]').parentElement.querySelector('.form-label').textContent = `Stake Amount (${newCurrency})`;
+            setTimeout(refreshAllData, 1000);
+        } else {
+            showAlert(`Failed to switch currency: ${result.message}`, 'danger');
+            // Revert the selection
+            loadCurrentConfig();
+        }
+        
+    } catch (error) {
+        console.error('Error switching currency:', error);
+        showAlert('Error switching currency', 'danger');
+        // Revert the selection
+        loadCurrentConfig();
+    } finally {
+        hideLoading();
+    }
+}
+
+async function saveCredentials(event) {
+    event.preventDefault();
+    
+    try {
+        showLoading('Saving credentials...');
+        
+        const formData = new FormData(event.target);
+        
+        // Save Telegram configuration
+        const telegramConfig = {
+            bot_token: formData.get('telegram_bot_token'),
+            group_id: formData.get('telegram_group_id'),
+            topic_id: formData.get('telegram_topic_id') || null
+        };
+        
+        // Save Deriv configuration
+        const derivConfig = {
+            deriv_app_id: formData.get('deriv_app_id'),
+            xrp_api_token: formData.get('xrp_api_token') || null,
+            btc_api_token: formData.get('btc_api_token') || null,
+            eth_api_token: formData.get('eth_api_token') || null,
+            ltc_api_token: formData.get('ltc_api_token') || null,
+            usdt_api_token: formData.get('usdt_api_token') || null,
+            usd_api_token: formData.get('usd_api_token') || null
+        };
+        
+        // Save both configurations
+        const telegramResponse = await fetch('/api/decter/telegram/config', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(telegramConfig)
+        });
+        
+        const derivResponse = await fetch('/api/decter/deriv/config', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(derivConfig)
+        });
+        
+        const telegramResult = await telegramResponse.json();
+        const derivResult = await derivResponse.json();
+        
+        if (telegramResponse.ok && derivResponse.ok && telegramResult.success && derivResult.success) {
+            showAlert('Credentials saved successfully!', 'success');
+            // Clear password fields for security
+            event.target.querySelectorAll('input[type="password"]').forEach(input => input.value = '');
+        } else {
+            const errorMsg = !telegramResult.success ? telegramResult.message : derivResult.message;
+            showAlert(`Failed to save credentials: ${errorMsg}`, 'danger');
+        }
+        
+    } catch (error) {
+        console.error('Error saving credentials:', error);
+        showAlert('Error saving credentials', 'danger');
+    } finally {
+        hideLoading();
+    }
+}
+
+async function loadCredentials() {
+    try {
+        // Load Telegram config (but don't populate password fields for security)
+        const telegramResponse = await fetch('/api/decter/telegram/config');
+        if (telegramResponse.ok) {
+            const telegramConfig = await telegramResponse.json();
+            if (telegramConfig.group_id) {
+                document.querySelector('input[name="telegram_group_id"]').value = telegramConfig.group_id;
+            }
+            if (telegramConfig.topic_id) {
+                document.querySelector('input[name="telegram_topic_id"]').value = telegramConfig.topic_id;
+            }
+        }
+        
+        // Load Deriv config (but don't populate API tokens for security)
+        const derivResponse = await fetch('/api/decter/deriv/config');
+        if (derivResponse.ok) {
+            const derivConfig = await derivResponse.json();
+            if (derivConfig.deriv_app_id) {
+                document.querySelector('input[name="deriv_app_id"]').value = derivConfig.deriv_app_id;
+            }
+        }
+        
+    } catch (error) {
+        console.error('Error loading credentials:', error);
     }
 }
 
