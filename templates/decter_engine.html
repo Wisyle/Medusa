@@ -459,6 +459,56 @@
 <script>
 let refreshInterval;
 
+// Get authentication token from cookie for API calls
+function getAuthToken() {
+    const cookies = document.cookie.split(';');
+    for (let cookie of cookies) {
+        const [name, value] = cookie.trim().split('=');
+        if (name === 'access_token') {
+            return value;
+        }
+    }
+    return null;
+}
+
+// Helper function to make authenticated API calls
+async function authenticatedFetch(url, options = {}) {
+    const token = getAuthToken();
+    
+    if (!token) {
+        console.warn('No authentication token found, redirecting to login...');
+        window.location.href = '/login';
+        return;
+    }
+    
+    const defaultOptions = {
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        ...options
+    };
+    
+    // Merge headers properly
+    if (options.headers) {
+        defaultOptions.headers = { ...defaultOptions.headers, ...options.headers };
+    }
+    
+    const response = await fetch(url, defaultOptions);
+    
+    // Handle authentication errors
+    if (response.status === 401 || response.status === 403) {
+        console.warn('Authentication failed, redirecting to login...');
+        showAlert('Session expired. Redirecting to login...', 'warning');
+        setTimeout(() => {
+            window.location.href = '/login';
+        }, 2000);
+        return response;
+    }
+    
+    return response;
+}
+
 // Initialize page
 document.addEventListener('DOMContentLoaded', function() {
     refreshAllData();
@@ -497,7 +547,7 @@ async function refreshAllData() {
 
 async function updateStatus() {
     try {
-        const response = await fetch('/api/decter/status');
+        const response = await authenticatedFetch('/api/decter/status');
         const data = await response.json();
         
         // Update status badge
@@ -527,7 +577,7 @@ async function updateStatus() {
 
 async function updatePerformance() {
     try {
-        const response = await fetch('/api/decter/performance');
+        const response = await authenticatedFetch('/api/decter/performance');
         const data = await response.json();
         
         document.getElementById('totalTrades').textContent = data.total_trades || '--';
@@ -542,7 +592,7 @@ async function updatePerformance() {
 
 async function updateTrades() {
     try {
-        const response = await fetch('/api/decter/trades?limit=10');
+        const response = await authenticatedFetch('/api/decter/trades?limit=10');
         const data = await response.json();
         
         const container = document.getElementById('tradesContainer');
@@ -570,7 +620,7 @@ async function updateTrades() {
 
 async function updateLogs() {
     try {
-        const response = await fetch('/api/decter/logs?lines=20');
+        const response = await authenticatedFetch('/api/decter/logs?lines=20');
         const data = await response.json();
         
         const container = document.getElementById('logsContainer');
@@ -601,11 +651,8 @@ async function controlDecter(action) {
     try {
         showLoading(`${action.charAt(0).toUpperCase() + action.slice(1)}ing Decter 001...`);
         
-        const response = await fetch(`/api/decter/${action}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            }
+        const response = await authenticatedFetch(`/api/decter/${action}`, {
+            method: 'POST'
         });
         
         const result = await response.json();
@@ -627,7 +674,7 @@ async function controlDecter(action) {
 
 async function loadCurrentConfig() {
     try {
-        const response = await fetch('/api/decter/config');
+        const response = await authenticatedFetch('/api/decter/config');
         const config = await response.json();
         
         if (config && Object.keys(config).length > 0) {
@@ -658,11 +705,8 @@ async function saveConfiguration(event) {
             config[key] = parseFloat(value) || value;
         });
         
-        const response = await fetch('/api/decter/config', {
+        const response = await authenticatedFetch('/api/decter/config', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
             body: JSON.stringify(config)
         });
         
@@ -686,11 +730,8 @@ async function sendCommand(command) {
     try {
         showLoading(`Sending command: ${command}`);
         
-        const response = await fetch('/api/decter/command', {
+        const response = await authenticatedFetch('/api/decter/command', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
             body: JSON.stringify({ command: command })
         });
         
@@ -757,11 +798,8 @@ async function handleCurrencyChange(newCurrency) {
     try {
         showLoading(`Switching currency to ${newCurrency}...`);
         
-        const response = await fetch('/api/decter/currency/switch', {
+        const response = await authenticatedFetch('/api/decter/currency/switch', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
             body: JSON.stringify({ currency: newCurrency })
         });
         
@@ -816,15 +854,13 @@ async function saveCredentials(event) {
         };
         
         // Save both configurations
-        const telegramResponse = await fetch('/api/decter/telegram/config', {
+        const telegramResponse = await authenticatedFetch('/api/decter/telegram/config', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(telegramConfig)
         });
         
-        const derivResponse = await fetch('/api/decter/deriv/config', {
+        const derivResponse = await authenticatedFetch('/api/decter/deriv/config', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(derivConfig)
         });
         
@@ -851,7 +887,7 @@ async function saveCredentials(event) {
 async function loadCredentials() {
     try {
         // Load Telegram config (but don't populate password fields for security)
-        const telegramResponse = await fetch('/api/decter/telegram/config');
+        const telegramResponse = await authenticatedFetch('/api/decter/telegram/config');
         if (telegramResponse.ok) {
             const telegramConfig = await telegramResponse.json();
             if (telegramConfig.group_id) {
@@ -863,7 +899,7 @@ async function loadCredentials() {
         }
         
         // Load Deriv config (but don't populate API tokens for security)
-        const derivResponse = await fetch('/api/decter/deriv/config');
+        const derivResponse = await authenticatedFetch('/api/decter/deriv/config');
         if (derivResponse.ok) {
             const derivConfig = await derivResponse.json();
             if (derivConfig.deriv_app_id) {
