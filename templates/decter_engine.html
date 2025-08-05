@@ -468,7 +468,21 @@ function getAuthToken() {
     }
     
     // Fallback to sessionStorage
-    return sessionStorage.getItem('access_token');
+    const sessionToken = sessionStorage.getItem('access_token');
+    if (sessionToken) {
+        return sessionToken;
+    }
+    
+    // Also try to get from cookies as fallback
+    const cookies = document.cookie.split(';');
+    for (let cookie of cookies) {
+        const [name, value] = cookie.trim().split('=');
+        if (name === 'access_token') {
+            return value;
+        }
+    }
+    
+    return null;
 }
 
 // Helper function to make authenticated API calls
@@ -523,6 +537,20 @@ async function authenticatedFetch(url, options = {}) {
 
 // Initialize page
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('[DEBUG] DOM Content Loaded - Initializing Decter Engine interface');
+    
+    // Ensure functions are available globally
+    window.controlDecter = controlDecter;
+    window.sendCommand = sendCommand;
+    window.refreshAllData = refreshAllData;
+    window.handleCurrencyChange = handleCurrencyChange;
+    
+    console.log('[DEBUG] Global functions attached:', {
+        controlDecter: typeof window.controlDecter,
+        sendCommand: typeof window.sendCommand,
+        refreshAllData: typeof window.refreshAllData
+    });
+    
     refreshAllData();
     startAutoRefresh();
     loadCurrentConfig();
@@ -531,6 +559,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Setup form submission
     document.getElementById('configForm').addEventListener('submit', saveConfiguration);
     document.getElementById('credentialsForm').addEventListener('submit', saveCredentials);
+    
+    console.log('[DEBUG] Decter Engine interface initialized successfully');
 });
 
 function startAutoRefresh() {
@@ -682,25 +712,44 @@ function updateControlButtons(isRunning) {
 }
 
 async function controlDecter(action) {
+    console.log(`[DEBUG] controlDecter called with action: ${action}`);
+    
     try {
+        // Check if we have authentication
+        const token = getAuthToken();
+        if (!token) {
+            showAlert('Please login to use Decter Engine controls.', 'warning');
+            return;
+        }
+        
         showLoading(`${action.charAt(0).toUpperCase() + action.slice(1)}ing Decter 001...`);
         
         const response = await authenticatedFetch(`/api/decter/${action}`, {
             method: 'POST'
         });
         
-        const result = await response.json();
+        console.log(`[DEBUG] Response status: ${response.status}`);
         
-        if (response.ok && result.success) {
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`[DEBUG] Error response: ${errorText}`);
+            showAlert(`HTTP Error ${response.status}: ${errorText}`, 'danger');
+            return;
+        }
+        
+        const result = await response.json();
+        console.log(`[DEBUG] Response result:`, result);
+        
+        if (result.success) {
             showAlert(`Decter 001 ${action} successful!`, 'success');
             setTimeout(refreshAllData, 1000);
         } else {
-            showAlert(`Failed to ${action} Decter 001: ${result.message}`, 'danger');
+            showAlert(`Failed to ${action} Decter 001: ${result.message || 'Unknown error'}`, 'danger');
         }
         
     } catch (error) {
-        console.error(`Error ${action}ing Decter:`, error);
-        showAlert(`Error ${action}ing Decter 001`, 'danger');
+        console.error(`[DEBUG] Error ${action}ing Decter:`, error);
+        showAlert(`Error ${action}ing Decter 001: ${error.message}`, 'danger');
     } finally {
         hideLoading();
     }
@@ -761,7 +810,16 @@ async function saveConfiguration(event) {
 }
 
 async function sendCommand(command) {
+    console.log(`[DEBUG] sendCommand called with command: ${command}`);
+    
     try {
+        // Check if we have authentication
+        const token = getAuthToken();
+        if (!token) {
+            showAlert('Please login to use Decter Engine commands.', 'warning');
+            return;
+        }
+        
         showLoading(`Sending command: ${command}`);
         
         const response = await authenticatedFetch('/api/decter/command', {
@@ -769,17 +827,27 @@ async function sendCommand(command) {
             body: JSON.stringify({ command: command })
         });
         
-        const result = await response.json();
+        console.log(`[DEBUG] Command response status: ${response.status}`);
         
-        if (response.ok && result.success) {
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`[DEBUG] Command error response: ${errorText}`);
+            showAlert(`HTTP Error ${response.status}: ${errorText}`, 'danger');
+            return;
+        }
+        
+        const result = await response.json();
+        console.log(`[DEBUG] Command response result:`, result);
+        
+        if (result.success) {
             showAlert(`Command "${command}" sent successfully!`, 'success');
         } else {
-            showAlert(`Failed to send command: ${result.message}`, 'danger');
+            showAlert(`Failed to send command: ${result.message || 'Unknown error'}`, 'danger');
         }
         
     } catch (error) {
-        console.error('Error sending command:', error);
-        showAlert('Error sending command', 'danger');
+        console.error('[DEBUG] Error sending command:', error);
+        showAlert(`Error sending command: ${error.message}`, 'danger');
     } finally {
         hideLoading();
     }
@@ -950,5 +1018,24 @@ async function loadCredentials() {
 window.addEventListener('beforeunload', function() {
     stopAutoRefresh();
 });
+
+// Global error handler for undefined function errors
+window.addEventListener('error', function(e) {
+    if (e.message && e.message.includes('not defined')) {
+        console.error('[DEBUG] Function not defined error detected:', e.message);
+        showAlert('JavaScript function error detected. Please refresh the page.', 'warning');
+    }
+});
+
+// Fallback function definitions (in case of loading issues)
+window.controlDecter = window.controlDecter || function(action) {
+    console.error('[FALLBACK] controlDecter function not properly loaded');
+    showAlert('Decter control functions not loaded. Please refresh the page.', 'danger');
+};
+
+window.sendCommand = window.sendCommand || function(command) {
+    console.error('[FALLBACK] sendCommand function not properly loaded');
+    showAlert('Command functions not loaded. Please refresh the page.', 'danger');
+};
 </script>
 {% endblock %}
