@@ -12,6 +12,7 @@ import logging
 
 from decter_controller import decter_controller, DecterConfig, DecterStatus
 from auth import get_current_active_user
+from database import User
 
 logger = logging.getLogger(__name__)
 
@@ -124,7 +125,7 @@ async def decter_health():
 
 # Status endpoints
 @decter_router.get("/status", response_model=DecterStatusResponse)
-async def get_decter_status(current_user: Dict = Depends(get_current_active_user)):
+async def get_decter_status(current_user: User = Depends(get_current_active_user)):
     """Get comprehensive Decter 001 status"""
     try:
         status = decter_controller.get_status()
@@ -135,7 +136,7 @@ async def get_decter_status(current_user: Dict = Depends(get_current_active_user
 
 
 @decter_router.get("/performance")
-async def get_decter_performance(current_user: Dict = Depends(get_current_active_user)):
+async def get_decter_performance(current_user: User = Depends(get_current_active_user)):
     """Get Decter 001 performance summary"""
     try:
         performance = decter_controller.get_performance_summary()
@@ -147,12 +148,12 @@ async def get_decter_performance(current_user: Dict = Depends(get_current_active
 
 # Control endpoints
 @decter_router.post("/start")
-async def start_decter(current_user: Dict = Depends(get_current_active_user)):
+async def start_decter(current_user: User = Depends(get_current_active_user)):
     """Start Decter 001 bot"""
     try:
         result = decter_controller.start()
         if result["success"]:
-            logger.info(f"✅ Decter 001 started by user: {current_user.get('username', 'unknown')}")
+            logger.info(f"✅ Decter 001 started by user: {getattr(current_user, 'email', 'unknown')}")
             return JSONResponse(content=result)
         else:
             logger.warning(f"⚠️ Failed to start Decter 001: {result['message']}")
@@ -163,12 +164,12 @@ async def start_decter(current_user: Dict = Depends(get_current_active_user)):
 
 
 @decter_router.post("/stop")
-async def stop_decter(current_user: Dict = Depends(get_current_active_user)):
+async def stop_decter(current_user: User = Depends(get_current_active_user)):
     """Stop Decter 001 bot"""
     try:
         result = decter_controller.stop()
         if result["success"]:
-            logger.info(f"✅ Decter 001 stopped by user: {current_user.get('username', 'unknown')}")
+            logger.info(f"✅ Decter 001 stopped by user: {getattr(current_user, 'email', 'unknown')}")
             return JSONResponse(content=result)
         else:
             logger.warning(f"⚠️ Failed to stop Decter 001: {result['message']}")
@@ -179,12 +180,12 @@ async def stop_decter(current_user: Dict = Depends(get_current_active_user)):
 
 
 @decter_router.post("/restart")
-async def restart_decter(current_user: Dict = Depends(get_current_active_user)):
+async def restart_decter(current_user: User = Depends(get_current_active_user)):
     """Restart Decter 001 bot"""
     try:
         result = decter_controller.restart()
         if result["success"]:
-            logger.info(f"✅ Decter 001 restarted by user: {current_user.get('username', 'unknown')}")
+            logger.info(f"✅ Decter 001 restarted by user: {getattr(current_user, 'email', 'unknown')}")
             return JSONResponse(content=result)
         else:
             logger.warning(f"⚠️ Failed to restart Decter 001: {result['message']}")
@@ -198,7 +199,7 @@ async def restart_decter(current_user: Dict = Depends(get_current_active_user)):
 @decter_router.post("/config")
 async def set_decter_config(
     config: DecterConfigRequest,
-    current_user: Dict = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_user)
 ):
     """Set Decter 001 trading parameters"""
     try:
@@ -214,7 +215,7 @@ async def set_decter_config(
         
         result = decter_controller.set_parameters(decter_config)
         if result["success"]:
-            logger.info(f"✅ Decter 001 config updated by user: {current_user.get('username', 'unknown')}")
+            logger.info(f"✅ Decter 001 config updated by user: {getattr(current_user, 'email', 'unknown')}")
             return JSONResponse(content=result)
         else:
             logger.warning(f"⚠️ Failed to update Decter config: {result['message']}")
@@ -225,7 +226,7 @@ async def set_decter_config(
 
 
 @decter_router.get("/config")
-async def get_decter_config(current_user: Dict = Depends(get_current_active_user)):
+async def get_decter_config(current_user: User = Depends(get_current_active_user)):
     """Get current Decter 001 configuration"""
     try:
         config = decter_controller._get_current_config()
@@ -239,7 +240,7 @@ async def get_decter_config(current_user: Dict = Depends(get_current_active_user
 @decter_router.get("/trades")
 async def get_decter_trades(
     limit: int = 50,
-    current_user: Dict = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_user)
 ):
     """Get Decter 001 trade history"""
     try:
@@ -251,7 +252,7 @@ async def get_decter_trades(
 
 
 @decter_router.get("/stats")
-async def get_decter_stats(current_user: Dict = Depends(get_current_active_user)):
+async def get_decter_stats(current_user: User = Depends(get_current_active_user)):
     """Get detailed Decter 001 statistics"""
     try:
         stats = decter_controller.get_stats()
@@ -268,13 +269,13 @@ async def get_decter_stats(current_user: Dict = Depends(get_current_active_user)
 @decter_router.post("/command")
 async def send_decter_command(
     command_req: DecterCommandRequest,
-    current_user: Dict = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_user)
 ):
     """Send command to Decter 001"""
     try:
         result = decter_controller.send_telegram_command(command_req.command)
         if result["success"]:
-            logger.info(f"✅ Command sent to Decter by user: {current_user.get('username', 'unknown')}: {command_req.command}")
+            logger.info(f"✅ Command sent to Decter by user: {getattr(current_user, 'email', 'unknown')}: {command_req.command}")
             return JSONResponse(content=result)
         else:
             logger.warning(f"⚠️ Failed to send command: {result['message']}")
@@ -286,7 +287,7 @@ async def send_decter_command(
 
 # Information endpoints
 @decter_router.get("/indices")
-async def get_available_indices(current_user: Dict = Depends(get_current_active_user)):
+async def get_available_indices(current_user: User = Depends(get_current_active_user)):
     """Get available trading indices"""
     try:
         indices = decter_controller._get_available_indices()
@@ -297,7 +298,7 @@ async def get_available_indices(current_user: Dict = Depends(get_current_active_
 
 
 @decter_router.get("/currencies")
-async def get_available_currencies(current_user: Dict = Depends(get_current_active_user)):
+async def get_available_currencies(current_user: User = Depends(get_current_active_user)):
     """Get available currencies"""
     try:
         currencies = decter_controller._get_available_currencies()
@@ -310,7 +311,7 @@ async def get_available_currencies(current_user: Dict = Depends(get_current_acti
 @decter_router.get("/logs")
 async def get_decter_logs(
     lines: int = 50,
-    current_user: Dict = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_user)
 ):
     """Get recent Decter 001 logs"""
     try:
@@ -331,7 +332,7 @@ async def set_decter_config_form(
     currency: str = Form(...),
     max_loss_amount: float = Form(...),
     max_win_amount: float = Form(...),
-    current_user: Dict = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_user)
 ):
     """Set Decter 001 config via form submission"""
     try:
@@ -353,7 +354,7 @@ async def set_decter_config_form(
 @decter_router.post("/command/form")
 async def send_decter_command_form(
     command: str = Form(...),
-    current_user: Dict = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_user)
 ):
     """Send command via form submission"""
     try:
@@ -368,7 +369,7 @@ async def send_decter_command_form(
 @decter_router.post("/telegram/config")
 async def set_telegram_config(
     config_req: TelegramConfigRequest,
-    current_user: Dict = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_user)
 ):
     """Set Telegram bot configuration"""
     try:
@@ -378,7 +379,7 @@ async def set_telegram_config(
             config_req.topic_id
         )
         if result["success"]:
-            logger.info(f"✅ Telegram config updated by user: {current_user.get('username', 'unknown')}")
+            logger.info(f"✅ Telegram config updated by user: {getattr(current_user, 'email', 'unknown')}")
             return JSONResponse(content=result)
         else:
             raise HTTPException(status_code=400, detail=result["message"])
@@ -388,7 +389,7 @@ async def set_telegram_config(
 
 
 @decter_router.get("/telegram/config")
-async def get_telegram_config(current_user: Dict = Depends(get_current_active_user)):
+async def get_telegram_config(current_user: User = Depends(get_current_active_user)):
     """Get current Telegram configuration"""
     try:
         config = decter_controller.get_telegram_config()
@@ -404,7 +405,7 @@ async def get_telegram_config(current_user: Dict = Depends(get_current_active_us
 @decter_router.post("/telegram/notify")
 async def send_telegram_notification(
     notify_req: TransactionLogRequest,
-    current_user: Dict = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_user)
 ):
     """Send Telegram notification with transaction logging"""
     try:
@@ -423,7 +424,7 @@ async def send_telegram_notification(
         )
         
         if result["success"]:
-            logger.info(f"✅ Telegram notification sent by user: {current_user.get('username', 'unknown')}")
+            logger.info(f"✅ Telegram notification sent by user: {getattr(current_user, 'email', 'unknown')}")
             return JSONResponse(content=result)
         else:
             raise HTTPException(status_code=400, detail=result["message"])
@@ -433,13 +434,13 @@ async def send_telegram_notification(
 
 
 @decter_router.post("/telegram/daily-summary")
-async def send_daily_summary(current_user: Dict = Depends(get_current_active_user)):
+async def send_daily_summary(current_user: User = Depends(get_current_active_user)):
     """Send daily trading summary via Telegram"""
     try:
         result = decter_controller.send_daily_summary()
         
         if result["success"]:
-            logger.info(f"✅ Daily summary sent by user: {current_user.get('username', 'unknown')}")
+            logger.info(f"✅ Daily summary sent by user: {getattr(current_user, 'email', 'unknown')}")
             return JSONResponse(content=result)
         else:
             raise HTTPException(status_code=400, detail=result["message"])
@@ -453,7 +454,7 @@ async def set_telegram_config_form(
     bot_token: str = Form(...),
     group_id: str = Form(...),
     topic_id: str = Form(None),
-    current_user: Dict = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_user)
 ):
     """Set Telegram config via form submission"""
     try:
@@ -472,7 +473,7 @@ async def set_telegram_config_form(
 @decter_router.post("/deriv/config")
 async def set_deriv_config(
     config_req: DerivConfigRequest,
-    current_user: Dict = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_user)
 ):
     """Set Deriv API configuration"""
     try:
@@ -489,7 +490,7 @@ async def set_deriv_config(
             currency_tokens
         )
         if result["success"]:
-            logger.info(f"✅ Deriv config updated by user: {current_user.get('username', 'unknown')}")
+            logger.info(f"✅ Deriv config updated by user: {getattr(current_user, 'email', 'unknown')}")
             return JSONResponse(content=result)
         else:
             raise HTTPException(status_code=400, detail=result["message"])
@@ -499,7 +500,7 @@ async def set_deriv_config(
 
 
 @decter_router.get("/deriv/config")
-async def get_deriv_config(current_user: Dict = Depends(get_current_active_user)):
+async def get_deriv_config(current_user: User = Depends(get_current_active_user)):
     """Get current Deriv configuration"""
     try:
         config = decter_controller.get_deriv_config()
@@ -518,7 +519,7 @@ async def set_deriv_config_form(
     ltc_api_token: str = Form(""),
     usdt_api_token: str = Form(""),
     usd_api_token: str = Form(""),
-    current_user: Dict = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_user)
 ):
     """Set Deriv config via form submission"""
     try:
@@ -541,7 +542,7 @@ async def set_deriv_config_form(
 @decter_router.post("/engine/config")
 async def set_engine_config(
     config_req: EngineConfigRequest,
-    current_user: Dict = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_user)
 ):
     """Set engine behavior and risk parameters"""
     try:
@@ -549,7 +550,7 @@ async def set_engine_config(
         result = decter_controller.set_engine_config(config_dict)
         
         if result["success"]:
-            logger.info(f"✅ Engine config updated by user: {current_user.get('username', 'unknown')}")
+            logger.info(f"✅ Engine config updated by user: {getattr(current_user, 'email', 'unknown')}")
             return JSONResponse(content=result)
         else:
             raise HTTPException(status_code=400, detail=result["message"])
@@ -559,7 +560,7 @@ async def set_engine_config(
 
 
 @decter_router.get("/engine/config")
-async def get_engine_config(current_user: Dict = Depends(get_current_active_user)):
+async def get_engine_config(current_user: User = Depends(get_current_active_user)):
     """Get current engine configuration"""
     try:
         config = decter_controller.get_engine_config()
@@ -570,7 +571,7 @@ async def get_engine_config(current_user: Dict = Depends(get_current_active_user
 
 
 @decter_router.get("/engine/diagnostics")
-async def get_engine_diagnostics(current_user: Dict = Depends(get_current_active_user)):
+async def get_engine_diagnostics(current_user: User = Depends(get_current_active_user)):
     """Get comprehensive engine diagnostics and state"""
     try:
         diagnostics = decter_controller.get_engine_diagnostics()
@@ -583,14 +584,14 @@ async def get_engine_diagnostics(current_user: Dict = Depends(get_current_active
 @decter_router.post("/currency/switch")
 async def switch_currency(
     switch_req: CurrencySwitchRequest,
-    current_user: Dict = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_user)
 ):
     """Switch active trading currency"""
     try:
         result = decter_controller.switch_currency(switch_req.currency)
         
         if result["success"]:
-            logger.info(f"✅ Currency switched by user: {current_user.get('username', 'unknown')} to {switch_req.currency}")
+            logger.info(f"✅ Currency switched by user: {getattr(current_user, 'email', 'unknown')} to {switch_req.currency}")
             return JSONResponse(content=result)
         else:
             raise HTTPException(status_code=400, detail=result["message"])
@@ -600,7 +601,7 @@ async def switch_currency(
 
 
 @decter_router.get("/currencies")
-async def get_supported_currencies(current_user: Dict = Depends(get_current_active_user)):
+async def get_supported_currencies(current_user: User = Depends(get_current_active_user)):
     """Get list of supported currencies"""
     try:
         engine_config = decter_controller.get_engine_config()
@@ -619,7 +620,7 @@ async def get_supported_currencies(current_user: Dict = Depends(get_current_acti
 
 # Engine control endpoints
 @decter_router.post("/engine/continuous/start")
-async def start_continuous_engine(current_user: Dict = Depends(get_current_active_user)):
+async def start_continuous_engine(current_user: User = Depends(get_current_active_user)):
     """Start the continuous monitoring engine"""
     try:
         # Update engine config to enable continuous engine
@@ -628,7 +629,7 @@ async def start_continuous_engine(current_user: Dict = Depends(get_current_activ
         result = decter_controller.set_engine_config(config)
         
         if result["success"]:
-            logger.info(f"✅ Continuous engine started by user: {current_user.get('username', 'unknown')}")
+            logger.info(f"✅ Continuous engine started by user: {getattr(current_user, 'email', 'unknown')}")
             return JSONResponse(content={"success": True, "message": "Continuous engine started"})
         else:
             raise HTTPException(status_code=400, detail=result["message"])
@@ -638,7 +639,7 @@ async def start_continuous_engine(current_user: Dict = Depends(get_current_activ
 
 
 @decter_router.post("/engine/continuous/stop")
-async def stop_continuous_engine(current_user: Dict = Depends(get_current_active_user)):
+async def stop_continuous_engine(current_user: User = Depends(get_current_active_user)):
     """Stop the continuous monitoring engine"""
     try:
         # Update engine config to disable continuous engine
@@ -647,7 +648,7 @@ async def stop_continuous_engine(current_user: Dict = Depends(get_current_active
         result = decter_controller.set_engine_config(config)
         
         if result["success"]:
-            logger.info(f"✅ Continuous engine stopped by user: {current_user.get('username', 'unknown')}")
+            logger.info(f"✅ Continuous engine stopped by user: {getattr(current_user, 'email', 'unknown')}")
             return JSONResponse(content={"success": True, "message": "Continuous engine stopped"})
         else:
             raise HTTPException(status_code=400, detail=result["message"])
@@ -657,7 +658,7 @@ async def stop_continuous_engine(current_user: Dict = Depends(get_current_active
 
 
 @decter_router.post("/engine/decision/start")
-async def start_decision_engine(current_user: Dict = Depends(get_current_active_user)):
+async def start_decision_engine(current_user: User = Depends(get_current_active_user)):
     """Start the decision/recovery engine"""
     try:
         # Update engine config to enable decision engine
@@ -666,7 +667,7 @@ async def start_decision_engine(current_user: Dict = Depends(get_current_active_
         result = decter_controller.set_engine_config(config)
         
         if result["success"]:
-            logger.info(f"✅ Decision engine started by user: {current_user.get('username', 'unknown')}")
+            logger.info(f"✅ Decision engine started by user: {getattr(current_user, 'email', 'unknown')}")
             return JSONResponse(content={"success": True, "message": "Decision engine started"})
         else:
             raise HTTPException(status_code=400, detail=result["message"])
@@ -676,7 +677,7 @@ async def start_decision_engine(current_user: Dict = Depends(get_current_active_
 
 
 @decter_router.post("/engine/decision/stop")
-async def stop_decision_engine(current_user: Dict = Depends(get_current_active_user)):
+async def stop_decision_engine(current_user: User = Depends(get_current_active_user)):
     """Stop the decision/recovery engine"""
     try:
         # Update engine config to disable decision engine
@@ -685,7 +686,7 @@ async def stop_decision_engine(current_user: Dict = Depends(get_current_active_u
         result = decter_controller.set_engine_config(config)
         
         if result["success"]:
-            logger.info(f"✅ Decision engine stopped by user: {current_user.get('username', 'unknown')}")
+            logger.info(f"✅ Decision engine stopped by user: {getattr(current_user, 'email', 'unknown')}")
             return JSONResponse(content={"success": True, "message": "Decision engine stopped"})
         else:
             raise HTTPException(status_code=400, detail=result["message"])
@@ -698,7 +699,7 @@ async def stop_decision_engine(current_user: Dict = Depends(get_current_active_u
 @decter_router.post("/trades/history")
 async def get_trade_history(
     history_req: TradeHistoryRequest,
-    current_user: Dict = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_user)
 ):
     """Get filtered trade history with pagination"""
     try:
@@ -725,7 +726,7 @@ async def get_trade_summary(
     end_date: Optional[str] = None,
     currency: Optional[str] = None,
     engine: Optional[str] = None,
-    current_user: Dict = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_user)
 ):
     """Get trade summary statistics"""
     try:
@@ -745,7 +746,7 @@ async def get_trade_summary(
 @decter_router.post("/trades/export")
 async def export_trades(
     export_req: ExportRequest,
-    current_user: Dict = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_user)
 ):
     """Export filtered trades to specified format"""
     try:
@@ -758,7 +759,7 @@ async def export_trades(
         )
         
         if result["success"]:
-            logger.info(f"✅ Trades exported by user: {current_user.get('username', 'unknown')} - Format: {export_req.format}")
+            logger.info(f"✅ Trades exported by user: {getattr(current_user, 'email', 'unknown')} - Format: {export_req.format}")
             return JSONResponse(content=result)
         else:
             raise HTTPException(status_code=400, detail=result["message"])
@@ -770,7 +771,7 @@ async def export_trades(
 @decter_router.get("/trades/daily-breakdown")
 async def get_daily_breakdown(
     days: int = 30,
-    current_user: Dict = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_user)
 ):
     """Get daily trading performance breakdown"""
     try:
