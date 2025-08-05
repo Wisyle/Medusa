@@ -414,7 +414,7 @@
                             <button class="btn btn-outline-danger w-100 mb-2" onclick="sendCommand('stop trading')">⏹️ Stop Trading</button>
                         </div>
                     </div>
-                    <button class="btn btn-outline-warning w-100" onclick="sendCommand('export')">📤 Export Data</button>
+                    <button class="btn btn-outline-warning w-100" onclick="exportData()">📤 Export Data</button>
                 </div>
             </div>
         </div>
@@ -542,12 +542,14 @@ document.addEventListener('DOMContentLoaded', function() {
     // Ensure functions are available globally
     window.controlDecter = controlDecter;
     window.sendCommand = sendCommand;
+    window.exportData = exportData;
     window.refreshAllData = refreshAllData;
     window.handleCurrencyChange = handleCurrencyChange;
     
     console.log('[DEBUG] Global functions attached:', {
         controlDecter: typeof window.controlDecter,
         sendCommand: typeof window.sendCommand,
+        exportData: typeof window.exportData,
         refreshAllData: typeof window.refreshAllData
     });
     
@@ -854,23 +856,143 @@ async function sendCommand(command) {
 }
 
 function showAlert(message, type) {
-    // Create and show bootstrap alert
+    console.log(`[DEBUG] Showing alert: ${message} (type: ${type})`);
+    
+    // Remove any existing alerts first
+    const existingAlerts = document.querySelectorAll('.custom-alert');
+    existingAlerts.forEach(alert => alert.remove());
+    
+    // Create and show custom alert with better styling
     const alertDiv = document.createElement('div');
-    alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
-    alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed custom-alert`;
+    alertDiv.style.cssText = `
+        top: 20px; 
+        right: 20px; 
+        z-index: 99999; 
+        min-width: 350px; 
+        max-width: 500px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        border-radius: 8px;
+        font-weight: 500;
+    `;
+    
+    // Set background color based on type
+    const colors = {
+        'success': '#d1edff',
+        'danger': '#f8d7da',
+        'warning': '#fff3cd',
+        'info': '#d1ecf1'
+    };
+    
+    const textColors = {
+        'success': '#0c5460',
+        'danger': '#721c24', 
+        'warning': '#856404',
+        'info': '#0c5460'
+    };
+    
+    alertDiv.style.backgroundColor = colors[type] || colors.info;
+    alertDiv.style.color = textColors[type] || textColors.info;
+    alertDiv.style.border = `1px solid ${colors[type] || colors.info}`;
+    
     alertDiv.innerHTML = `
-        ${message}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div style="flex: 1; padding-right: 10px;">
+                <strong>${type.charAt(0).toUpperCase() + type.slice(1)}:</strong> ${message}
+            </div>
+            <button type="button" class="btn-close" onclick="this.parentElement.parentElement.remove()" style="background: none; border: none; font-size: 20px; cursor: pointer; opacity: 0.7;">×</button>
+        </div>
     `;
     
     document.body.appendChild(alertDiv);
     
+    // Add animation
+    setTimeout(() => alertDiv.style.opacity = '1', 10);
+    
     // Auto dismiss after 5 seconds
     setTimeout(() => {
         if (alertDiv.parentNode) {
-            alertDiv.remove();
+            alertDiv.style.opacity = '0';
+            setTimeout(() => alertDiv.remove(), 300);
         }
     }, 5000);
+    
+    console.log(`[DEBUG] Alert created and added to DOM`);
+}
+
+async function exportData() {
+    console.log('[DEBUG] exportData function called');
+    
+    try {
+        // Check if we have authentication
+        const token = getAuthToken();
+        if (!token) {
+            showAlert('Please login to export data.', 'warning');
+            return;
+        }
+        
+        showLoading('Preparing data export...');
+        
+        // Call the export API endpoint
+        const response = await authenticatedFetch('/api/decter/trades/export', {
+            method: 'POST',
+            body: JSON.stringify({
+                format: 'csv',
+                start_date: null,
+                end_date: null,
+                currency: null,
+                engine: null
+            })
+        });
+        
+        console.log(`[DEBUG] Export response status: ${response.status}`);
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`[DEBUG] Export error response: ${errorText}`);
+            showAlert(`Export failed: HTTP ${response.status}`, 'danger');
+            return;
+        }
+        
+        const result = await response.json();
+        console.log(`[DEBUG] Export response result:`, result);
+        
+        if (result.success && result.file_path) {
+            // If the API returns a file path, try to download it
+            const downloadLink = document.createElement('a');
+            downloadLink.href = result.file_path;
+            downloadLink.download = result.filename || 'decter_trades_export.csv';
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+            
+            showAlert('Data exported successfully! Download should start automatically.', 'success');
+        } else if (result.success && result.data) {
+            // If the API returns data directly, create and download the file
+            const csvContent = result.data;
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', 'decter_trades_export.csv');
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            
+            showAlert('Data exported successfully! Download started.', 'success');
+        } else {
+            // Fallback: show the message and let user know data is ready
+            showAlert(result.message || 'Export completed, but no download data received.', 'info');
+        }
+        
+    } catch (error) {
+        console.error('[DEBUG] Error exporting data:', error);
+        showAlert(`Export error: ${error.message}`, 'danger');
+    } finally {
+        hideLoading();
+    }
 }
 
 function showLoading(message) {
@@ -1036,6 +1158,11 @@ window.controlDecter = window.controlDecter || function(action) {
 window.sendCommand = window.sendCommand || function(command) {
     console.error('[FALLBACK] sendCommand function not properly loaded');
     showAlert('Command functions not loaded. Please refresh the page.', 'danger');
+};
+
+window.exportData = window.exportData || function() {
+    console.error('[FALLBACK] exportData function not properly loaded');
+    showAlert('Export functions not loaded. Please refresh the page.', 'danger');
 };
 </script>
 {% endblock %}
