@@ -16,18 +16,38 @@
     <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
     <style>
         :root {
-            --primary-black: #0a0a0a;
-            --secondary-black: #121212;
+            /* Modern Black & White Theme */
+            --primary-black: #000000;
+            --secondary-black: #0f0f0f;
             --dark-gray: #1a1a1a;
-            --medium-gray: #2a2a2a;
+            --medium-gray: #2d2d2d;
             --light-gray: #404040;
+            --lighter-gray: #666666;
+            --border-gray: #333333;
             --white: #ffffff;
             --off-white: #f8f9fa;
-            --accent-blue: #0066ff;
-            --accent-gold: #ffd700;
-            --accent-cyan: #00d4ff;
-            --glow-blue: rgba(0, 102, 255, 0.3);
-            --glow-gold: rgba(255, 215, 0, 0.3);
+            --text-primary: #ffffff;
+            --text-secondary: #b3b3b3;
+            --text-muted: #808080;
+            
+            /* Accent Colors - Minimal & Professional */
+            --accent-primary: #ffffff;
+            --accent-secondary: #e5e5e5;
+            --accent-success: #00ff00;
+            --accent-warning: #ffaa00;
+            --accent-danger: #ff3333;
+            --accent-info: #00aaff;
+            
+            /* Shadows & Effects */
+            --shadow-primary: rgba(0, 0, 0, 0.5);
+            --shadow-light: rgba(0, 0, 0, 0.3);
+            --border-primary: rgba(255, 255, 255, 0.1);
+            --border-secondary: rgba(255, 255, 255, 0.05);
+            
+            /* Interactive States */
+            --hover-bg: rgba(255, 255, 255, 0.05);
+            --active-bg: rgba(255, 255, 255, 0.1);
+            --focus-ring: rgba(255, 255, 255, 0.25);
         }
         
         * {
@@ -35,12 +55,14 @@
         }
         
         body {
-            background: linear-gradient(135deg, var(--primary-black) 0%, var(--secondary-black) 50%, var(--dark-gray) 100%);
-            color: var(--white);
+            background: var(--primary-black);
+            color: var(--text-primary);
             font-family: 'Inter', sans-serif;
             min-height: 100vh;
             position: relative;
             overflow-x: hidden;
+            font-weight: 400;
+            line-height: 1.6;
         }
         
         /* Floating particles background */
@@ -82,59 +104,118 @@
         
         .sidebar {
             min-height: 100vh;
-            background: linear-gradient(145deg, var(--secondary-black) 0%, var(--dark-gray) 100%);
-            border-right: 1px solid var(--medium-gray);
-            box-shadow: 4px 0 20px rgba(0, 0, 0, 0.3);
-            backdrop-filter: blur(10px);
+            background: var(--secondary-black);
+            border-right: 1px solid var(--border-gray);
+            box-shadow: 2px 0 12px var(--shadow-light);
             position: relative;
+            z-index: 100;
         }
         
-        .sidebar::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            right: 0;
-            width: 2px;
-            height: 100%;
-            background: linear-gradient(180deg, var(--accent-blue), var(--accent-cyan));
-            box-shadow: 0 0 10px var(--glow-blue);
-        }
-        
-        .sidebar .nav-link {
-            color: rgba(255, 255, 255, 0.8);
-            border-radius: 12px;
-            margin: 4px 8px;
-            padding: 12px 16px;
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
-            backdrop-filter: blur(5px);
-            border: 1px solid transparent;
-            font-weight: 500;
-        }
-        
-        .sidebar .nav-link::before {
-            content: '';
-            position: absolute;
+        /* Top Navigation Bar */
+        .top-navbar {
+            height: 60px;
+            background: var(--secondary-black);
+            border-bottom: 1px solid var(--border-gray);
+            box-shadow: 0 2px 4px var(--shadow-light);
+            position: fixed;
             top: 0;
             left: 0;
             right: 0;
-            bottom: 0;
-            background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
-            border-radius: 12px;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-            z-index: -1;
+            z-index: 1030;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+        }
+        
+        .system-status {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent-success);
+            animation: pulse 2s infinite;
+        }
+        
+        .status-indicator.offline {
+            background: var(--accent-danger);
+            animation: none;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        
+        .theme-toggle {
+            background: none;
+            border: 1px solid var(--border-gray);
+            color: var(--text-secondary);
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .theme-toggle:hover {
+            background: var(--hover-bg);
+            color: var(--text-primary);
+        }
+        
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--medium-gray);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-primary);
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .user-avatar:hover {
+            background: var(--light-gray);
+        }
+        
+        .sidebar .nav-link {
+            color: var(--text-secondary);
+            border-radius: 8px;
+            margin: 2px 12px;
+            padding: 12px 16px;
+            transition: all 0.2s ease;
+            position: relative;
+            border: none;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 12px;
         }
         
         .sidebar .nav-link:hover, .sidebar .nav-link.active {
-            color: var(--white);
-            transform: translateX(8px) scale(1.02);
-            border-color: var(--accent-blue);
-            box-shadow: 0 8px 25px rgba(0, 102, 255, 0.2);
+            background: var(--hover-bg);
+            color: var(--text-primary);
         }
         
-        .sidebar .nav-link:hover::before, .sidebar .nav-link.active::before {
-            opacity: 0.1;
+        .sidebar .nav-link.active {
+            background: var(--active-bg);
+            border-left: 3px solid var(--accent-primary);
+            margin-left: 12px;
+            padding-left: 13px;
         }
         
         .logo-container {
@@ -193,24 +274,26 @@
         }
         .main-content {
             background: transparent;
-            min-height: 100vh;
+            min-height: calc(100vh - 60px);
             position: relative;
             z-index: 1;
+            margin-top: 60px;
+            padding: 24px;
+        }
+        
+        .sidebar {
+            padding-top: 60px;
         }
         
         .card {
-            border: 1px solid var(--medium-gray);
-            border-radius: 16px;
-            box-shadow: 
-                0 8px 32px rgba(0, 0, 0, 0.3),
-                0 0 0 1px rgba(255, 255, 255, 0.05),
-                inset 0 1px 0 rgba(255, 255, 255, 0.1);
-            background: linear-gradient(145deg, var(--secondary-black), var(--dark-gray));
-            color: var(--white);
-            backdrop-filter: blur(10px);
+            border: 1px solid var(--border-gray);
+            border-radius: 12px;
+            box-shadow: 0 4px 16px var(--shadow-light);
+            background: var(--secondary-black);
+            color: var(--text-primary);
             position: relative;
             overflow: hidden;
-            transition: all 0.3s ease;
+            transition: all 0.2s ease;
         }
         
         /* Override backdrop-filter for modals to prevent blur issues */
@@ -249,30 +332,18 @@
         
         .card:hover {
             transform: translateY(-2px);
-            box-shadow: 
-                0 12px 40px rgba(0, 0, 0, 0.4),
-                0 0 0 1px rgba(255, 255, 255, 0.1),
-                inset 0 1px 0 rgba(255, 255, 255, 0.15);
-        }
-        
-        .card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 1px;
-            background: linear-gradient(90deg, transparent, var(--accent-blue), transparent);
-            opacity: 0.6;
+            box-shadow: 0 8px 24px var(--shadow-primary);
+            border-color: var(--border-primary);
         }
         
         .card-header {
-            background: linear-gradient(135deg, var(--light-gray), var(--medium-gray));
-            border-bottom: 1px solid var(--medium-gray);
-            color: var(--white);
-            border-radius: 16px 16px 0 0;
+            background: var(--dark-gray);
+            border-bottom: 1px solid var(--border-gray);
+            color: var(--text-primary);
+            border-radius: 12px 12px 0 0;
             position: relative;
             font-weight: 600;
+            padding: 20px 24px;
         }
         .status-badge {
             font-size: 0.8em;
@@ -282,58 +353,46 @@
             color: var(--accent-blue);
         }
         .btn-primary {
-            background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
-            border: none;
-            color: var(--white);
-            border-radius: 12px;
+            background: var(--accent-primary);
+            border: 1px solid var(--border-gray);
+            color: var(--primary-black);
+            border-radius: 8px;
             padding: 12px 24px;
             font-weight: 600;
+            font-size: 14px;
             position: relative;
             overflow: hidden;
-            transition: all 0.3s ease;
-            box-shadow: 
-                0 4px 15px rgba(0, 102, 255, 0.3),
-                inset 0 1px 0 rgba(255, 255, 255, 0.2);
-        }
-        
-        .btn-primary::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-            transition: left 0.5s ease;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 8px var(--shadow-light);
         }
         
         .btn-primary:hover {
+            background: var(--accent-secondary);
             transform: translateY(-2px);
-            box-shadow: 
-                0 8px 25px rgba(0, 102, 255, 0.4),
-                inset 0 1px 0 rgba(255, 255, 255, 0.3);
+            box-shadow: 0 4px 16px var(--shadow-primary);
         }
         
-        .btn-primary:hover::before {
-            left: 100%;
+        .btn-primary:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 8px var(--shadow-light);
         }
         
         .btn-outline-primary {
-            color: var(--accent-blue);
-            border: 2px solid var(--accent-blue);
+            color: var(--text-primary);
+            border: 1px solid var(--border-gray);
             background: transparent;
-            border-radius: 12px;
+            border-radius: 8px;
             padding: 12px 24px;
-            font-weight: 600;
-            transition: all 0.3s ease;
+            font-weight: 500;
+            font-size: 14px;
+            transition: all 0.2s ease;
         }
         
         .btn-outline-primary:hover {
-            background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
-            border-color: var(--accent-cyan);
-            color: var(--white);
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(0, 102, 255, 0.3);
+            background: var(--hover-bg);
+            border-color: var(--border-primary);
+            color: var(--text-primary);
+            transform: translateY(-1px);
         }
         .text-primary {
             color: var(--accent-blue) !important;
@@ -359,17 +418,25 @@
             color: var(--white);
         }
         .form-control {
-            border: 1px solid var(--medium-gray);
-            background-color: var(--secondary-black);
-            color: var(--white);
+            border: 1px solid var(--border-gray);
+            background-color: var(--dark-gray);
+            color: var(--text-primary);
+            border-radius: 8px;
+            padding: 12px 16px;
+            font-size: 14px;
+            transition: all 0.2s ease;
         }
+        
         .form-control:focus {
-            background-color: var(--secondary-black);
-            color: var(--white);
+            background-color: var(--dark-gray);
+            color: var(--text-primary);
+            border-color: var(--border-primary);
+            box-shadow: 0 0 0 0.2rem var(--focus-ring);
+            outline: none;
         }
-        .form-control:focus {
-            border-color: var(--accent-blue);
-            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+        
+        .form-control::placeholder {
+            color: var(--text-muted);
         }
         
         .form-label {
@@ -537,6 +604,39 @@
     <!-- Floating particles background -->
     <div class="particles-bg" id="particles-bg"></div>
     
+    <!-- Top Navigation Bar -->
+    {% if current_user %}
+    <nav class="top-navbar">
+        <div class="system-status">
+            <div class="status-indicator" id="systemStatus"></div>
+            <span class="text-sm font-medium">System Online</span>
+        </div>
+        
+        <div class="d-flex align-items-center gap-3">
+            <h5 class="mb-0 font-weight-bold text-white">LIGHTHOUSE</h5>
+        </div>
+        
+        <div class="user-profile">
+            <button class="theme-toggle" onclick="toggleTheme()" title="Toggle Theme">
+                <i class="fas fa-moon"></i>
+            </button>
+            
+            <div class="dropdown">
+                <div class="user-avatar dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                    {{ current_user.username[0].upper() }}
+                </div>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item" href="/account"><i class="fas fa-user-cog me-2"></i>Account Settings</a></li>
+                    <li><a class="dropdown-item" href="#" onclick="openCredentialsModal()"><i class="fas fa-key me-2"></i>Credentials</a></li>
+                    <li><a class="dropdown-item" href="/setup-2fa"><i class="fas fa-shield-alt me-2"></i>2FA Security</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="#" onclick="document.querySelector('form[action=\"/auth/logout\"]').submit()"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+    {% endif %}
+    
     <div class="container-fluid">
         <div class="row">
             <!-- Sidebar - Only show when user is authenticated server-side -->
@@ -682,6 +782,123 @@
         </div>
     </div>
 
+    <!-- Credentials Management Modal -->
+    <div class="modal fade" id="credentialsModal" tabindex="-1" aria-labelledby="credentialsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="credentialsModalLabel">
+                        <i class="fas fa-key me-2"></i>Credentials Management
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="twofaWarning" class="alert alert-warning d-none">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        You must enable Two-Factor Authentication to access credentials management.
+                        <a href="/setup-2fa" class="btn btn-sm btn-warning ms-2">Setup 2FA</a>
+                    </div>
+                    
+                    <div id="credentialsForm" class="row">
+                        <div class="col-md-6">
+                            <div class="card mb-3">
+                                <div class="card-header">
+                                    <h6 class="mb-0"><i class="fab fa-telegram me-2"></i>Telegram Configuration</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label class="form-label">Bot Token</label>
+                                        <input type="password" class="form-control" id="telegramBotToken" placeholder="Enter Telegram bot token">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Group/Chat ID</label>
+                                        <input type="text" class="form-control" id="telegramGroupId" placeholder="Enter group or chat ID">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Topic ID (Optional)</label>
+                                        <input type="text" class="form-control" id="telegramTopicId" placeholder="Enter topic ID for forum groups">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="card mb-3">
+                                <div class="card-header">
+                                    <h6 class="mb-0"><i class="fas fa-chart-line me-2"></i>Deriv API Configuration</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label class="form-label">Application ID</label>
+                                        <input type="text" class="form-control" id="derivAppId" placeholder="Enter Deriv application ID">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">API Token</label>
+                                        <input type="password" class="form-control" id="derivApiToken" placeholder="Enter Deriv API token">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="mb-0"><i class="fas fa-exchange-alt me-2"></i>Exchange API Keys</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-6">
+                                            <div class="mb-3">
+                                                <label class="form-label">API Key</label>
+                                                <input type="password" class="form-control" id="exchangeApiKey" placeholder="Exchange API key">
+                                            </div>
+                                        </div>
+                                        <div class="col-6">
+                                            <div class="mb-3">
+                                                <label class="form-label">Secret Key</label>
+                                                <input type="password" class="form-control" id="exchangeSecretKey" placeholder="Exchange secret key">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="saveCredentials()">
+                        <i class="fas fa-save me-2"></i>Save Credentials
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2FA Verification Modal -->
+    <div class="modal fade" id="twofaModal" tabindex="-1" aria-labelledby="twofaModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="twofaModalLabel">
+                        <i class="fas fa-shield-alt me-2"></i>Two-Factor Authentication
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted">Enter your 6-digit authentication code to proceed:</p>
+                    <div class="mb-3">
+                        <input type="text" class="form-control text-center" id="twofaCode" placeholder="000000" maxlength="6" style="font-size: 24px; letter-spacing: 8px;">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="verifyTwoFA()">
+                        <i class="fas fa-check me-2"></i>Verify
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
@@ -760,6 +977,177 @@
                 fallbackImage.style.display = 'none';
                 lottiePlayer.style.display = 'block';
             }
+        }
+
+        // 2FA and Credentials Management
+        let pendingAction = null;
+        
+        function openCredentialsModal() {
+            // Check if 2FA is enabled first
+            fetch('/api/auth/2fa/status')
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.enabled) {
+                        document.getElementById('twofaWarning').classList.remove('d-none');
+                        document.getElementById('credentialsForm').classList.add('d-none');
+                    } else {
+                        document.getElementById('twofaWarning').classList.add('d-none');
+                        document.getElementById('credentialsForm').classList.remove('d-none');
+                        loadCredentials();
+                    }
+                    new bootstrap.Modal(document.getElementById('credentialsModal')).show();
+                })
+                .catch(error => {
+                    console.error('Error checking 2FA status:', error);
+                    showNotification('Error checking 2FA status', 'error');
+                });
+        }
+        
+        function requireTwoFA(action, callback) {
+            pendingAction = callback;
+            new bootstrap.Modal(document.getElementById('twofaModal')).show();
+        }
+        
+        function verifyTwoFA() {
+            const code = document.getElementById('twofaCode').value;
+            
+            if (!code || code.length !== 6) {
+                showNotification('Please enter a valid 6-digit code', 'warning');
+                return;
+            }
+            
+            fetch('/api/auth/2fa/verify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ code: code })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    bootstrap.Modal.getInstance(document.getElementById('twofaModal')).hide();
+                    document.getElementById('twofaCode').value = '';
+                    
+                    if (pendingAction) {
+                        pendingAction();
+                        pendingAction = null;
+                    }
+                } else {
+                    showNotification('Invalid 2FA code', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error verifying 2FA:', error);
+                showNotification('Error verifying 2FA code', 'error');
+            });
+        }
+        
+        function loadCredentials() {
+            // Load existing credentials (masked for security)
+            fetch('/api/credentials')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.telegram) {
+                        if (data.telegram.group_id) document.getElementById('telegramGroupId').value = data.telegram.group_id;
+                        if (data.telegram.topic_id) document.getElementById('telegramTopicId').value = data.telegram.topic_id;
+                    }
+                    if (data.deriv) {
+                        if (data.deriv.app_id) document.getElementById('derivAppId').value = data.deriv.app_id;
+                    }
+                })
+                .catch(error => console.error('Error loading credentials:', error));
+        }
+        
+        function saveCredentials() {
+            const credentials = {
+                telegram: {
+                    bot_token: document.getElementById('telegramBotToken').value,
+                    group_id: document.getElementById('telegramGroupId').value,
+                    topic_id: document.getElementById('telegramTopicId').value
+                },
+                deriv: {
+                    app_id: document.getElementById('derivAppId').value,
+                    api_token: document.getElementById('derivApiToken').value
+                },
+                exchange: {
+                    api_key: document.getElementById('exchangeApiKey').value,
+                    secret_key: document.getElementById('exchangeSecretKey').value
+                }
+            };
+            
+            fetch('/api/credentials', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(credentials)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification('Credentials saved successfully', 'success');
+                    bootstrap.Modal.getInstance(document.getElementById('credentialsModal')).hide();
+                } else {
+                    showNotification('Failed to save credentials: ' + data.message, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error saving credentials:', error);
+                showNotification('Error saving credentials', 'error');
+            });
+        }
+        
+        function toggleTheme() {
+            // Theme toggle functionality (placeholder)
+            document.body.classList.toggle('light-theme');
+            const themeIcon = document.querySelector('.theme-toggle i');
+            themeIcon.className = document.body.classList.contains('light-theme') 
+                ? 'fas fa-sun' 
+                : 'fas fa-moon';
+        }
+        
+        function showNotification(message, type = 'info') {
+            // Create notification
+            const notification = document.createElement('div');
+            notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+            notification.style.cssText = 'top: 80px; right: 20px; z-index: 9999; max-width: 400px;';
+            notification.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            // Auto remove after 5 seconds
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.remove();
+                }
+            }, 5000);
+        }
+        
+        // System status monitoring
+        function updateSystemStatus() {
+            fetch('/api/system/status')
+                .then(response => response.json())
+                .then(data => {
+                    const statusIndicator = document.getElementById('systemStatus');
+                    if (statusIndicator) {
+                        statusIndicator.className = data.online ? 'status-indicator' : 'status-indicator offline';
+                        statusIndicator.parentElement.querySelector('span').textContent = 
+                            data.online ? 'System Online' : 'System Offline';
+                    }
+                })
+                .catch(() => {
+                    const statusIndicator = document.getElementById('systemStatus');
+                    if (statusIndicator) {
+                        statusIndicator.className = 'status-indicator offline';
+                        statusIndicator.parentElement.querySelector('span').textContent = 'System Offline';
+                    }
+                });
+        }
+        
+        // Update system status every 30 seconds
+        if (document.getElementById('systemStatus')) {
+            updateSystemStatus();
+            setInterval(updateSystemStatus, 30000);
         }
     </script>
     {% block scripts %}{% endblock %}

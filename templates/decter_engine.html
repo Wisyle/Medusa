@@ -4,130 +4,245 @@
 
 {% block head %}
 <style>
-    .decter-card {
-        background: linear-gradient(135deg, #1e3c72, #2a5298);
-        border: none;
-        border-radius: 15px;
-        color: white;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    .decter-header {
+        background: var(--secondary-black);
+        border: 1px solid var(--border-gray);
+        border-radius: 12px;
+        padding: 32px;
+        margin-bottom: 32px;
+        box-shadow: 0 4px 16px var(--shadow-light);
     }
     
     .status-badge {
-        font-size: 0.9rem;
-        padding: 0.5rem 1rem;
+        font-size: 12px;
+        font-weight: 600;
+        padding: 8px 16px;
         border-radius: 20px;
         text-transform: uppercase;
-        font-weight: bold;
         letter-spacing: 0.5px;
+        border: 1px solid;
     }
     
-    .status-online { background: linear-gradient(45deg, #28a745, #20c997); }
-    .status-trading { background: linear-gradient(45deg, #007bff, #17a2b8); }
-    .status-offline { background: linear-gradient(45deg, #6c757d, #495057); }
-    .status-error { background: linear-gradient(45deg, #dc3545, #e74c3c); }
+    .status-online { 
+        background: var(--accent-success);
+        color: var(--primary-black);
+        border-color: var(--accent-success);
+    }
+    .status-trading { 
+        background: var(--accent-info);
+        color: var(--primary-black);
+        border-color: var(--accent-info);
+    }
+    .status-offline { 
+        background: var(--medium-gray);
+        color: var(--text-primary);
+        border-color: var(--border-gray);
+    }
+    .status-error { 
+        background: var(--accent-danger);
+        color: var(--white);
+        border-color: var(--accent-danger);
+    }
     
     .metric-card {
-        background: rgba(255, 255, 255, 0.05);
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 10px;
-        padding: 1.5rem;
-        margin-bottom: 1rem;
-        color: white;
+        background: var(--secondary-black);
+        border: 1px solid var(--border-gray);
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 24px;
+        transition: all 0.2s ease;
+    }
+    
+    .metric-card:hover {
+        border-color: var(--border-primary);
+        transform: translateY(-2px);
     }
     
     .metric-value {
-        font-size: 2rem;
-        font-weight: bold;
-        color: #00ff88;
+        font-size: 32px;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 8px;
     }
     
     .metric-label {
-        font-size: 0.9rem;
-        opacity: 0.8;
+        font-size: 14px;
+        color: var(--text-secondary);
         text-transform: uppercase;
         letter-spacing: 0.5px;
+        font-weight: 500;
+    }
+    
+    .control-panel {
+        background: var(--secondary-black);
+        border: 1px solid var(--border-gray);
+        border-radius: 12px;
+        padding: 32px;
+        margin-bottom: 32px;
+        text-align: center;
     }
     
     .control-btn {
-        border-radius: 25px;
-        padding: 0.7rem 2rem;
-        font-weight: bold;
-        text-transform: uppercase;
+        border-radius: 8px;
+        padding: 12px 32px;
+        font-weight: 600;
+        font-size: 14px;
         letter-spacing: 0.5px;
-        transition: all 0.3s ease;
-        border: none;
-        margin: 0.5rem;
+        transition: all 0.2s ease;
+        border: 1px solid;
+        margin: 0 8px;
+        min-width: 140px;
     }
     
     .btn-start { 
-        background: linear-gradient(45deg, #28a745, #20c997);
-        color: white;
+        background: var(--accent-success);
+        color: var(--primary-black);
+        border-color: var(--accent-success);
     }
     
     .btn-stop { 
-        background: linear-gradient(45deg, #dc3545, #e74c3c);
-        color: white;
+        background: var(--accent-danger);
+        color: var(--white);
+        border-color: var(--accent-danger);
     }
     
     .btn-restart { 
-        background: linear-gradient(45deg, #ffc107, #fd7e14);
-        color: white;
+        background: var(--accent-warning);
+        color: var(--primary-black);
+        border-color: var(--accent-warning);
     }
     
-    .control-btn:hover {
+    .control-btn:hover:not(:disabled) {
         transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        box-shadow: 0 4px 16px var(--shadow-light);
+        opacity: 0.9;
     }
     
-    .config-form {
-        background: rgba(255, 255, 255, 0.05);
-        backdrop-filter: blur(10px);
-        border-radius: 15px;
-        padding: 2rem;
-        border: 1px solid rgba(255, 255, 255, 0.1);
+    .control-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
     }
     
-    .form-control {
-        background: rgba(255, 255, 255, 0.1);
-        border: 1px solid rgba(255, 255, 255, 0.2);
+    .config-section {
+        margin-bottom: 32px;
+    }
+    
+    .section-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 20px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid var(--border-gray);
+    }
+    
+    .section-title {
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin: 0;
+    }
+    
+    .form-group {
+        margin-bottom: 20px;
+    }
+    
+    .form-group label {
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--text-secondary);
+        margin-bottom: 8px;
+        display: block;
+    }
+    
+    .quick-commands {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 16px;
+        margin-top: 24px;
+    }
+    
+    .quick-cmd-btn {
+        background: var(--hover-bg);
+        border: 1px solid var(--border-gray);
         border-radius: 8px;
-        color: white;
-        padding: 0.7rem 1rem;
+        padding: 16px;
+        color: var(--text-primary);
+        text-decoration: none;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-weight: 500;
     }
     
-    .form-control:focus {
-        background: rgba(255, 255, 255, 0.15);
-        border-color: #00ff88;
-        color: white;
-        box-shadow: 0 0 0 0.2rem rgba(0, 255, 136, 0.25);
-    }
-    
-    .form-control::placeholder {
-        color: rgba(255, 255, 255, 0.6);
+    .quick-cmd-btn:hover {
+        background: var(--active-bg);
+        border-color: var(--border-primary);
+        color: var(--text-primary);
+        transform: translateY(-2px);
     }
     
     .trade-row {
-        background: rgba(255, 255, 255, 0.05);
+        background: var(--secondary-black);
+        border: 1px solid var(--border-gray);
         border-radius: 8px;
-        margin-bottom: 0.5rem;
-        padding: 0.8rem;
+        margin-bottom: 12px;
+        padding: 16px;
         border-left: 4px solid transparent;
+        transition: all 0.2s ease;
     }
     
-    .trade-win { border-left-color: #28a745; }
-    .trade-loss { border-left-color: #dc3545; }
+    .trade-row:hover {
+        border-color: var(--border-primary);
+    }
+    
+    .trade-win { 
+        border-left-color: var(--accent-success);
+        background: var(--secondary-black);
+    }
+    .trade-loss { 
+        border-left-color: var(--accent-danger);
+        background: var(--secondary-black);
+    }
     
     .log-container {
-        background: #1a1a1a;
+        background: var(--primary-black);
+        border: 1px solid var(--border-gray);
         border-radius: 8px;
-        padding: 1rem;
-        max-height: 300px;
+        padding: 20px;
+        max-height: 400px;
         overflow-y: auto;
-        font-family: 'Courier New', monospace;
-        font-size: 0.85rem;
-        color: #00ff88;
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        font-family: 'JetBrains Mono', 'Courier New', monospace;
+        font-size: 13px;
+        color: var(--accent-success);
+        line-height: 1.6;
+    }
+    
+    .empty-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 40px 20px;
+        color: var(--text-muted);
+        text-align: center;
+    }
+    
+    .empty-state i {
+        font-size: 48px;
+        margin-bottom: 16px;
+        opacity: 0.3;
+    }
+    
+    .empty-state h6 {
+        margin-bottom: 8px;
+        color: var(--text-secondary);
+    }
+    
+    .empty-state p {
+        font-size: 14px;
+        margin: 0;
     }
     
     .refresh-btn {
@@ -154,73 +269,78 @@
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4">
+<div class="container-fluid">
     <!-- Header -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="decter-card card p-4">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h2 class="mb-0">🤖 Decter 001 Engine</h2>
-                        <p class="mb-0 opacity-75">Advanced Deriv Trading Bot with AI Decision Engine</p>
-                    </div>
-                    <div class="text-end">
-                        <span id="statusBadge" class="status-badge status-offline">OFFLINE</span>
-                        <div class="mt-2">
-                            <small id="uptimeDisplay" class="opacity-75">Uptime: --</small>
-                        </div>
-                    </div>
+    <div class="decter-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="mb-2 d-flex align-items-center gap-3">
+                    <i class="fas fa-robot"></i>
+                    Decter Engine
+                </h1>
+                <p class="mb-0 text-secondary">Advanced AI-powered trading automation system</p>
+            </div>
+            <div class="text-end">
+                <div class="d-flex align-items-center gap-3 mb-2">
+                    <span id="statusBadge" class="status-badge status-offline">OFFLINE</span>
+                    <button class="btn btn-outline-primary btn-sm" onclick="openCredentialsModal()">
+                        <i class="fas fa-key me-2"></i>Credentials
+                    </button>
+                </div>
+                <div class="text-secondary">
+                    <small id="uptimeDisplay">Uptime: --</small>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Control Panel -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0">🎮 Control Panel</h5>
-                </div>
-                <div class="card-body text-center">
-                    <button id="startBtn" class="control-btn btn-start" onclick="controlDecter('start')">
-                        ▶️ Start Engine
-                    </button>
-                    <button id="stopBtn" class="control-btn btn-stop" onclick="controlDecter('stop')">
-                        ⏹️ Stop Engine
-                    </button>
-                    <button id="restartBtn" class="control-btn btn-restart" onclick="controlDecter('restart')">
-                        🔄 Restart Engine
-                    </button>
-                </div>
+    <div class="control-panel">
+        <div class="section-header">
+            <h2 class="section-title">Engine Controls</h2>
+            <div class="d-flex gap-2">
+                <button id="startBtn" class="control-btn btn-start" onclick="controlDecter('start')">
+                    <i class="fas fa-play me-2"></i>Start
+                </button>
+                <button id="stopBtn" class="control-btn btn-stop" onclick="controlDecter('stop')">
+                    <i class="fas fa-stop me-2"></i>Stop
+                </button>
+                <button id="restartBtn" class="control-btn btn-restart" onclick="controlDecter('restart')">
+                    <i class="fas fa-redo me-2"></i>Restart
+                </button>
             </div>
         </div>
     </div>
 
     <!-- Performance Metrics -->
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="metric-card">
-                <div class="metric-value" id="totalTrades">--</div>
-                <div class="metric-label">Total Trades</div>
-            </div>
+    <div class="config-section">
+        <div class="section-header">
+            <h2 class="section-title">Performance Overview</h2>
         </div>
-        <div class="col-md-3">
-            <div class="metric-card">
-                <div class="metric-value" id="winRate">--%</div>
-                <div class="metric-label">Win Rate</div>
+        <div class="row">
+            <div class="col-md-3">
+                <div class="metric-card text-center">
+                    <div class="metric-value" id="totalTrades">--</div>
+                    <div class="metric-label">Total Trades</div>
+                </div>
             </div>
-        </div>
-        <div class="col-md-3">
-            <div class="metric-card">
-                <div class="metric-value" id="netPnL">--</div>
-                <div class="metric-label">Net P&L (XRP)</div>
+            <div class="col-md-3">
+                <div class="metric-card text-center">
+                    <div class="metric-value" id="winRate">--%</div>
+                    <div class="metric-label">Win Rate</div>
+                </div>
             </div>
-        </div>
-        <div class="col-md-3">
-            <div class="metric-card">
-                <div class="metric-value" id="growthRate">--%</div>
-                <div class="metric-label">Growth Rate</div>
+            <div class="col-md-3">
+                <div class="metric-card text-center">
+                    <div class="metric-value" id="netPnL">--</div>
+                    <div class="metric-label">Net P&L (XRP)</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card text-center">
+                    <div class="metric-value" id="growthRate">--%</div>
+                    <div class="metric-label">Growth Rate</div>
+                </div>
             </div>
         </div>
     </div>
@@ -230,19 +350,21 @@
         <div class="col-md-6">
             <div class="card mb-4">
                 <div class="card-header">
-                    <h5 class="mb-0">⚙️ Trading Parameters</h5>
+                    <div class="section-header">
+                        <h2 class="section-title">Trading Parameters</h2>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <form id="configForm" class="config-form">
+                <div class="card-body p-4">
+                    <form id="configForm">
                         <div class="row">
                             <div class="col-md-6">
-                                <div class="mb-3">
+                                <div class="form-group">
                                     <label class="form-label">Stake Amount (XRP)</label>
                                     <input type="number" class="form-control" name="stake" step="0.1" min="0.4" placeholder="0.4" required>
                                 </div>
                             </div>
                             <div class="col-md-6">
-                                <div class="mb-3">
+                                <div class="form-group">
                                     <label class="form-label">Growth Rate (%)</label>
                                     <select class="form-control" name="growth_rate" required>
                                         <option value="1">1%</option>
@@ -257,13 +379,13 @@
                         
                         <div class="row">
                             <div class="col-md-6">
-                                <div class="mb-3">
+                                <div class="form-group">
                                     <label class="form-label">Take Profit (%)</label>
                                     <input type="number" class="form-control" name="take_profit" step="0.1" min="1" placeholder="15" required>
                                 </div>
                             </div>
                             <div class="col-md-6">
-                                <div class="mb-3">
+                                <div class="form-group">
                                     <label class="form-label">Index</label>
                                     <select class="form-control" name="index" required>
                                         <option value="R_10">R_10</option>
@@ -283,7 +405,7 @@
                         
                         <div class="row">
                             <div class="col-md-6">
-                                <div class="mb-3">
+                                <div class="form-group">
                                     <label class="form-label">Currency</label>
                                     <select id="currencySelect" class="form-control" name="currency" required onchange="handleCurrencyChange(this.value)">
                                         <option value="XRP">XRP</option>
@@ -296,104 +418,21 @@
                                 </div>
                             </div>
                             <div class="col-md-6">
-                                <div class="mb-3">
+                                <div class="form-group">
                                     <label class="form-label">Max Loss Amount</label>
                                     <input type="number" class="form-control" name="max_loss_amount" step="0.1" min="1" placeholder="100" required>
                                 </div>
                             </div>
                         </div>
                         
-                        <div class="mb-3">
+                        <div class="form-group">
                             <label class="form-label">Max Win Amount</label>
                             <input type="number" class="form-control" name="max_win_amount" step="0.1" min="1" placeholder="200" required>
                         </div>
                         
-                        <button type="submit" class="btn btn-primary w-100">💾 Save Configuration</button>
-                    </form>
-                </div>
-            </div>
-
-            <!-- Credentials Configuration -->
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0">🔐 API Credentials</h5>
-                </div>
-                <div class="card-body">
-                    <form id="credentialsForm" class="config-form">
-                        <!-- Telegram Configuration -->
-                        <h6 class="mb-3 text-warning">📱 Telegram Configuration</h6>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">Bot Token</label>
-                                    <input type="password" class="form-control" name="telegram_bot_token" placeholder="Enter Telegram bot token" required>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">Group/Chat ID</label>
-                                    <input type="text" class="form-control" name="telegram_group_id" placeholder="Enter group or chat ID" required>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Topic ID (Optional)</label>
-                            <input type="text" class="form-control" name="telegram_topic_id" placeholder="Enter topic ID for forum groups">
-                        </div>
-
-                        <!-- Deriv API Configuration -->
-                        <h6 class="mb-3 text-info">🏦 Deriv API Configuration</h6>
-                        <div class="mb-3">
-                            <label class="form-label">Application ID</label>
-                            <input type="text" class="form-control" name="deriv_app_id" placeholder="Enter Deriv application ID" required>
-                        </div>
-                        
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">XRP API Token</label>
-                                    <input type="password" class="form-control" name="xrp_api_token" placeholder="XRP trading token">
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">BTC API Token</label>
-                                    <input type="password" class="form-control" name="btc_api_token" placeholder="BTC trading token">
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">ETH API Token</label>
-                                    <input type="password" class="form-control" name="eth_api_token" placeholder="ETH trading token">
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">LTC API Token</label>
-                                    <input type="password" class="form-control" name="ltc_api_token" placeholder="LTC trading token">
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">USDT API Token</label>
-                                    <input type="password" class="form-control" name="usdt_api_token" placeholder="USDT trading token">
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">USD API Token</label>
-                                    <input type="password" class="form-control" name="usd_api_token" placeholder="USD trading token">
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <button type="submit" class="btn btn-warning w-100">🔒 Save Credentials</button>
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-save me-2"></i>Save Configuration
+                        </button>
                     </form>
                 </div>
             </div>
@@ -401,20 +440,33 @@
             <!-- Quick Commands -->
             <div class="card">
                 <div class="card-header">
-                    <h5 class="mb-0">📱 Quick Commands</h5>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-6">
-                            <button class="btn btn-outline-primary w-100 mb-2" onclick="sendCommand('status')">📊 Status</button>
-                            <button class="btn btn-outline-info w-100 mb-2" onclick="sendCommand('history')">📜 History</button>
-                        </div>
-                        <div class="col-6">
-                            <button class="btn btn-outline-success w-100 mb-2" onclick="sendCommand('start trading')">▶️ Start Trading</button>
-                            <button class="btn btn-outline-danger w-100 mb-2" onclick="sendCommand('stop trading')">⏹️ Stop Trading</button>
-                        </div>
+                    <div class="section-header">
+                        <h2 class="section-title">Quick Commands</h2>
                     </div>
-                    <button class="btn btn-outline-warning w-100" onclick="exportData()">📤 Export Data</button>
+                </div>
+                <div class="card-body p-4">
+                    <div class="quick-commands">
+                        <button class="quick-cmd-btn" onclick="sendCommand('status')">
+                            <i class="fas fa-chart-bar"></i>
+                            <span>Status Report</span>
+                        </button>
+                        <button class="quick-cmd-btn" onclick="sendCommand('history')">
+                            <i class="fas fa-history"></i>
+                            <span>Trade History</span>
+                        </button>
+                        <button class="quick-cmd-btn" onclick="sendCommand('start trading')">
+                            <i class="fas fa-play-circle"></i>
+                            <span>Start Trading</span>
+                        </button>
+                        <button class="quick-cmd-btn" onclick="sendCommand('stop trading')">
+                            <i class="fas fa-stop-circle"></i>
+                            <span>Stop Trading</span>
+                        </button>
+                        <button class="quick-cmd-btn" onclick="exportData()">
+                            <i class="fas fa-download"></i>
+                            <span>Export Data</span>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -424,12 +476,24 @@
             <!-- Recent Trades -->
             <div class="card mb-4">
                 <div class="card-header">
-                    <h5 class="mb-0">📈 Recent Trades</h5>
+                    <div class="section-header">
+                        <h2 class="section-title">Recent Trades</h2>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-outline-primary" onclick="refreshTrades()">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-primary" onclick="exportTrades()">
+                                <i class="fas fa-download"></i>
+                            </button>
+                        </div>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <div id="tradesContainer" style="max-height: 300px; overflow-y: auto;">
-                        <div class="text-center text-muted">
-                            <p>No trades available</p>
+                <div class="card-body p-4">
+                    <div id="tradesContainer" style="max-height: 350px; overflow-y: auto;">
+                        <div class="empty-state">
+                            <i class="fas fa-chart-line"></i>
+                            <h6>No Recent Trades</h6>
+                            <p>Trades will appear here once the engine starts executing orders</p>
                         </div>
                     </div>
                 </div>
@@ -438,11 +502,25 @@
             <!-- System Logs -->
             <div class="card">
                 <div class="card-header">
-                    <h5 class="mb-0">📋 System Logs</h5>
+                    <div class="section-header">
+                        <h2 class="section-title">System Logs</h2>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-outline-primary" onclick="refreshLogs()">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-primary" onclick="clearLogs()">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
                 </div>
-                <div class="card-body">
+                <div class="card-body p-4">
                     <div id="logsContainer" class="log-container">
-                        <div class="text-center">Loading logs...</div>
+                        <div class="empty-state">
+                            <i class="fas fa-terminal"></i>
+                            <h6>No System Logs</h6>
+                            <p>System activity logs will be displayed here</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -450,10 +528,12 @@
     </div>
 </div>
 
-<!-- Auto-refresh button -->
-<button class="refresh-btn" onclick="refreshAllData()" title="Refresh Data">
-    🔄
-</button>
+<!-- Floating Action Button -->
+<div class="position-fixed" style="bottom: 32px; right: 32px; z-index: 1000;">
+    <button class="btn btn-primary rounded-circle" onclick="refreshAllData()" title="Refresh All Data" style="width: 56px; height: 56px;">
+        <i class="fas fa-sync-alt"></i>
+    </button>
+</div>
 
 <!-- Scripts -->
 <script>
@@ -1164,5 +1244,36 @@ window.exportData = window.exportData || function() {
     console.error('[FALLBACK] exportData function not properly loaded');
     showAlert('Export functions not loaded. Please refresh the page.', 'danger');
 };
+
+// Additional UI helper functions
+function refreshTrades() {
+    updateTrades();
+    showAlert('Trades refreshed', 'success');
+}
+
+function refreshLogs() {
+    updateLogs();
+    showAlert('Logs refreshed', 'success');
+}
+
+function clearLogs() {
+    if (confirm('Are you sure you want to clear all logs?')) {
+        const response = authenticatedFetch('/api/decter/logs/clear', { method: 'POST' })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('logsContainer').innerHTML = '<div class="empty-state"><i class="fas fa-terminal"></i><h6>No System Logs</h6><p>System activity logs will be displayed here</p></div>';
+                    showAlert('Logs cleared', 'success');
+                } else {
+                    showAlert('Failed to clear logs', 'danger');
+                }
+            })
+            .catch(error => showAlert('Error clearing logs', 'danger'));
+    }
+}
+
+function exportTrades() {
+    exportData();
+}
 </script>
 {% endblock %}
