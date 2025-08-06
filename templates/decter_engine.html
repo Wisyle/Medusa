@@ -388,7 +388,7 @@
                     </div>
                     <div>
                         <h1 class="mb-1" style="font-family: 'Orbitron', monospace; font-weight: 700; font-size: 2rem;">DECTER ENGINE</h1>
-                        <p class="mb-0 text-secondary" style="font-size: 14px;">Advanced AI-powered trading automation system</p>
+                        <p class="mb-0 text-secondary" style="font-size: 14px;">First entity of the Decter class by DR.Decatalyst</p>
                     </div>
                 </div>
             </div>
@@ -400,7 +400,7 @@
                             <div class="status-indicator" id="statusIndicator" style="width: 8px; height: 8px; border-radius: 50%; background: var(--accent-danger);"></div>
                         </div>
                         <div class="mb-2">
-                            <span id="statusBadge" class="status-badge status-offline">OFFLINE</span>
+                            <span id="statusBadge" class="status-badge status-offline">Decter 001</span>
                         </div>
                         <div class="d-flex justify-content-between text-secondary" style="font-size: 11px;">
                             <span id="uptimeDisplay">Uptime: --</span>
@@ -1580,19 +1580,31 @@ function refreshLogs() {
     showAlert('Logs refreshed', 'success');
 }
 
-function clearLogs() {
+async function clearLogs() {
     if (confirm('Are you sure you want to clear all logs?')) {
-        const response = authenticatedFetch('/api/decter/logs/clear', { method: 'POST' })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    document.getElementById('logsContainer').innerHTML = '<div class="empty-state"><i class="fas fa-terminal"></i><h6>No System Logs</h6><p>System activity logs will be displayed here</p></div>';
-                    showAlert('Logs cleared', 'success');
-                } else {
-                    showAlert('Failed to clear logs', 'danger');
-                }
-            })
-            .catch(error => showAlert('Error clearing logs', 'danger'));
+        try {
+            showLoading('Clearing logs...');
+            const response = await authenticatedFetch('/api/decter/logs/clear', { method: 'POST' });
+            const data = await response.json();
+            
+            if (data.success) {
+                document.getElementById('logsContainer').innerHTML = `
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-terminal" style="font-size: 2rem; opacity: 0.3;"></i>
+                        <div class="mt-2">Logs cleared</div>
+                        <small>New logs will appear here as Decter 001 operates</small>
+                    </div>
+                `;
+                showAlert('Logs cleared successfully', 'success');
+            } else {
+                showAlert('Failed to clear logs: ' + data.message, 'danger');
+            }
+        } catch (error) {
+            console.error('Error clearing logs:', error);
+            showAlert('Error clearing logs', 'danger');
+        } finally {
+            hideLoading();
+        }
     }
 }
 
@@ -1688,10 +1700,10 @@ function show2FAModal() {
 }
 
 function initializeDataSync() {
-    // Simulate real-time data sync
+    // Real-time data sync from actual JSON files
     dataUpdateInterval = setInterval(() => {
         updateSyncStatus();
-        loadDataFromJSON();
+        loadRealDataFromJSON();
     }, 3000);
 }
 
@@ -1704,92 +1716,131 @@ function updateSyncStatus() {
     if (footerSync) footerSync.textContent = `Last sync: ${lastSync}`;
 }
 
-function loadDataFromJSON() {
-    // This would load from decter_engine_data.json in a real implementation
-    // For now, we'll simulate with random data
-    const mockData = {
-        logs: generateMockLogs(),
-        trades: generateMockTrades(),
-        metrics: generateMockMetrics()
-    };
-    
-    updateLogsFromData(mockData.logs);
-    updateTradesFromData(mockData.trades);
-    updateMetricsFromData(mockData.metrics);
+async function loadRealDataFromJSON() {
+    try {
+        // Load real data from Decter JSON files via API
+        const [statsResponse, tradesResponse, logsResponse] = await Promise.all([
+            authenticatedFetch('/api/decter/performance'),
+            authenticatedFetch('/api/decter/trades?limit=10'),
+            authenticatedFetch('/api/decter/logs?lines=20')
+        ]);
+        
+        if (statsResponse.ok) {
+            const statsData = await statsResponse.json();
+            updateMetricsFromRealData(statsData);
+        }
+        
+        if (tradesResponse.ok) {
+            const tradesData = await tradesResponse.json();
+            updateTradesFromRealData(tradesData.trades || []);
+        }
+        
+        if (logsResponse.ok) {
+            const logsData = await logsResponse.json();
+            updateLogsFromRealData(logsData.logs || []);
+        }
+    } catch (error) {
+        console.error('Error loading real data:', error);
+        // Fallback to empty state
+        showEmptyDataState();
+    }
 }
 
-function generateMockLogs() {
-    const levels = ['INFO', 'WARNING', 'ERROR'];
-    const modules = ['Engine', 'Deriv API', 'Telegram', 'Decision'];
-    const messages = [
-        'System initialized successfully',
-        'Trade execution completed',
-        'API rate limit approaching',
-        'Connection established',
-        'Data sync completed'
-    ];
-    
-    return Array.from({length: 5}, () => {
-        const timestamp = new Date().toISOString().substring(11, 19);
-        const level = levels[Math.floor(Math.random() * levels.length)];
-        const module = modules[Math.floor(Math.random() * modules.length)];
-        const message = messages[Math.floor(Math.random() * messages.length)];
-        return `[${timestamp}] — [${module}] — [${level}] — ${message}`;
-    });
-}
-
-function generateMockTrades() {
-    return Array.from({length: 3}, (_, i) => ({
-        symbol: 'R_10',
-        entry: (1.234 + Math.random() * 0.1).toFixed(3),
-        exit: (1.234 + Math.random() * 0.1).toFixed(3),
-        pnl: (Math.random() * 20 - 10).toFixed(2),
-        timestamp: new Date(Date.now() - i * 300000).toLocaleTimeString(),
-        status: Math.random() > 0.3 ? 'Win' : 'Loss'
-    }));
-}
-
-function generateMockMetrics() {
-    return {
-        totalTrades: Math.floor(Math.random() * 100) + 50,
-        winRate: (Math.random() * 30 + 60).toFixed(1),
-        netPnL: (Math.random() * 200 - 100).toFixed(2),
-        growthRate: (Math.random() * 10 + 2).toFixed(2)
-    };
-}
-
-function updateLogsFromData(logs) {
+function updateLogsFromRealData(logs) {
     const container = document.getElementById('logsContainer');
-    if (container && logs.length > 0) {
-        container.innerHTML = logs.map(log => `<div class="log-entry">${log}</div>`).join('');
-        container.scrollTop = container.scrollHeight;
+    if (container) {
+        if (logs && logs.length > 0) {
+            container.innerHTML = logs.map(log => `<div class="log-entry">${log}</div>`).join('');
+            container.scrollTop = container.scrollHeight;
+        } else {
+            container.innerHTML = `
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-terminal" style="font-size: 2rem; opacity: 0.3;"></i>
+                    <div class="mt-2">No system logs available</div>
+                    <small>Logs will appear here once Decter 001 starts</small>
+                </div>
+            `;
+        }
     }
 }
 
-function updateTradesFromData(trades) {
+function updateTradesFromRealData(trades) {
     const tbody = document.getElementById('tradesTableBody');
-    if (tbody && trades.length > 0) {
-        tbody.innerHTML = trades.map(trade => `
-            <tr class="${trade.status === 'Win' ? 'table-success' : 'table-danger'}" style="opacity: 0.8;">
-                <td>${trade.symbol}</td>
-                <td>${trade.entry}</td>
-                <td>${trade.exit}</td>
-                <td class="${parseFloat(trade.pnl) > 0 ? 'text-success' : 'text-danger'}">
-                    ${parseFloat(trade.pnl) > 0 ? '+' : ''}${trade.pnl}
-                </td>
-                <td>${trade.timestamp}</td>
-                <td><span class="badge ${trade.status === 'Win' ? 'bg-success' : 'bg-danger'}">${trade.status}</span></td>
-            </tr>
-        `).join('');
+    if (tbody) {
+        if (trades && trades.length > 0) {
+            tbody.innerHTML = trades.map(trade => `
+                <tr class="${trade.win ? 'table-success' : 'table-danger'}" style="opacity: 0.8;">
+                    <td>${trade.symbol}</td>
+                    <td>${trade.entry_price || 'N/A'}</td>
+                    <td>${trade.exit_price || 'N/A'}</td>
+                    <td class="${trade.profit_loss > 0 ? 'text-success' : 'text-danger'}">
+                        ${trade.profit_loss > 0 ? '+' : ''}${(trade.profit_loss || 0).toFixed(4)}
+                    </td>
+                    <td>${new Date(trade.timestamp).toLocaleTimeString()}</td>
+                    <td><span class="badge ${trade.win ? 'bg-success' : 'bg-danger'}">${trade.win ? 'Win' : 'Loss'}</span></td>
+                </tr>
+            `).join('');
+        } else {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" class="text-center text-muted py-4">
+                        <i class="fas fa-chart-line" style="font-size: 2rem; opacity: 0.3;"></i>
+                        <div class="mt-2">No trades available</div>
+                        <small>Trade history will appear here once Decter 001 executes trades</small>
+                    </td>
+                </tr>
+            `;
+        }
     }
 }
 
-function updateMetricsFromData(metrics) {
-    document.getElementById('totalTrades').textContent = metrics.totalTrades;
-    document.getElementById('winRate').textContent = `${metrics.winRate}%`;
-    document.getElementById('netPnL').textContent = metrics.netPnL;
-    document.getElementById('growthRate').textContent = `${metrics.growthRate}%`;
+function updateMetricsFromRealData(metricsData) {
+    // Update performance metrics with real data from Decter JSON files
+    const totalTrades = metricsData.total_trades || 0;
+    const winRate = metricsData.win_rate || 0;
+    const netPnL = metricsData.net_pnl || 0;
+    const growthRate = metricsData.growth_rate || 0;
+    
+    document.getElementById('totalTrades').textContent = totalTrades;
+    document.getElementById('winRate').textContent = `${winRate.toFixed(1)}%`;
+    document.getElementById('netPnL').textContent = netPnL.toFixed(4);
+    document.getElementById('growthRate').textContent = `${growthRate.toFixed(2)}%`;
 }
+
+function showEmptyDataState() {
+    // Show empty state when no data is available
+    const logsContainer = document.getElementById('logsContainer');
+    const tradesTableBody = document.getElementById('tradesTableBody');
+    
+    if (logsContainer) {
+        logsContainer.innerHTML = `
+            <div class="text-center text-muted py-4">
+                <i class="fas fa-database" style="font-size: 2rem; opacity: 0.3;"></i>
+                <div class="mt-2">No data connection</div>
+                <small>Unable to load Decter 001 data. Please check connection.</small>
+            </div>
+        `;
+    }
+    
+    if (tradesTableBody) {
+        tradesTableBody.innerHTML = `
+            <tr>
+                <td colspan="6" class="text-center text-muted py-4">
+                    <i class="fas fa-exclamation-triangle" style="font-size: 2rem; opacity: 0.3;"></i>
+                    <div class="mt-2">Data unavailable</div>
+                </td>
+            </tr>
+        `;
+    }
+    
+    // Set default metric values
+    document.getElementById('totalTrades').textContent = '0';
+    document.getElementById('winRate').textContent = '0.0%';
+    document.getElementById('netPnL').textContent = '0.0000';
+    document.getElementById('growthRate').textContent = '0.00%';
+}
+
+
 
 function setupLogFilters() {
     document.querySelectorAll('.log-filter-btn[data-level]').forEach(btn => {

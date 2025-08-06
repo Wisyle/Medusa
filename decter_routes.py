@@ -322,6 +322,21 @@ async def get_decter_logs(
         raise HTTPException(status_code=500, detail=f"Error getting logs: {str(e)}")
 
 
+@decter_router.post("/logs/clear")
+async def clear_decter_logs(current_user: User = Depends(get_current_active_user)):
+    """Clear Decter 001 JSON log files"""
+    try:
+        result = decter_controller.clear_json_logs()
+        if result["success"]:
+            logger.info(f"✅ Decter logs cleared by user: {getattr(current_user, 'email', 'unknown')}")
+            return JSONResponse(content=result)
+        else:
+            raise HTTPException(status_code=400, detail=result["message"])
+    except Exception as e:
+        logger.error(f"❌ Error clearing Decter logs: {e}")
+        raise HTTPException(status_code=500, detail=f"Error clearing logs: {str(e)}")
+
+
 # Form-based endpoints for web interface
 @decter_router.post("/config/form")
 async def set_decter_config_form(

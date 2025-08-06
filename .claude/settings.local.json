@@ -6,7 +6,10 @@
       "Bash(git commit:*)",
       "Bash(git push:*)",
       "Bash(find:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(npm i:*)",
+      "Bash(sudo npm i -g @anthropic-ai/claude-code)",
+      "Bash(rm:*)"
     ],
     "deny": []
   }

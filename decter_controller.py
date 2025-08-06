@@ -107,6 +107,8 @@ class DecterController:
         self.stats_file = self.data_dir / "trading_stats.json"
         self.params_file = self.data_dir / "saved_params.json"
         self.log_file = self.data_dir / "trading_bot.log"
+        self.engine_logs_file = self.data_dir / "engine_logs.json"
+        self.live_logs_file = self.data_dir / "live_logs.json"
         
         # Ensure data directory exists with proper error handling
         try:
@@ -138,6 +140,9 @@ class DecterController:
             logger.warning(f"Could not import Decter modules for internal service: {e}")
             self._internal_service = False
             logger.info(f"🤖 Decter Controller initialized with subprocess mode for path: {decter_path}")
+        
+        # Initialize JSON logging system
+        self.initialize_json_logs()
 
     def is_running(self) -> bool:
         """Check if Decter 001 process is running"""
@@ -235,6 +240,14 @@ class DecterController:
                 self.start_time = datetime.now()
                 logger.info(f"✅ Decter 001 started successfully with PID: {self.process.pid}")
                 
+                # Log to JSON
+                self.log_to_json(
+                    f"Decter 001 started successfully (PID: {self.process.pid})",
+                    "INFO",
+                    "Engine",
+                    {"process_id": self.process.pid, "status": self.status.value}
+                )
+                
                 return {
                     "success": True,
                     "message": "Decter 001 started successfully",
@@ -292,6 +305,14 @@ class DecterController:
             self.process = None
             self.start_time = None
             logger.info("✅ Decter 001 stopped successfully")
+            
+            # Log to JSON
+            self.log_to_json(
+                "Decter 001 stopped successfully",
+                "INFO",
+                "Engine",
+                {"status": self.status.value}
+            )
             
             return {
                 "success": True,
@@ -381,6 +402,14 @@ class DecterController:
             
             logger.info(f"📝 Parameters updated: {params_data}")
             
+            # Log to JSON
+            self.log_to_json(
+                "Trading parameters updated",
+                "INFO",
+                "Config",
+                params_data
+            )
+            
             return {
                 "success": True,
                 "message": "Parameters updated successfully",
@@ -462,8 +491,14 @@ class DecterController:
         return None
 
     def _get_recent_logs(self, lines: int = 10) -> List[str]:
-        """Get recent log entries"""
+        """Get recent log entries from JSON log files"""
         try:
+            # First try to get from JSON log files (preferred for Render)
+            logs = self._get_logs_from_json(lines)
+            if logs:
+                return logs
+            
+            # Fallback to traditional log files
             if not self.log_file.exists():
                 # Try subprocess log file
                 subprocess_log = self.data_dir / "subprocess.log"
@@ -513,6 +548,14 @@ class DecterController:
             
             logger.info(f"📱 Telegram configuration updated: Group {group_id}, Topic {topic_id}")
             
+            # Log to JSON
+            self.log_to_json(
+                f"Telegram configuration updated (Group: {group_id})",
+                "INFO",
+                "Telegram",
+                {"group_id": group_id, "has_topic": bool(topic_id)}
+            )
+            
             return {
                 "success": True,
                 "message": "Telegram configuration updated successfully",
@@ -552,6 +595,14 @@ class DecterController:
                 json.dump(deriv_config, f, indent=2)
             
             logger.info(f"🔑 Deriv configuration updated: App ID {deriv_app_id[:8]}...")
+            
+            # Log to JSON
+            self.log_to_json(
+                f"Deriv API configuration updated (App ID: {deriv_app_id[:8]}...)",
+                "INFO",
+                "API",
+                {"deriv_app_id": deriv_app_id[:12] + "...", "currencies_configured": len(currency_tokens)}
+            )
             
             return {
                 "success": True,
@@ -617,6 +668,14 @@ class DecterController:
                 json.dump(engine_config, f, indent=2)
             
             logger.info(f"⚙️ Engine configuration updated: Currency {engine_config['selected_currency']}")
+            
+            # Log to JSON
+            self.log_to_json(
+                f"Engine configuration updated (Currency: {engine_config['selected_currency']})",
+                "INFO",
+                "Engine",
+                {"selected_currency": engine_config['selected_currency'], "engines_enabled": {"continuous": engine_config.get('enable_continuous_engine', False), "decision": engine_config.get('enable_decision_engine', False)}}
+            )
             
             return {
                 "success": True,
@@ -725,6 +784,14 @@ class DecterController:
             
             if result["success"]:
                 logger.info(f"💱 Currency switched to {new_currency}")
+                
+                # Log to JSON
+                self.log_to_json(
+                    f"Currency switched to {new_currency}",
+                    "INFO",
+                    "Engine",
+                    {"new_currency": new_currency, "previous_currency": engine_config.get('selected_currency', 'unknown')}
+                )
                 return {
                     "success": True,
                     "message": f"Successfully switched to {new_currency}",
@@ -852,6 +919,138 @@ class DecterController:
                 
         except Exception as e:
             logger.error(f"❌ Error logging transaction: {e}")
+
+    def _get_logs_from_json(self, lines: int = 10) -> List[str]:
+        """Get logs from JSON log files"""
+        try:
+            logs = []
+            
+            # Try engine logs first
+            if self.engine_logs_file.exists():
+                with open(self.engine_logs_file, 'r') as f:
+                    engine_logs = json.load(f)
+                    if isinstance(engine_logs, list):
+                        logs.extend(engine_logs[-lines//2:])
+            
+            # Then try live logs
+            if self.live_logs_file.exists():
+                with open(self.live_logs_file, 'r') as f:
+                    live_logs = json.load(f)
+                    if isinstance(live_logs, list):
+                        logs.extend(live_logs[-lines//2:])
+            
+            # Sort by timestamp if available, otherwise return as is
+            return logs[-lines:] if logs else []
+            
+        except Exception as e:
+            logger.error(f"❌ Error reading JSON logs: {e}")
+            return []
+
+    def log_to_json(self, message: str, level: str = "INFO", module: str = "Decter", details: Dict = None):
+        """Log a message to JSON files for Render persistence"""
+        try:
+            timestamp = datetime.now().isoformat()
+            log_entry = {
+                "timestamp": timestamp,
+                "level": level,
+                "module": module,
+                "message": message,
+                "details": details or {}
+            }
+            
+            # Format for display
+            formatted_log = f"[{timestamp}] — [{module}] — [{level}] — {message}"
+            
+            # Save to live logs (for real-time display)
+            self._append_to_json_file(self.live_logs_file, formatted_log)
+            
+            # Save structured log to engine logs
+            self._append_to_json_file(self.engine_logs_file, log_entry, structured=True)
+            
+        except Exception as e:
+            logger.error(f"❌ Error logging to JSON: {e}")
+
+    def _append_to_json_file(self, file_path: Path, entry: any, structured: bool = False, max_entries: int = 1000):
+        """Append entry to JSON file with rotation"""
+        try:
+            # Load existing data
+            if file_path.exists():
+                with open(file_path, 'r') as f:
+                    try:
+                        data = json.load(f)
+                        if not isinstance(data, list):
+                            data = []
+                    except json.JSONDecodeError:
+                        data = []
+            else:
+                data = []
+            
+            # Add new entry
+            data.append(entry)
+            
+            # Rotate logs if too many entries
+            if len(data) > max_entries:
+                data = data[-max_entries:]
+            
+            # Save back to file
+            with open(file_path, 'w') as f:
+                json.dump(data, f, indent=2 if structured else None, default=str)
+                
+        except Exception as e:
+            logger.error(f"❌ Error appending to JSON file {file_path}: {e}")
+
+    def clear_json_logs(self) -> Dict[str, Any]:
+        """Clear JSON log files"""
+        try:
+            files_cleared = []
+            
+            if self.engine_logs_file.exists():
+                with open(self.engine_logs_file, 'w') as f:
+                    json.dump([], f)
+                files_cleared.append("engine_logs.json")
+            
+            if self.live_logs_file.exists():
+                with open(self.live_logs_file, 'w') as f:
+                    json.dump([], f)
+                files_cleared.append("live_logs.json")
+            
+            self.log_to_json("JSON log files cleared", "INFO", "Controller")
+            
+            return {
+                "success": True,
+                "message": f"Cleared {len(files_cleared)} log files",
+                "files_cleared": files_cleared
+            }
+            
+        except Exception as e:
+            logger.error(f"❌ Error clearing JSON logs: {e}")
+            return {
+                "success": False,
+                "message": f"Error clearing logs: {str(e)}"
+            }
+
+    def initialize_json_logs(self):
+        """Initialize JSON log files with startup messages"""
+        try:
+            # Create empty log files if they don't exist
+            if not self.engine_logs_file.exists():
+                with open(self.engine_logs_file, 'w') as f:
+                    json.dump([], f)
+            
+            if not self.live_logs_file.exists():
+                with open(self.live_logs_file, 'w') as f:
+                    json.dump([], f)
+            
+            # Log initialization
+            self.log_to_json(
+                "Decter 001 Controller initialized", 
+                "INFO", 
+                "Controller",
+                {"decter_path": str(self.decter_path), "data_dir": str(self.data_dir)}
+            )
+            
+        except Exception as e:
+            logger.error(f"❌ Error initializing JSON logs: {e}")
 
     def get_performance_summary(self) -> Dict[str, Any]:
         """Get performance summary for dashboard"""
