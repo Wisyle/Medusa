@@ -593,10 +593,10 @@
                             <span id="lastSyncDisplay">Last Sync: --</span>
                         </div>
                     </div>
-                    <button class="btn btn-outline-primary" onclick="console.log('Button clicked!'); openSecureCredentialsModal();" style="min-width: 120px;">
+                    <button class="btn btn-outline-primary" onclick="alert('Button works!'); console.log('Button clicked!'); openSecureCredentialsModal();" style="min-width: 120px;">
                         <i class="fas fa-shield-alt me-2"></i>Credentials
                     </button>
-                    <button class="btn btn-outline-secondary btn-sm ms-2" onclick="testShowModal()" title="Test Modal">
+                    <button class="btn btn-outline-secondary btn-sm ms-2" onclick="simpleShowModal()" title="Test Modal">
                         <i class="fas fa-eye"></i>
                     </button>
                 </div>
@@ -1228,7 +1228,33 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     console.log('[DEBUG] Enhanced Decter Engine interface initialized successfully');
+    
+    // Test function definition at page level
+    console.log('=== TESTING FUNCTION DEFINITIONS ===');
+    console.log('openSecureCredentialsModal defined?', typeof window.openSecureCredentialsModal);
+    console.log('testShowModal defined?', typeof window.testShowModal);
 });
+
+// Backup simple function definition outside of DOMContentLoaded
+function simpleShowModal() {
+    console.log('=== SIMPLE SHOW MODAL BACKUP ===');
+    const modal = document.getElementById('secureCredentialsModal');
+    if (modal) {
+        modal.style.display = 'flex';
+        modal.style.position = 'fixed';
+        modal.style.top = '0';
+        modal.style.left = '0';
+        modal.style.width = '100%';
+        modal.style.height = '100%';
+        modal.style.backgroundColor = 'rgba(0,0,0,0.5)';
+        modal.style.alignItems = 'center';
+        modal.style.justifyContent = 'center';
+        modal.style.zIndex = '9999';
+        console.log('Backup modal should be showing');
+    } else {
+        console.error('Modal not found with backup function');
+    }
+}
 
 function startAutoRefresh() {
     // Refresh data every 5 seconds
