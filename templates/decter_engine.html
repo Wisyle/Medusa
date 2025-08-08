@@ -479,6 +479,86 @@
     body.modal-open #secureCredentialsModal.show ~ .modal-backdrop:not(:last-child) {
         display: none !important;
     }
+    
+    /* Custom Modal Styling for Decter Engine */
+    .custom-modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 9999;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+    }
+
+    .custom-modal-overlay.show {
+        display: flex !important;
+    }
+
+    .custom-modal {
+        background-color: var(--secondary-black);
+        border: 1px solid var(--border-gray);
+        border-radius: 8px;
+        color: var(--white);
+        max-width: 90%;
+        width: 800px;
+        max-height: 90%;
+        overflow-y: auto;
+        position: relative;
+        filter: none !important;
+        backdrop-filter: none !important;
+    }
+
+    .custom-modal-header {
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid var(--border-gray);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .custom-modal-body {
+        padding: 1.5rem;
+    }
+
+    .custom-modal-footer {
+        padding: 1rem 1.5rem;
+        border-top: 1px solid var(--border-gray);
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.5rem;
+    }
+
+    .custom-modal .form-control, .custom-modal .form-select {
+        background-color: var(--secondary-black);
+        border: 1px solid var(--border-gray);
+        color: var(--white);
+    }
+
+    .custom-modal .form-control:focus, .custom-modal .form-select:focus {
+        background-color: var(--secondary-black);
+        color: var(--white);
+        border-color: var(--accent-blue);
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    }
+
+    .close-btn {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        color: var(--white);
+        opacity: 0.7;
+    }
+
+    .close-btn:hover {
+        opacity: 1;
+    }
 </style>
 {% endblock %}
 
@@ -834,17 +914,18 @@
     </div>
 </div>
 
-<!-- Enhanced Secure Credentials Modal -->
-<div class="modal fade" id="secureCredentialsModal" tabindex="-1" aria-labelledby="secureCredentialsLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content" style="background: var(--secondary-black); border: 1px solid var(--border-gray);">
-            <div class="modal-header" style="border-color: var(--border-gray);">
-                <h5 class="modal-title text-white" id="secureCredentialsLabel">
-                    <i class="fas fa-shield-alt me-2"></i>Secure Credentials Management
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
+<!-- Enhanced Secure Credentials Modal - Custom Implementation -->
+<div class="custom-modal-overlay" id="secureCredentialsModal" style="display: none;">
+    <div class="custom-modal" style="max-width: 800px; width: 90%;">
+        <div class="custom-modal-header" style="background: var(--secondary-black); border-bottom: 1px solid var(--border-gray);">
+            <h5 class="text-white" id="secureCredentialsLabel">
+                <i class="fas fa-shield-alt me-2"></i>Secure Credentials Management
+            </h5>
+            <button type="button" class="close-btn" onclick="hideCredentialsModal()" style="background: none; border: none; color: var(--white); font-size: 1.5rem;">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="custom-modal-body" style="background: var(--secondary-black); color: var(--white);">
                 <div id="twofaRequired" class="text-center py-4" style="display: none;">
                     <div class="mb-4">
                         <i class="fas fa-shield-alt" style="font-size: 3rem; color: var(--accent-warning);"></i>
@@ -910,12 +991,12 @@
                     </div>
                 </div>
             </div>
-            <div class="modal-footer" style="border-color: var(--border-gray);">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" id="saveCredentialsBtn" class="btn btn-primary" onclick="saveSecureCredentials()" style="display: none;">
-                    <i class="fas fa-save me-2"></i>Save Changes
-                </button>
-            </div>
+        </div>
+        <div class="custom-modal-footer" style="background: var(--secondary-black); border-top: 1px solid var(--border-gray);">
+            <button type="button" class="btn btn-secondary" onclick="hideCredentialsModal()">Cancel</button>
+            <button type="button" id="saveCredentialsBtn" class="btn btn-primary" onclick="saveSecureCredentials()" style="display: none;">
+                <i class="fas fa-save me-2"></i>Save Changes
+            </button>
         </div>
     </div>
 </div>
@@ -1065,6 +1146,7 @@ document.addEventListener('DOMContentLoaded', function() {
     window.handleCurrencyChange = handleCurrencyChange;
     window.requireAuth = requireAuth;
     window.openSecureCredentialsModal = openSecureCredentialsModal;
+    window.hideCredentialsModal = hideCredentialsModal;
     window.verify2FA = verify2FA;
     window.saveSecureCredentials = saveSecureCredentials;
     window.refreshMetrics = refreshMetrics;
@@ -1124,6 +1206,24 @@ document.addEventListener('DOMContentLoaded', function() {
             backdrop.remove();
         });
         forceRemoveAllBlurEffects();
+    });
+    
+    // Custom modal event listeners for Decter Engine
+    document.addEventListener('click', function(e) {
+        // Close modal when clicking overlay
+        if (e.target.classList.contains('custom-modal-overlay') && e.target.id === 'secureCredentialsModal') {
+            hideCredentialsModal();
+        }
+    });
+    
+    // Close modal with Escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            const credentialsModal = document.getElementById('secureCredentialsModal');
+            if (credentialsModal && credentialsModal.classList.contains('show')) {
+                hideCredentialsModal();
+            }
+        }
     });
     
     console.log('[DEBUG] Enhanced Decter Engine interface initialized successfully');
@@ -1788,20 +1888,23 @@ function requireAuth(functionName, ...args) {
 
 async function openSecureCredentialsModal() {
     try {
-        console.log('Opening Decter credentials modal...');
+        console.log('Opening Decter credentials modal with custom modal system...');
         
-        // Force close ANY other modals that might be open
+        // Force close ANY other modals that might be open (Bootstrap or custom)
         document.querySelectorAll('.modal.show').forEach(modal => {
             const modalInstance = bootstrap.Modal.getInstance(modal);
-            if (modalInstance && modal.id !== 'secureCredentialsModal') {
+            if (modalInstance) {
                 modalInstance.hide();
             }
         });
         
+        // Close any custom modals too
+        document.querySelectorAll('.custom-modal-overlay.show').forEach(modal => {
+            modal.classList.remove('show');
+        });
+        
         // Clean up ALL modal backdrops
-        setTimeout(() => {
-            document.querySelectorAll('.modal-backdrop').forEach(backdrop => backdrop.remove());
-        }, 100);
+        document.querySelectorAll('.modal-backdrop').forEach(backdrop => backdrop.remove());
         
         // Get the modal element
         const modalElement = document.getElementById('secureCredentialsModal');
@@ -1830,9 +1933,6 @@ async function openSecureCredentialsModal() {
             is2FAEnabled = false;
         }
         
-        // Force remove any blur effects BEFORE configuring
-        forceRemoveAllBlurEffects();
-        
         // Configure modal content based on 2FA status
         const twofaRequired = document.getElementById('twofaRequired');
         const twofaVerification = document.getElementById('twofaVerification');
@@ -1859,65 +1959,31 @@ async function openSecureCredentialsModal() {
             if (codeInput) codeInput.value = '';
         }
         
-        // Ensure modal is completely reset and isolated
-        modalElement.style.zIndex = '1080';
-        modalElement.style.display = 'block';
-        modalElement.style.pointerEvents = 'auto';
-        modalElement.style.filter = 'none';
-        modalElement.style.backdropFilter = 'none';
+        // Show the custom modal (no Bootstrap modal system)
+        modalElement.classList.add('show');
         
-        // Create modal with specific isolation options
-        const modal = new bootstrap.Modal(modalElement, {
-            backdrop: 'static',
-            keyboard: false,
-            focus: true
-        });
-        
-        // Add comprehensive event handlers
-        modalElement.addEventListener('shown.bs.modal', function() {
-            console.log('Modal shown, enforcing accessibility...');
-            
-            // Force accessibility and remove any blur
-            forceRemoveAllBlurEffects();
-            
-            // Ensure this modal is on top
-            modalElement.style.zIndex = '1080';
-            const backdrop = document.querySelector('.modal-backdrop');
-            if (backdrop) {
-                backdrop.style.zIndex = '1079';
-                backdrop.style.filter = 'none';
-                backdrop.style.backdropFilter = 'none';
-            }
-            
-            // Focus on the appropriate input
+        // Focus on the appropriate input after modal is shown
+        setTimeout(() => {
             if (is2FAEnabled) {
                 const codeInput = document.getElementById('decterTwofaCode');
-                if (codeInput) setTimeout(() => codeInput.focus(), 200);
+                if (codeInput) codeInput.focus();
             }
-            
-        }, { once: true });
+        }, 200);
         
-        modalElement.addEventListener('hidden.bs.modal', function() {
-            console.log('Modal hidden, cleaning up...');
-            forceRemoveAllBlurEffects();
-            // Extra cleanup
-            setTimeout(() => {
-                document.querySelectorAll('.modal-backdrop').forEach(backdrop => backdrop.remove());
-            }, 100);
-        }, { once: true });
-        
-        // Show the modal
-        modal.show();
-        
-        // Final enforcement after modal is shown
-        setTimeout(() => {
-            forceRemoveAllBlurEffects();
-            modalElement.style.zIndex = '1080';
-        }, 300);
+        console.log('Custom credentials modal opened successfully');
         
     } catch (error) {
         console.error('Error opening credentials modal:', error);
         showAlert('Error opening credentials modal: ' + error.message, 'danger');
+    }
+}
+
+// Custom modal functions for Decter Engine
+function hideCredentialsModal() {
+    const modalElement = document.getElementById('secureCredentialsModal');
+    if (modalElement) {
+        modalElement.classList.remove('show');
+        console.log('Custom credentials modal closed');
     }
 }
 
@@ -2037,7 +2103,7 @@ function verify2FA() {
 function saveSecureCredentials() {
     // Implementation for saving encrypted credentials
     showAlert('Credentials saved securely', 'success');
-    bootstrap.Modal.getInstance(document.getElementById('secureCredentialsModal')).hide();
+    hideCredentialsModal();
 }
 
 function show2FAModal() {
