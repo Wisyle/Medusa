@@ -593,10 +593,10 @@
                             <span id="lastSyncDisplay">Last Sync: --</span>
                         </div>
                     </div>
-                    <button class="btn btn-outline-primary" onclick="openSecureCredentialsModal()" style="min-width: 120px;">
+                    <button class="btn btn-outline-primary" onclick="console.log('Button clicked!'); openSecureCredentialsModal();" style="min-width: 120px;">
                         <i class="fas fa-shield-alt me-2"></i>Credentials
                     </button>
-                    <button class="btn btn-outline-secondary btn-sm ms-2" onclick="forceRemoveAllBlurEffects()" title="Fix UI Issues">
+                    <button class="btn btn-outline-secondary btn-sm ms-2" onclick="testShowModal()" title="Test Modal">
                         <i class="fas fa-eye"></i>
                     </button>
                 </div>
@@ -1147,6 +1147,7 @@ document.addEventListener('DOMContentLoaded', function() {
     window.requireAuth = requireAuth;
     window.openSecureCredentialsModal = openSecureCredentialsModal;
     window.hideCredentialsModal = hideCredentialsModal;
+    window.testShowModal = testShowModal;
     window.verify2FA = verify2FA;
     window.saveSecureCredentials = saveSecureCredentials;
     window.refreshMetrics = refreshMetrics;
@@ -1888,6 +1889,7 @@ function requireAuth(functionName, ...args) {
 
 async function openSecureCredentialsModal() {
     try {
+        console.log('=== CREDENTIALS MODAL FUNCTION CALLED ===');
         console.log('Opening Decter credentials modal with custom modal system...');
         
         // Force close ANY other modals that might be open (Bootstrap or custom)
@@ -1960,7 +1962,19 @@ async function openSecureCredentialsModal() {
         }
         
         // Show the custom modal (no Bootstrap modal system)
+        console.log('About to show modal, current display:', modalElement.style.display);
+        console.log('Modal element:', modalElement);
+        console.log('Modal classes before:', modalElement.className);
+        
         modalElement.classList.add('show');
+        
+        console.log('Modal classes after:', modalElement.className);
+        console.log('Modal should now be visible');
+        
+        // Force display just in case
+        modalElement.style.display = 'flex';
+        modalElement.style.alignItems = 'center';
+        modalElement.style.justifyContent = 'center';
         
         // Focus on the appropriate input after modal is shown
         setTimeout(() => {
@@ -1983,7 +1997,24 @@ function hideCredentialsModal() {
     const modalElement = document.getElementById('secureCredentialsModal');
     if (modalElement) {
         modalElement.classList.remove('show');
+        modalElement.style.display = 'none';
         console.log('Custom credentials modal closed');
+    }
+}
+
+// Simple test function to show modal immediately
+function testShowModal() {
+    console.log('=== TEST SHOW MODAL ===');
+    const modalElement = document.getElementById('secureCredentialsModal');
+    if (modalElement) {
+        console.log('Found modal element:', modalElement);
+        modalElement.classList.add('show');
+        modalElement.style.display = 'flex';
+        modalElement.style.alignItems = 'center';
+        modalElement.style.justifyContent = 'center';
+        console.log('Modal should be visible now');
+    } else {
+        console.error('Modal element not found!');
     }
 }
 
