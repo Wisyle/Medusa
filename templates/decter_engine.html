@@ -444,6 +444,23 @@
         filter: none !important;
         opacity: 0.5 !important;
     }
+    
+    /* Ensure modal is always accessible and not blurred */
+    .modal.show {
+        filter: none !important;
+        backdrop-filter: none !important;
+        -webkit-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        pointer-events: auto !important;
+        z-index: 1055 !important;
+    }
+    
+    /* Fix for any overlapping modals */
+    .modal.show .modal-dialog {
+        transform: none !important;
+        margin: 30px auto !important;
+        pointer-events: auto !important;
+    }
 </style>
 {% endblock %}
 
@@ -920,7 +937,22 @@ let dataUpdateInterval;
 
 // Enhanced authentication and 2FA handling
 function checkUser2FAStatus() {
-    // This would be populated from the server template or API call
+    // Check 2FA status from server API
+    fetch('/api/auth/2fa/status', {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${getAuthToken()}`
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        user2FAEnabled = data.enabled || false;
+    })
+    .catch(error => {
+        console.error('Error checking 2FA status:', error);
+        user2FAEnabled = false;
+    });
+    
     return user2FAEnabled;
 }
 
@@ -1019,6 +1051,9 @@ document.addEventListener('DOMContentLoaded', function() {
     window.loadMoreTrades = loadMoreTrades;
     window.exportLogs = exportLogs;
     window.forceRemoveAllBlurEffects = forceRemoveAllBlurEffects;
+    
+    // Initialize 2FA status
+    checkUser2FAStatus();
     
     // Initialize enhanced features
     initializeDataSync();
@@ -1719,109 +1754,91 @@ function exportTrades() {
     exportData();
 }
 
-// Enhanced Functions for New Features
+// Enhanced Functions for New Features  
 function requireAuth(functionName, ...args) {
-    if (!checkUser2FAStatus()) {
-        showAlert('2FA authentication required for this action.', 'warning');
-        openSecureCredentialsModal();
-        return;
+    // Simplified auth check - just execute the function directly
+    // The credentials modal will handle auth internally
+    if (typeof window[functionName] === 'function') {
+        window[functionName](...args);
+    } else {
+        console.warn(`Function ${functionName} not found`);
     }
-    
-    // If 2FA is enabled, verify the code
-    show2FAModal().then(verified => {
-        if (verified) {
-            // Execute the original function
-            if (typeof window[functionName] === 'function') {
-                window[functionName](...args);
-            }
-        }
-    });
 }
 
-function openSecureCredentialsModal() {
+async function openSecureCredentialsModal() {
     try {
-        // Remove any existing backdrop issues
+        // Clean up any existing modals first
         document.querySelectorAll('.modal-backdrop').forEach(backdrop => backdrop.remove());
         
-        // Ensure modal is properly initialized
+        // Get the modal element
         const modalElement = document.getElementById('secureCredentialsModal');
         if (!modalElement) {
             showAlert('Credentials modal not found', 'danger');
             return;
         }
         
-        // Force remove any blur effects before showing modal
-        document.body.style.filter = 'none';
-        document.body.style.webkitFilter = 'none';
-        document.body.style.backdropFilter = 'none';
-        document.body.style.webkitBackdropFilter = 'none';
-        
-        // Configure modal content visibility
-        if (!checkUser2FAStatus()) {
-            document.getElementById('twofaRequired').style.display = 'block';
-            document.getElementById('twofaVerification').style.display = 'none';
-            document.getElementById('credentialsContent').style.display = 'none';
-            document.getElementById('saveCredentialsBtn').style.display = 'none';
-        } else {
-            document.getElementById('twofaRequired').style.display = 'none';
-            document.getElementById('twofaVerification').style.display = 'block';
-            document.getElementById('credentialsContent').style.display = 'none';
-            document.getElementById('saveCredentialsBtn').style.display = 'none';
+        // Check 2FA status asynchronously before showing modal
+        let is2FAEnabled = false;
+        try {
+            const response = await fetch('/api/auth/2fa/status', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${getAuthToken()}`
+                }
+            });
+            if (response.ok) {
+                const data = await response.json();
+                is2FAEnabled = data.enabled || false;
+                user2FAEnabled = is2FAEnabled;
+            }
+        } catch (error) {
+            console.warn('Could not check 2FA status, proceeding without 2FA requirement:', error);
         }
         
-        // Create modal with specific options to prevent blur issues
+        // Remove any blur effects
+        forceRemoveAllBlurEffects();
+        
+        // Configure modal content based on 2FA status
+        const twofaRequired = document.getElementById('twofaRequired');
+        const twofaVerification = document.getElementById('twofaVerification');
+        const credentialsContent = document.getElementById('credentialsContent');
+        const saveCredentialsBtn = document.getElementById('saveCredentialsBtn');
+        
+        if (!is2FAEnabled) {
+            // Skip 2FA requirement and go straight to credentials
+            if (twofaRequired) twofaRequired.style.display = 'none';
+            if (twofaVerification) twofaVerification.style.display = 'none';
+            if (credentialsContent) credentialsContent.style.display = 'block';
+            if (saveCredentialsBtn) saveCredentialsBtn.style.display = 'block';
+            
+            // Load existing credentials
+            loadCredentials();
+        } else {
+            // Show 2FA verification first
+            if (twofaRequired) twofaRequired.style.display = 'none';
+            if (twofaVerification) twofaVerification.style.display = 'block';
+            if (credentialsContent) credentialsContent.style.display = 'none';
+            if (saveCredentialsBtn) saveCredentialsBtn.style.display = 'none';
+        }
+        
+        // Create and show modal without backdrop issues
         const modal = new bootstrap.Modal(modalElement, {
-            backdrop: 'static',
+            backdrop: true,
             keyboard: true,
             focus: true
         });
         
-        // Add event listeners to fix interaction issues
+        // Prevent modal conflicts
         modalElement.addEventListener('shown.bs.modal', function() {
-            // Force fix any lingering blur effects
-            document.body.style.filter = 'none';
-            document.body.style.backdropFilter = 'none';
-            
-            // Ensure modal is clickable
-            const modalDialog = modalElement.querySelector('.modal-dialog');
-            const modalContent = modalElement.querySelector('.modal-content');
-            
-            if (modalDialog) {
-                modalDialog.style.pointerEvents = 'auto';
-                modalDialog.style.filter = 'none';
-                modalDialog.style.backdropFilter = 'none';
-            }
-            
-            if (modalContent) {
-                modalContent.style.pointerEvents = 'auto';
-                modalContent.style.filter = 'none';
-                modalContent.style.backdropFilter = 'none';
-            }
-            
-            // Fix backdrop
-            const backdrop = document.querySelector('.modal-backdrop');
-            if (backdrop) {
-                backdrop.style.backdropFilter = 'none';
-                backdrop.style.webkitBackdropFilter = 'none';
-                backdrop.style.filter = 'none';
-            }
-            
+            forceRemoveAllBlurEffects();
             console.log('Credentials modal opened successfully');
-        });
+        }, { once: true });
         
         modalElement.addEventListener('hidden.bs.modal', function() {
-            // Cleanup any remaining blur effects
-            document.body.style.filter = 'none';
-            document.body.style.backdropFilter = 'none';
-            document.querySelectorAll('.modal-backdrop').forEach(backdrop => backdrop.remove());
-        });
+            forceRemoveAllBlurEffects();
+        }, { once: true });
         
         modal.show();
-        
-        // Force fix all elements with any blur effects
-        setTimeout(() => {
-            forceRemoveAllBlurEffects();
-        }, 100);
         
     } catch (error) {
         console.error('Error opening credentials modal:', error);
@@ -1830,38 +1847,61 @@ function openSecureCredentialsModal() {
 }
 
 function forceRemoveAllBlurEffects() {
-    // Force remove blur from all elements
-    const allElements = document.querySelectorAll('*');
-    allElements.forEach(element => {
-        element.style.filter = 'none';
-        element.style.webkitFilter = 'none';
-        element.style.backdropFilter = 'none';
-        element.style.webkitBackdropFilter = 'none';
-    });
-    
-    // Specific fixes for body and modal elements
-    document.body.style.filter = 'none';
-    document.body.style.backdropFilter = 'none';
-    document.documentElement.style.filter = 'none';
-    document.documentElement.style.backdropFilter = 'none';
-    
-    // Fix modal-specific elements
-    const modal = document.getElementById('secureCredentialsModal');
-    const modalDialog = document.querySelector('.modal-dialog');
-    const modalContent = document.querySelector('.modal-content');
-    const backdrop = document.querySelector('.modal-backdrop');
-    
-    [modal, modalDialog, modalContent, backdrop].forEach(element => {
-        if (element) {
-            element.style.filter = 'none';
-            element.style.backdropFilter = 'none';
-            element.style.webkitFilter = 'none';
-            element.style.webkitBackdropFilter = 'none';
-            element.style.pointerEvents = 'auto';
+    try {
+        // Remove blur from important elements first
+        document.body.style.filter = 'none';
+        document.body.style.backdropFilter = 'none';
+        document.body.style.webkitFilter = 'none';
+        document.body.style.webkitBackdropFilter = 'none';
+        document.body.style.pointerEvents = 'auto';
+        
+        document.documentElement.style.filter = 'none';
+        document.documentElement.style.backdropFilter = 'none';
+        document.documentElement.style.webkitFilter = 'none';
+        document.documentElement.style.webkitBackdropFilter = 'none';
+        
+        // Remove any existing modal backdrops that might cause issues
+        document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
+            if (backdrop.style) {
+                backdrop.style.backdropFilter = 'none';
+                backdrop.style.webkitBackdropFilter = 'none';
+                backdrop.style.filter = 'none';
+                backdrop.style.webkitFilter = 'none';
+            }
+        });
+        
+        // Fix modal-specific elements
+        const modal = document.getElementById('secureCredentialsModal');
+        if (modal) {
+            modal.style.filter = 'none';
+            modal.style.backdropFilter = 'none';
+            modal.style.webkitFilter = 'none';
+            modal.style.webkitBackdropFilter = 'none';
+            modal.style.pointerEvents = 'auto';
+            
+            const modalDialog = modal.querySelector('.modal-dialog');
+            const modalContent = modal.querySelector('.modal-content');
+            
+            [modalDialog, modalContent].forEach(element => {
+                if (element) {
+                    element.style.filter = 'none';
+                    element.style.backdropFilter = 'none';
+                    element.style.webkitFilter = 'none';
+                    element.style.webkitBackdropFilter = 'none';
+                    element.style.pointerEvents = 'auto';
+                }
+            });
         }
-    });
-    
-    console.log('Forced removal of all blur effects');
+        
+        // Remove any CSS classes that might add blur effects
+        document.querySelectorAll('.blur, .blurred, .modal-backdrop.show').forEach(element => {
+            element.classList.remove('blur', 'blurred');
+        });
+        
+        console.log('All blur effects removed successfully');
+    } catch (error) {
+        console.error('Error removing blur effects:', error);
+    }
 }
 
 function verify2FA() {
