@@ -17,13 +17,12 @@
         padding: 1rem;
     }
     
-    .top-navbar {
-        padding: 0.5rem 1rem;
+    .lighthouse-main.login-mode {
+        padding: 1rem !important;
     }
     
-    .login-card {
-        margin: 1rem;
-        padding: 2rem 1.5rem;
+    .top-navbar {
+        padding: 0.5rem 1rem;
     }
     
     .container {
@@ -388,13 +387,24 @@
 
 .lighthouse-main.login-mode {
     margin-left: 0 !important;
-    padding: 0 !important;
+    padding: 2rem !important;
     width: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
     min-height: 100vh;
     background: var(--primary-black);
+}
+
+.lighthouse-main.login-mode .login-page {
+    width: 100%;
+    max-width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    margin: 0;
+    min-height: auto;
 }
 
 .login-card {
