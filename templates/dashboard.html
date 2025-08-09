@@ -444,7 +444,319 @@
     }
 }
 
-/* Recent Activity Styles */
+/* Terminal-Style Activity Log */
+.terminal-window {
+    background: var(--primary-black);
+    border: 1px solid var(--border-gray);
+    border-radius: 8px;
+    overflow: hidden;
+    font-family: 'JetBrains Mono', 'Consolas', 'Monaco', monospace;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.terminal-header {
+    background: linear-gradient(135deg, #2d3748, #4a5568);
+    padding: 8px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-gray);
+}
+
+.terminal-controls {
+    display: flex;
+    gap: 6px;
+}
+
+.terminal-button {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+.terminal-button.close { background: #ff5f56; }
+.terminal-button.minimize { background: #ffbd2e; }
+.terminal-button.maximize { background: #27ca3f; }
+
+.terminal-title {
+    color: #e2e8f0;
+    font-size: 0.9rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.terminal-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.status-connected {
+    color: #10b981;
+    font-weight: bold;
+    font-size: 0.8rem;
+    animation: pulse-green 2s infinite;
+}
+
+@keyframes pulse-green {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}
+
+.terminal-body {
+    background: #1a202c;
+    height: 300px;
+    overflow-y: auto;
+    padding: 16px;
+}
+
+.terminal-content {
+    color: #e2e8f0;
+    font-size: 0.85rem;
+    line-height: 1.5;
+}
+
+.terminal-line {
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    animation: terminal-slide-in 0.3s ease-out;
+}
+
+@keyframes terminal-slide-in {
+    from { opacity: 0; transform: translateX(-10px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+.terminal-prompt {
+    color: #10b981;
+    font-weight: bold;
+}
+
+.terminal-command {
+    color: #fbbf24;
+}
+
+.terminal-timestamp {
+    color: #6b7280;
+    font-size: 0.75rem;
+}
+
+.terminal-text {
+    flex: 1;
+}
+
+.terminal-text.info { color: #3b82f6; }
+.terminal-text.success { color: #10b981; }
+.terminal-text.warning { color: #f59e0b; }
+.terminal-text.error { color: #ef4444; }
+.terminal-text.debug { color: #8b5cf6; }
+
+/* Horizontal Bot/Validator Cards */
+.horizontal-cards-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+@media (max-width: 768px) {
+    .horizontal-cards-container {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+    
+    .card-metrics {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+    }
+    
+    .terminal-body {
+        height: 200px;
+    }
+    
+    .auto-refresh-indicator {
+        top: 60px;
+        right: 10px;
+        padding: 6px 12px;
+        font-size: 0.7rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .horizontal-cards-container {
+        gap: 10px;
+    }
+    
+    .bot-card, .validator-card {
+        padding: 15px;
+    }
+    
+    .card-metrics {
+        gap: 8px;
+    }
+    
+    .metric-value {
+        font-size: 1.2rem;
+    }
+    
+    .metric-label {
+        font-size: 0.7rem;
+    }
+    
+    .card-actions {
+        gap: 5px;
+    }
+    
+    .btn-terminal {
+        padding: 4px 8px;
+        font-size: 0.7rem;
+    }
+    
+    .terminal-body {
+        height: 150px;
+        padding: 12px;
+    }
+    
+    .terminal-content {
+        font-size: 0.8rem;
+    }
+}
+
+.bot-card, .validator-card {
+    background: linear-gradient(145deg, var(--secondary-black), var(--dark-gray));
+    border: 1px solid var(--border-gray);
+    border-radius: 12px;
+    padding: 20px;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.bot-card:hover, .validator-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+    border-color: var(--accent-blue);
+}
+
+.bot-card::before, .validator-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #10b981, #3b82f6, #8b5cf6);
+}
+
+.card-header-horizontal {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.card-title-horizontal {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--white);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.card-status {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status-active { background: rgba(16, 185, 129, 0.2); color: #10b981; }
+.status-inactive { background: rgba(107, 114, 128, 0.2); color: #6b7280; }
+.status-error { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+
+.card-metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 15px;
+    margin-bottom: 16px;
+}
+
+.metric-item {
+    text-align: center;
+}
+
+.metric-value {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--accent-blue);
+    margin-bottom: 4px;
+}
+
+.metric-label {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.card-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+}
+
+.btn-terminal {
+    background: linear-gradient(135deg, #4a5568, #2d3748);
+    border: 1px solid #4a5568;
+    color: #e2e8f0;
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 0.8rem;
+    transition: all 0.2s ease;
+}
+
+.btn-terminal:hover {
+    background: linear-gradient(135deg, #2d3748, #1a202c);
+    border-color: var(--accent-blue);
+    color: var(--accent-blue);
+}
+
+/* Auto-refresh indicators */
+.auto-refresh-indicator {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    background: rgba(16, 185, 129, 0.9);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    z-index: 1000;
+    animation: slide-in-right 0.3s ease-out;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.auto-refresh-indicator.show {
+    opacity: 1;
+}
+
+@keyframes slide-in-right {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+/* Old Recent Activity Styles - keeping for compatibility */
 .recent-activity-card {
     background: linear-gradient(145deg, var(--secondary-black), var(--dark-gray));
     border: 1px solid var(--medium-gray);
@@ -597,6 +909,11 @@
 {% endblock %}
 
 {% block content %}
+<!-- Auto-refresh notification -->
+<div class="auto-refresh-indicator" id="global-refresh-indicator">
+    <i class="fas fa-sync-alt fa-spin"></i> Auto-updating dashboard...
+</div>
+
 <!-- Welcome Section with Typewriter Effect -->
 <div class="welcome-section mb-4">
     <div class="welcome-card">
@@ -642,24 +959,32 @@
     </div>
 </div>
 
-<!-- Recent Activity Section -->
+<!-- Terminal-Style Recent Activity Section -->
 <div class="row mb-4">
     <div class="col-12">
-        <div class="card shadow recent-activity-card">
-            <div class="card-header py-2 d-flex justify-content-between align-items-center">
-                <h6 class="m-0 font-weight-bold text-primary">
-                    <i class="fas fa-clock me-2"></i>Recent Activity
-                </h6>
-                <button class="btn btn-sm btn-outline-primary" onclick="refreshRecentActivity()">
-                    <i class="fas fa-sync-alt"></i>
-                </button>
+        <div class="terminal-window">
+            <div class="terminal-header">
+                <div class="terminal-controls">
+                    <span class="terminal-button close"></span>
+                    <span class="terminal-button minimize"></span>
+                    <span class="terminal-button maximize"></span>
+                </div>
+                <div class="terminal-title">
+                    <i class="fas fa-terminal"></i> Recent Activity Log
+                </div>
+                <div class="terminal-status">
+                    <span id="activity-status" class="status-connected">LIVE</span>
+                </div>
             </div>
-            <div class="card-body p-2">
-                <div class="recent-activity-scroll">
-                    <div id="recent-activity-feed">
-                        <div class="activity-item-compact">
-                            <i class="fas fa-spinner fa-spin"></i> Loading recent activity...
-                        </div>
+            <div class="terminal-body">
+                <div class="terminal-content" id="recent-activity-terminal">
+                    <div class="terminal-line loading">
+                        <span class="terminal-prompt">$</span>
+                        <span class="terminal-command">tail -f /var/log/lighthouse/activity.log</span>
+                    </div>
+                    <div class="terminal-line">
+                        <span class="terminal-timestamp">[$(date)]</span>
+                        <span class="terminal-text info">Initializing activity monitor...</span>
                     </div>
                 </div>
             </div>
@@ -818,8 +1143,47 @@
             </div>
         </div>
 
-        <!-- Bot Instances Overview -->
-        <div class="card shadow mb-4">
+        <!-- Bot Instances - Horizontal Cards Layout -->
+        <div class="mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-robot me-2"></i>
+                    Bot Instances
+                </h5>
+                <div class="auto-refresh-indicator" id="bots-refresh-indicator">
+                    <i class="fas fa-sync-alt fa-spin"></i> Auto-refreshing...
+                </div>
+            </div>
+            <div class="horizontal-cards-container" id="bot-cards-container">
+                <!-- Bot cards will be populated dynamically -->
+                <div class="bot-card">
+                    <div class="card-header-horizontal">
+                        <h6 class="card-title-horizontal">
+                            <i class="fas fa-robot"></i>
+                            Loading Bots...
+                        </h6>
+                        <span class="card-status status-inactive">Loading</span>
+                    </div>
+                    <div class="card-metrics">
+                        <div class="metric-item">
+                            <div class="metric-value">-</div>
+                            <div class="metric-label">PnL</div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-value">-</div>
+                            <div class="metric-label">Trades</div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-value">-</div>
+                            <div class="metric-label">Uptime</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Fallback Table (hidden by default) -->
+        <div class="card shadow mb-4" id="instances-table-container" style="display: none;">
             <div class="card-header py-3">
                 <h6 class="m-0 font-weight-bold text-primary">
                     <i class="fas fa-robot me-2"></i>
@@ -1189,8 +1553,52 @@
             </div>
         </div>
         
-        <!-- Validator Nodes Table -->
-        <div class="row">
+        <!-- Validator Nodes - Horizontal Cards Layout -->
+        <div class="mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-shield-alt me-2"></i>
+                    Validator Nodes
+                </h5>
+                <div class="d-flex align-items-center gap-3">
+                    <div class="auto-refresh-indicator" id="validators-refresh-indicator">
+                        <i class="fas fa-sync-alt fa-spin"></i> Auto-refreshing...
+                    </div>
+                    <a href="/validators/new" class="btn btn-primary btn-sm">
+                        <i class="fas fa-plus"></i> New Validator
+                    </a>
+                </div>
+            </div>
+            <div class="horizontal-cards-container" id="validator-cards-container">
+                <!-- Validator cards will be populated dynamically -->
+                <div class="validator-card">
+                    <div class="card-header-horizontal">
+                        <h6 class="card-title-horizontal">
+                            <i class="fas fa-shield-alt"></i>
+                            Loading Validators...
+                        </h6>
+                        <span class="card-status status-inactive">Loading</span>
+                    </div>
+                    <div class="card-metrics">
+                        <div class="metric-item">
+                            <div class="metric-value">-</div>
+                            <div class="metric-label">Stake</div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-value">-</div>
+                            <div class="metric-label">APY</div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-value">-</div>
+                            <div class="metric-label">Uptime</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Fallback Table (hidden by default) -->
+        <div class="row" style="display: none;" id="validators-table-container">
             <div class="col-12">
                 <div class="card shadow">
                     <div class="card-header py-3 d-flex justify-content-between align-items-center">
@@ -1535,8 +1943,20 @@ async function loadRecentActivityFeed() {
         const token = localStorage.getItem('access_token');
         if (!token) return;
         
-        const activityFeed = document.getElementById('recent-activity-feed');
-        activityFeed.innerHTML = '<div class="activity-item-compact"><i class="fas fa-spinner fa-spin"></i> Loading recent activity...</div>';
+        // Update terminal display
+        const terminal = document.querySelector('#recent-activity-terminal');
+        if (terminal) {
+            terminal.innerHTML = `
+                <div class="terminal-line">
+                    <span class="terminal-prompt">$</span>
+                    <span class="terminal-command">tail -f /var/log/lighthouse/activity.log</span>
+                </div>
+                <div class="terminal-line">
+                    <span class="terminal-timestamp">[$(date +"%Y-%m-%d %H:%M:%S")]</span>
+                    <span class="terminal-text info">Loading activity feed...</span>
+                </div>
+            `;
+        }
         
         const response = await fetch('/api/dashboard/recent-activity?limit=10', {
             headers: {
@@ -1546,6 +1966,8 @@ async function loadRecentActivityFeed() {
         
         if (response.ok) {
             const activities = await response.json();
+            // Update both terminal and legacy display
+            updateTerminalActivity(activities);
             updateRecentActivityFeed(activities);
         } else {
             activityFeed.innerHTML = '<div class="activity-item-compact error"><i class="fas fa-exclamation-triangle"></i> Failed to load recent activity</div>';
@@ -1664,6 +2086,8 @@ function initializeWelcomeMessage() {
 
 
 function refreshDashboard() {
+    // Show global refresh indicator
+    showAutoRefreshIndicator('global-refresh-indicator');
     loadDashboardData();
 }
 
@@ -1926,8 +2350,229 @@ function updateResourceUsage(resourceData) {
     });
 }
 
+// Update bot horizontal cards
+function updateBotCards(instances) {
+    const container = document.querySelector('#bot-cards-container');
+    if (!container) return;
+    
+    if (!instances || instances.length === 0) {
+        container.innerHTML = `
+            <div class="bot-card" style="grid-column: 1 / -1; text-align: center; padding: 40px;">
+                <div class="text-center py-4">
+                    <i class="fas fa-robot fa-3x text-muted mb-3"></i>
+                    <h4 class="text-muted">No Bot Instances Found</h4>
+                    <p class="text-muted">Create your first bot instance to get started</p>
+                    <a href="/bot-instances/new" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Create First Bot
+                    </a>
+                </div>
+            </div>
+        `;
+        return;
+    }
+
+    const cardsHTML = instances.map(instance => {
+        const statusClass = instance.status === 'active' ? 'status-active' : 
+                          instance.status === 'error' ? 'status-error' : 'status-inactive';
+        
+        const pnl = instance.pnl || 0;
+        const pnlColor = pnl >= 0 ? '#10b981' : '#ef4444';
+        const pnlPrefix = pnl >= 0 ? '+' : '';
+        
+        return `
+            <div class="bot-card" data-instance-id="${instance.id}">
+                <div class="card-header-horizontal">
+                    <h6 class="card-title-horizontal">
+                        <i class="fas fa-robot"></i>
+                        ${instance.name}
+                    </h6>
+                    <span class="card-status ${statusClass}">${instance.status}</span>
+                </div>
+                <div class="card-metrics">
+                    <div class="metric-item">
+                        <div class="metric-value" style="color: ${pnlColor}">
+                            ${pnlPrefix}$${safeFormatCurrency(pnl)}
+                        </div>
+                        <div class="metric-label">PnL</div>
+                    </div>
+                    <div class="metric-item">
+                        <div class="metric-value">${instance.trades_count || 0}</div>
+                        <div class="metric-label">Trades</div>
+                    </div>
+                    <div class="metric-item">
+                        <div class="metric-value">${instance.uptime_percentage || 0}%</div>
+                        <div class="metric-label">Uptime</div>
+                    </div>
+                </div>
+                <div class="small text-muted mb-3">
+                    <i class="fas fa-exchange-alt"></i> ${instance.exchange} | 
+                    <i class="fas fa-chart-line"></i> ${instance.strategies ? instance.strategies.join(', ') : 'No strategies'}
+                </div>
+                <div class="card-actions">
+                    <button class="btn btn-terminal btn-sm" onclick="viewInstanceLogs(${instance.id})">
+                        <i class="fas fa-terminal"></i> Logs
+                    </button>
+                    <button class="btn btn-terminal btn-sm" onclick="toggleInstance(${instance.id})">
+                        <i class="fas fa-${instance.status === 'active' ? 'pause' : 'play'}"></i> 
+                        ${instance.status === 'active' ? 'Pause' : 'Start'}
+                    </button>
+                    <button class="btn btn-terminal btn-sm text-danger" onclick="deleteInstance(${instance.id})">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
+    
+    container.innerHTML = cardsHTML;
+    showAutoRefreshIndicator('bots-refresh-indicator');
+}
+
+// Update validator horizontal cards
+function updateValidatorCards(validators) {
+    const container = document.querySelector('#validator-cards-container');
+    if (!container) return;
+    
+    if (!validators || validators.length === 0) {
+        container.innerHTML = `
+            <div class="validator-card" style="grid-column: 1 / -1; text-align: center; padding: 40px;">
+                <div class="text-center py-4">
+                    <i class="fas fa-shield-alt fa-3x text-muted mb-3"></i>
+                    <h4 class="text-muted">No Validator Nodes Found</h4>
+                    <p class="text-muted">Create your first validator node to get started</p>
+                    <a href="/validators/new" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Create First Validator
+                    </a>
+                </div>
+            </div>
+        `;
+        return;
+    }
+
+    const cardsHTML = validators.map(validator => {
+        const statusClass = validator.status === 'active' ? 'status-active' : 
+                          validator.status === 'error' ? 'status-error' : 'status-inactive';
+        
+        return `
+            <div class="validator-card" data-validator-id="${validator.id}">
+                <div class="card-header-horizontal">
+                    <h6 class="card-title-horizontal">
+                        <i class="fas fa-shield-alt"></i>
+                        ${validator.name}
+                    </h6>
+                    <span class="card-status ${statusClass}">${validator.status}</span>
+                </div>
+                <div class="card-metrics">
+                    <div class="metric-item">
+                        <div class="metric-value">$${safeFormatCurrency(validator.stake_amount || 0)}</div>
+                        <div class="metric-label">Stake</div>
+                    </div>
+                    <div class="metric-item">
+                        <div class="metric-value">${validator.apy || 0}%</div>
+                        <div class="metric-label">APY</div>
+                    </div>
+                    <div class="metric-item">
+                        <div class="metric-value">${validator.uptime_percentage || 0}%</div>
+                        <div class="metric-label">Uptime</div>
+                    </div>
+                </div>
+                <div class="small text-muted mb-3">
+                    <i class="fas fa-link"></i> ${validator.blockchain} | 
+                    <i class="fas fa-chart-line"></i> ${validator.strategy || 'Standard'}
+                </div>
+                <div class="card-actions">
+                    <button class="btn btn-terminal btn-sm" onclick="viewValidatorLogs(${validator.id})">
+                        <i class="fas fa-terminal"></i> Logs
+                    </button>
+                    <button class="btn btn-terminal btn-sm" onclick="manageValidator(${validator.id})">
+                        <i class="fas fa-cog"></i> Manage
+                    </button>
+                    <button class="btn btn-terminal btn-sm text-danger" onclick="deleteValidator(${validator.id})">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
+    
+    container.innerHTML = cardsHTML;
+    showAutoRefreshIndicator('validators-refresh-indicator');
+}
+
+// Update terminal-style activity log
+function updateTerminalActivity(activities) {
+    const terminal = document.querySelector('#recent-activity-terminal');
+    if (!terminal) return;
+
+    if (!activities || activities.length === 0) {
+        terminal.innerHTML = `
+            <div class="terminal-line">
+                <span class="terminal-prompt">$</span>
+                <span class="terminal-command">tail -f /var/log/lighthouse/activity.log</span>
+            </div>
+            <div class="terminal-line">
+                <span class="terminal-timestamp">[$(date +"%Y-%m-%d %H:%M:%S")]</span>
+                <span class="terminal-text info">No recent activity found</span>
+            </div>
+        `;
+        return;
+    }
+
+    const linesHTML = activities.slice(-10).map(activity => {
+        const timestamp = new Date(activity.timestamp).toISOString().replace('T', ' ').slice(0, 19);
+        const logLevel = getLogLevel(activity.type);
+        return `
+            <div class="terminal-line">
+                <span class="terminal-timestamp">[${timestamp}]</span>
+                <span class="terminal-text ${logLevel}">${activity.message}</span>
+            </div>
+        `;
+    }).join('');
+
+    terminal.innerHTML = `
+        <div class="terminal-line">
+            <span class="terminal-prompt">$</span>
+            <span class="terminal-command">tail -f /var/log/lighthouse/activity.log</span>
+        </div>
+        ${linesHTML}
+    `;
+
+    // Auto-scroll to bottom
+    const terminalBody = terminal.closest('.terminal-body');
+    if (terminalBody) {
+        terminalBody.scrollTop = terminalBody.scrollHeight;
+    }
+}
+
+// Get log level based on activity type
+function getLogLevel(type) {
+    const levels = {
+        'trade': 'success',
+        'error': 'error',
+        'warning': 'warning',
+        'info': 'info',
+        'debug': 'debug',
+        'system': 'info'
+    };
+    return levels[type] || 'info';
+}
+
+// Show auto-refresh indicator
+function showAutoRefreshIndicator(indicatorId) {
+    const indicator = document.getElementById(indicatorId);
+    if (indicator) {
+        indicator.classList.add('show');
+        setTimeout(() => {
+            indicator.classList.remove('show');
+        }, 2000);
+    }
+}
+
 // Update instances table
 function updateInstancesTable(instances) {
+    // Update horizontal cards first
+    updateBotCards(instances);
+    
     const tbody = document.querySelector('#instances-table tbody');
     if (!tbody) return;
     
@@ -2270,6 +2915,9 @@ function updateValidatorRewardsTable(rewards) {
 
 // Update validators table
 function updateValidatorsTable(validators) {
+    // Update horizontal cards first
+    updateValidatorCards(validators);
+    
     const tbody = document.querySelector('#validators-table tbody');
     if (!tbody) return;
     
@@ -2565,21 +3213,29 @@ document.addEventListener('DOMContentLoaded', function() {
         refreshDashboard(); // Try anyway
     });
     
-    // Add tab change event listeners
+    // Add tab change event listeners with immediate data loading
     const tabButtons = document.querySelectorAll('.nav-pills .nav-link');
     tabButtons.forEach(button => {
         button.addEventListener('click', function() {
-            setTimeout(() => {
-                refreshDashboard();
-            }, 100); // Small delay to ensure tab is active
+            // Get the target tab immediately
+            const targetTab = this.getAttribute('data-bs-target').replace('#', '');
+            
+            // Load data immediately when tab is clicked (no delay)
+            setTimeout(async () => {
+                await loadTabData(targetTab);
+                loadRecentActivityFeed(); // Always refresh activity log
+            }, 50); // Minimal delay to ensure tab activation
         });
     });
     
     // Initialize WebSocket connection for real-time updates
     initializeWebSocket();
     
-    // Auto-refresh every 30 seconds as fallback
-    setInterval(refreshDashboard, 30000);
+    // More frequent auto-refresh for better user experience
+    setInterval(() => {
+        refreshDashboard();
+        loadRecentActivityFeed();
+    }, 15000); // Refresh every 15 seconds instead of 30
 });
 
 // WebSocket connection management
