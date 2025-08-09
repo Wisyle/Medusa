@@ -10,7 +10,8 @@
     <link rel="alternate icon" href="/static/lighthouse1.svg">
     <link rel="apple-touch-icon" href="/static/lighthouse1.svg">
     
-    <!-- Removed Bootstrap CSS - using custom styles -->
+    <!-- Custom Modal System CSS -->
+    <link href="/static/modal-fix.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
@@ -296,266 +297,7 @@
             height: 80px;
             border-radius: 50%;
         }
-        
-        /* Custom Modal Styles (replacing Bootstrap) */
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1050;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            overflow: auto;
-            outline: 0;
-        }
-        
-        .modal.show {
-            display: block !important;
-        }
-        
-        .modal-dialog {
-            position: relative;
-            width: auto;
-            margin: 1.75rem auto;
-            pointer-events: none;
-            max-width: 500px;
-        }
-        
-        .modal-dialog-lg, .modal-lg .modal-dialog {
-            max-width: 800px;
-        }
-        
-        .modal-content {
-            position: relative;
-            display: flex;
-            flex-direction: column;
-            width: 100%;
-            pointer-events: auto;
-            background-color: var(--secondary-black);
-            background-clip: padding-box;
-            border: 1px solid var(--border-gray);
-            border-radius: 0.5rem;
-            outline: 0;
-        }
-        
-        .modal-backdrop {
-            position: fixed;
-            top: 0;
-            left: 0;
-            z-index: 1040;
-            width: 100vw;
-            height: 100vh;
-            background-color: rgba(0, 0, 0, 0.5);
-        }
-        
-        .modal-backdrop.show {
-            opacity: 1;
-        }
-        
-        .modal-header {
-            display: flex;
-            flex-shrink: 0;
-            align-items: center;
-            justify-content: space-between;
-            padding: 1rem;
-            border-bottom: 1px solid var(--border-gray);
-            border-top-left-radius: calc(0.5rem - 1px);
-            border-top-right-radius: calc(0.5rem - 1px);
-        }
-        
-        .modal-title {
-            margin-bottom: 0;
-            line-height: 1.5;
-            color: var(--text-primary);
-        }
-        
-        .modal-body {
-            position: relative;
-            flex: 1 1 auto;
-            padding: 1rem;
-        }
-        
-        .modal-footer {
-            display: flex;
-            flex-wrap: wrap;
-            flex-shrink: 0;
-            align-items: center;
-            justify-content: flex-end;
-            padding: 0.75rem;
-            border-top: 1px solid var(--border-gray);
-            border-bottom-right-radius: calc(0.5rem - 1px);
-            border-bottom-left-radius: calc(0.5rem - 1px);
-            gap: 0.5rem;
-        }
-        
-        .btn-close {
-            box-sizing: content-box;
-            width: 1em;
-            height: 1em;
-            padding: 0.25em;
-            color: var(--text-primary);
-            background: transparent;
-            border: 0;
-            border-radius: 0.25rem;
-            opacity: 0.5;
-            cursor: pointer;
-        }
-        
-        .btn-close:hover {
-            opacity: 0.75;
-        }
-        
-        /* Prevent body scroll when modal is open */
-        body.modal-open {
-            overflow: hidden;
-            padding-right: 0 !important;
-        }
-        
-        /* Utility classes */
-        .d-none {
-            display: none !important;
-        }
-        
-        .alert {
-            position: relative;
-            padding: 1rem;
-            margin-bottom: 1rem;
-            border: 1px solid transparent;
-            border-radius: 0.25rem;
-        }
-        
-        .alert-warning {
-            color: #664d03;
-            background-color: #fff3cd;
-            border-color: #ffecb5;
-        }
-        
-        /* Bootstrap replacement classes */
-        .btn {
-            display: inline-block;
-            font-weight: 400;
-            line-height: 1.5;
-            text-align: center;
-            text-decoration: none;
-            vertical-align: middle;
-            cursor: pointer;
-            user-select: none;
-            background-color: transparent;
-            border: 1px solid transparent;
-            padding: 0.375rem 0.75rem;
-            font-size: 1rem;
-            border-radius: 0.25rem;
-            transition: all 0.15s ease-in-out;
-        }
-        
-        .btn-primary {
-            color: #fff;
-            background-color: #0d6efd;
-            border-color: #0d6efd;
-        }
-        
-        .btn-primary:hover {
-            background-color: #0b5ed7;
-            border-color: #0a58ca;
-        }
-        
-        .btn-secondary, .btn-outline-secondary {
-            color: #fff;
-            background-color: #6c757d;
-            border-color: #6c757d;
-        }
-        
-        .btn-outline-secondary:hover {
-            background-color: #5c636a;
-            border-color: #565e64;
-        }
-        
-        .btn-sm {
-            padding: 0.25rem 0.5rem;
-            font-size: 0.875rem;
-        }
-        
-        .btn-warning {
-            color: #000;
-            background-color: #ffc107;
-            border-color: #ffc107;
-        }
-        
-        .card {
-            position: relative;
-            display: flex;
-            flex-direction: column;
-            min-width: 0;
-            word-wrap: break-word;
-            background-color: var(--secondary-black);
-            background-clip: border-box;
-            border: 1px solid var(--border-gray);
-            border-radius: 0.25rem;
-        }
-        
-        .card-header {
-            padding: 0.5rem 1rem;
-            margin-bottom: 0;
-            background-color: var(--dark-gray);
-            border-bottom: 1px solid var(--border-gray);
-        }
-        
-        .card-body {
-            flex: 1 1 auto;
-            padding: 1rem;
-        }
-        
-        .row {
-            display: flex;
-            flex-wrap: wrap;
-            margin-right: -0.75rem;
-            margin-left: -0.75rem;
-        }
-        
-        .col-md-6, .col-6 {
-            flex: 0 0 auto;
-            width: 50%;
-            padding-right: 0.75rem;
-            padding-left: 0.75rem;
-        }
-        
-        .mb-0 { margin-bottom: 0 !important; }
-        .mb-3 { margin-bottom: 1rem !important; }
-        .me-2 { margin-right: 0.5rem !important; }
-        .ms-2 { margin-left: 0.5rem !important; }
-        
-        .form-label {
-            margin-bottom: 0.5rem;
-            color: var(--text-secondary);
-        }
-        
-        .form-control {
-            display: block;
-            width: 100%;
-            padding: 0.375rem 0.75rem;
-            font-size: 1rem;
-            font-weight: 400;
-            line-height: 1.5;
-            color: var(--text-primary);
-            background-color: var(--dark-gray);
-            background-clip: padding-box;
-            border: 1px solid var(--border-gray);
-            appearance: none;
-            border-radius: 0.25rem;
-            transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
-        }
-        
-        .form-control:focus {
-            color: var(--text-primary);
-            background-color: var(--dark-gray);
-            border-color: #86b7fe;
-            outline: 0;
-            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
-        }
-        
-        .text-center { text-align: center !important; }
-        .text-muted { color: var(--text-secondary) !important; }
+        /* Modal styles moved to /static/modal-fix.css */
         .main-content {
             background: transparent;
             min-height: calc(100vh - 60px);
@@ -741,133 +483,7 @@
             transform: scale(1.05);
             box-shadow: 0 4px 12px rgba(255, 215, 0, 0.2);
         }
-        /* Comprehensive Modal fixes */
-        .modal-backdrop {
-            z-index: 1040 !important;
-            opacity: 0.5 !important;
-            background-color: #000 !important;
-            backdrop-filter: none !important;
-            -webkit-backdrop-filter: none !important;
-        }
-        
-        .modal-backdrop.show {
-            opacity: 0.5 !important;
-        }
-        
-        .modal {
-            z-index: 1050 !important;
-            background: transparent !important;
-            backdrop-filter: none !important;
-            -webkit-backdrop-filter: none !important;
-        }
-        
-        .modal-dialog {
-            z-index: 1060 !important;
-            margin: 1.75rem auto;
-            backdrop-filter: none !important;
-            -webkit-backdrop-filter: none !important;
-        }
-        
-        .modal-content {
-            position: relative;
-            background-color: #fff;
-            border: 1px solid rgba(0, 0, 0, 0.2);
-            border-radius: 0.3rem;
-            box-shadow: 0 3px 9px rgba(0, 0, 0, 0.5);
-            backdrop-filter: none !important;
-            -webkit-backdrop-filter: none !important;
-        }
-        
-        /* Override any card blur effects inside modals */
-        .modal .card,
-        .modal-content .card,
-        .modal-dialog .card,
-        .modal-body .card {
-            backdrop-filter: none !important;
-            -webkit-backdrop-filter: none !important;
-            filter: none !important;
-            -webkit-filter: none !important;
-        }
-        
-        /* Ensure modals and their content are clickable */
-        .modal.show {
-            display: block !important;
-            pointer-events: auto !important;
-        }
-        
-        .modal.show .modal-dialog,
-        .modal.show .modal-content,
-        .modal.show .modal-body,
-        .modal.show .modal-header,
-        .modal.show .modal-footer {
-            pointer-events: auto !important;
-            user-select: auto !important;
-            -webkit-user-select: auto !important;
-            -moz-user-select: auto !important;
-            -ms-user-select: auto !important;
-        }
-        
-        /* Fix modal close button styling */
-        .modal .close {
-            color: #000;
-            opacity: 0.5;
-            font-size: 1.5rem;
-            font-weight: bold;
-            line-height: 1;
-            background: none;
-            border: 0;
-            padding: 0;
-            cursor: pointer;
-            text-shadow: none;
-        }
-        
-        .modal .close:hover,
-        .modal .close:focus {
-            opacity: 0.8;
-            color: #000;
-            text-decoration: none;
-        }
-        
-        /* Fix modal header text color */
-        .modal-header {
-            color: #333;
-        }
-        
-        /* Prevent modal from blocking page interaction */
-        body.modal-open {
-            overflow: hidden;
-            padding-right: 0 !important;
-        }
-        
-        body.modal-open .modal {
-            overflow-x: hidden;
-            overflow-y: auto;
-        }
-        
-        /* Ensure form inputs in modals are interactive */
-        .modal input,
-        .modal select,
-        .modal textarea,
-        .modal button {
-            pointer-events: auto !important;
-            cursor: auto !important;
-        }
-        
-        .modal button {
-            cursor: pointer !important;
-        }
-        
-        /* Remove any blur effects from all modal elements */
-        .modal *,
-        .modal-backdrop *,
-        .modal-dialog *,
-        .modal-content *,
-        body.modal-open * {
-            filter: none !important;
-            backdrop-filter: none !important;
-            -webkit-filter: none !important;
-            -webkit-backdrop-filter: none !important;
-        }
+        /* All modal styles are in /static/modal-fix.css */
         
         /* Fix notification popups specifically */
         .alert.position-fixed {
@@ -1160,7 +776,68 @@
         </div>
     </div>
 
-    <!-- 2FA Verification Modal -->
+    <!-- OTP Verification Modal -->
+    <div class="modal" id="otpVerificationModal" tabindex="-1" role="dialog" aria-labelledby="otpModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="otpModalLabel">
+                        <i class="fas fa-shield-alt me-2"></i>Verify Your Identity
+                    </h5>
+                    <button type="button" class="btn-close" onclick="modalManager.close('otpVerificationModal')" aria-label="Close">×</button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted">Enter your 6-digit authentication code to access credentials:</p>
+                    <div class="mb-3">
+                        <input type="text" 
+                               class="form-control text-center" 
+                               id="otpCode" 
+                               placeholder="000000" 
+                               maxlength="6" 
+                               style="font-size: 24px; letter-spacing: 8px;"
+                               autocomplete="off">
+                    </div>
+                    <small class="text-muted">Open your authenticator app to get the code</small>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="modalManager.close('otpVerificationModal')">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="verifyOTP()">
+                        <i class="fas fa-check me-2"></i>Verify
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2FA Required Modal -->
+    <div class="modal" id="twoFARequiredModal" tabindex="-1" role="dialog" aria-labelledby="twoFARequiredLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="twoFARequiredLabel">
+                        <i class="fas fa-lock me-2"></i>Two-Factor Authentication Required
+                    </h5>
+                    <button type="button" class="btn-close" onclick="modalManager.close('twoFARequiredModal')" aria-label="Close">×</button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Security Notice</strong>
+                    </div>
+                    <p>You must enable Two-Factor Authentication to manage credentials and access sensitive features.</p>
+                    <p class="text-muted">2FA adds an extra layer of security to protect your account and API credentials.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="modalManager.close('twoFARequiredModal')">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="setupTwoFA()">
+                        <i class="fas fa-shield-alt me-2"></i>Setup 2FA Now
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Legacy 2FA Modal (keeping for compatibility) -->
     <div class="modal fade" id="twofaModal" tabindex="-1" aria-labelledby="twofaModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -1266,83 +943,7 @@
             }
         }
 
-        // 2FA and Credentials Management
-        let pendingAction = null;
-        
-        function openCredentialsModal() {
-            // Skip 2FA check and directly show credentials modal
-            const modal = document.getElementById('credentialsModal');
-            if (modal) {
-                // Hide any 2FA warnings
-                const twofaWarning = document.getElementById('twofaWarning');
-                if (twofaWarning) twofaWarning.style.display = 'none';
-                
-                const credentialsForm = document.getElementById('credentialsForm');
-                if (credentialsForm) credentialsForm.style.display = 'block';
-                
-                // Show modal using pure JavaScript
-                modal.style.display = 'block';
-                modal.classList.add('show');
-                document.body.classList.add('modal-open');
-                
-                // Create backdrop
-                const backdrop = document.createElement('div');
-                backdrop.className = 'modal-backdrop fade show';
-                backdrop.id = 'modalBackdrop';
-                document.body.appendChild(backdrop);
-                
-                loadCredentials();
-            }
-        }
-        
-        function requireTwoFA(action, callback) {
-            pendingAction = callback;
-            const modal = document.getElementById('twofaModal');
-            if (modal) {
-                modal.style.display = 'block';
-                modal.classList.add('show');
-                document.body.classList.add('modal-open');
-                
-                // Create backdrop
-                const backdrop = document.createElement('div');
-                backdrop.className = 'modal-backdrop fade show';
-                backdrop.id = 'twofaBackdrop';
-                document.body.appendChild(backdrop);
-            }
-        }
-        
-        function verifyTwoFA() {
-            const code = document.getElementById('twofaCode').value;
-            
-            if (!code || code.length !== 6) {
-                showNotification('Please enter a valid 6-digit code', 'warning');
-                return;
-            }
-            
-            fetch('/api/auth/2fa/verify', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ code: code })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    closeTwoFAModal();
-                    document.getElementById('twofaCode').value = '';
-                    
-                    if (pendingAction) {
-                        pendingAction();
-                        pendingAction = null;
-                    }
-                } else {
-                    showNotification('Invalid 2FA code', 'error');
-                }
-            })
-            .catch(error => {
-                console.error('Error verifying 2FA:', error);
-                showNotification('Error verifying 2FA code', 'error');
-            });
-        }
+        // Credentials Management functions are defined in /static/modal-fix.js
         
         function loadCredentials() {
             // Load existing credentials (masked for security)
@@ -1397,31 +998,7 @@
             });
         }
         
-        function closeCredentialsModal() {
-            const modal = document.getElementById('credentialsModal');
-            if (modal) {
-                modal.style.display = 'none';
-                modal.classList.remove('show');
-                document.body.classList.remove('modal-open');
-                
-                // Remove backdrop
-                const backdrop = document.getElementById('modalBackdrop');
-                if (backdrop) backdrop.remove();
-            }
-        }
-        
-        function closeTwoFAModal() {
-            const modal = document.getElementById('twofaModal');
-            if (modal) {
-                modal.style.display = 'none';
-                modal.classList.remove('show');
-                document.body.classList.remove('modal-open');
-                
-                // Remove backdrop
-                const backdrop = document.getElementById('twofaBackdrop');
-                if (backdrop) backdrop.remove();
-            }
-        }
+        // Modal close functions are defined in /static/modal-fix.js
         
         function toggleTheme() {
             // Theme toggle functionality (placeholder)
@@ -1479,6 +1056,10 @@
             setInterval(updateSystemStatus, 30000);
         }
     </script>
+    
+    <!-- Load Modal Fix Script -->
+    <script src="/static/modal-fix.js"></script>
+    
     {% block scripts %}{% endblock %}
 </body>
 </html>
