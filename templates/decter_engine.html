@@ -1701,15 +1701,69 @@ function requireAuth(functionName, ...args) {
     }
 }
 
-function openCredentialsModal() {
-    const modal = document.getElementById('credentialsModal');
-    if (modal) {
-        modal.style.display = 'flex';
-        // Focus on first input
-        setTimeout(() => {
-            const firstInput = modal.querySelector('input[type="password"]');
-            if (firstInput) firstInput.focus();
-        }, 100);
+async function openCredentialsModal() {
+    try {
+        // Check 2FA status before opening modal
+        const token = localStorage.getItem('access_token');
+        if (!token) {
+            window.location.href = '/login';
+            return;
+        }
+
+        const response = await fetch('/api/user/2fa-status', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            const modal = document.getElementById('credentialsModal');
+            const twofaWarning = document.getElementById('twofaWarning');
+            const credentialsForm = document.getElementById('credentialsForm');
+
+            if (modal) {
+                modal.style.display = 'flex';
+                
+                if (data.twofa_enabled) {
+                    // 2FA is enabled, show credentials form and hide warning
+                    twofaWarning.classList.add('d-none');
+                    credentialsForm.style.display = 'block';
+                    
+                    // Focus on first input
+                    setTimeout(() => {
+                        const firstInput = modal.querySelector('input[type="password"]');
+                        if (firstInput) firstInput.focus();
+                    }, 100);
+                } else {
+                    // 2FA is not enabled, show warning and hide form
+                    twofaWarning.classList.remove('d-none');
+                    credentialsForm.style.display = 'none';
+                }
+            }
+        } else {
+            console.error('Failed to check 2FA status');
+            // Default to showing the form if we can't verify
+            const modal = document.getElementById('credentialsModal');
+            if (modal) {
+                modal.style.display = 'flex';
+                setTimeout(() => {
+                    const firstInput = modal.querySelector('input[type="password"]');
+                    if (firstInput) firstInput.focus();
+                }, 100);
+            }
+        }
+    } catch (error) {
+        console.error('Error checking 2FA status:', error);
+        // Default to showing the form if there's an error
+        const modal = document.getElementById('credentialsModal');
+        if (modal) {
+            modal.style.display = 'flex';
+            setTimeout(() => {
+                const firstInput = modal.querySelector('input[type="password"]');
+                if (firstInput) firstInput.focus();
+            }, 100);
+        }
     }
 }
 

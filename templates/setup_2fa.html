@@ -2,6 +2,40 @@
 
 {% block title %}Setup 2FA - TGL MEDUSA{% endblock %}
 
+{% block extra_head %}
+<style>
+/* Fix 2FA code input sizing */
+#totp_code {
+    font-size: 1.2rem !important;
+    letter-spacing: 0.3em !important;
+    text-align: center !important;
+    max-width: 200px !important;
+    margin: 0 auto !important;
+    height: 45px !important;
+    padding: 10px !important;
+}
+
+/* Ensure the form input container doesn't expand */
+.mb-3 {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+}
+
+.form-label {
+    margin-bottom: 10px !important;
+}
+
+/* Fix any potential CSS conflicts */
+.form-control {
+    width: auto !important;
+    max-width: 200px !important;
+    display: block !important;
+    margin: 0 auto !important;
+}
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container-fluid">
     <div class="row justify-content-center">
