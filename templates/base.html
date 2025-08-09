@@ -21,6 +21,9 @@
     <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
     <style>
         :root {
+            /* Layout Variables */
+            --header-h: 60px;
+            
             /* Modern Black & White Theme */
             --primary-black: #000000;
             --secondary-black: #0f0f0f;
@@ -140,7 +143,7 @@
         
         /* Top Navigation Bar */
         .top-navbar {
-            height: 60px;
+            height: var(--header-h);
             background: var(--secondary-black);
             border-bottom: 1px solid var(--border-gray);
             box-shadow: 0 2px 4px var(--shadow-light);
@@ -304,11 +307,22 @@
         /* Modal styles moved to /static/modal-fix.css */
         .main-content {
             background: transparent;
-            min-height: calc(100vh - 60px);
+            min-height: calc(100vh - var(--header-h));
             position: relative;
             z-index: 1;
-            margin-top: 60px;
+            margin-top: var(--header-h);
             padding: 24px;
+        }
+        
+        /* Main content wrapper for authenticated users */
+        .lighthouse-main {
+            padding-top: var(--header-h);
+            min-height: 100vh;
+            background: var(--primary-black);
+        }
+        
+        .lighthouse-main.login-mode {
+            padding-top: 0;
         }
         
         .sidebar {
@@ -525,24 +539,7 @@
             <h5 class="mb-0 fw-bold text-white">LIGHTHOUSE</h5>
         </div>
         
-        <div class="user-profile">
-            <button class="theme-toggle" onclick="toggleTheme()" title="Toggle Theme" style="background: var(--hover-bg); border: 1px solid var(--border-primary); border-radius: 8px; padding: 8px 12px; transition: all 0.3s ease; color: var(--text-primary);">
-                <i class="fas fa-moon" style="font-size: 14px;"></i>
-            </button>
-            
-            <div class="dropdown">
-                <div class="user-avatar dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-                    {{ (current_user.full_name or current_user.email)[0].upper() }}
-                </div>
-                <ul class="dropdown-menu dropdown-menu-end">
-                    <li><a class="dropdown-item" href="/account"><i class="fas fa-user me-2"></i>Profile</a></li>
-                    <li><a class="dropdown-item" href="/setup-2fa"><i class="fas fa-shield-alt me-2"></i>Enable/Manage 2FA</a></li>
-                    <li><a class="dropdown-item" href="#" onclick="openCredentialsModal()"><i class="fas fa-key me-2"></i>Credentials Access</a></li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li><a class="dropdown-item" href="#" onclick="document.querySelector('form[action=\"/auth/logout\"]').submit()"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
-                </ul>
-            </div>
-        </div>
+        <!-- User profile section removed as per requirements -->
     </nav>
     {% endif %}
     
