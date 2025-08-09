@@ -316,7 +316,7 @@
         
         /* Main content wrapper for authenticated users */
         .lighthouse-main {
-            padding-top: var(--header-h);
+            padding-top: 0;
             min-height: 100vh;
             background: var(--primary-black);
         }
@@ -522,25 +522,8 @@
     <!-- Floating particles background -->
     <div class="particles-bg" id="particles-bg"></div>
     
-    <!-- Top Navigation Bar -->
+    <!-- Top navigation bar removed as per user request -->
     {% if current_user %}
-    <nav class="top-navbar">
-        <div class="d-flex align-items-center gap-3">
-            <button class="btn btn-outline-secondary sidebar-toggle d-desktop-none" onclick="toggleSidebar()" title="Toggle Menu">
-                <i class="fas fa-bars"></i>
-            </button>
-            <div class="system-status">
-                <div class="status-indicator" id="systemStatus"></div>
-                <span class="text-sm font-medium">System Online</span>
-            </div>
-        </div>
-        
-        <div class="d-flex align-items-center gap-3">
-            <h5 class="mb-0 fw-bold text-white">LIGHTHOUSE</h5>
-        </div>
-        
-        <!-- User profile section removed as per requirements -->
-    </nav>
     {% endif %}
     
     <!-- Main Application Layout -->
