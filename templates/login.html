@@ -3,10 +3,10 @@
 {% block title %}Login - Lighthouse{% endblock %}
 
 {% block content %}
-<div class="login-container">
-    <!-- Main Login Card -->
-    <div class="login-card-container">
-        <div class="login-card">
+<div class="container">
+    <div class="row justify-content-center align-items-center" style="min-height: 100vh;">
+        <div class="col-12 col-sm-10 col-md-8 col-lg-6 col-xl-5">
+            <div class="login-card lighthouse-card">
             <div class="login-card-header">
                 <div class="logo-section">
                     <div class="lighthouse-logo-container">
@@ -127,6 +127,7 @@
                     </div>
                 </form>
             </div>
+            </div>
         </div>
     </div>
 </div>
@@ -134,28 +135,11 @@
 
 {% block scripts %}
 <style>
-.login-container {
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-    position: relative;
-    overflow: hidden;
-}
-
-/* Login Card */
-.login-card-container {
-    max-width: 480px;
-    width: 100%;
-    z-index: 2;
-    position: relative;
-}
-
+/* Login Card Specific Styles */
 .login-card {
     background: linear-gradient(145deg, var(--secondary-black), var(--dark-gray));
-    border: 1px solid var(--medium-gray);
-    border-radius: 24px;
+    border: 1px solid var(--border-gray);
+    border-radius: 1.5rem;
     box-shadow: 
         0 20px 60px rgba(0, 0, 0, 0.4),
         0 0 0 1px rgba(255, 255, 255, 0.05),
@@ -163,6 +147,7 @@
     backdrop-filter: blur(20px);
     overflow: hidden;
     position: relative;
+    padding: 0;
 }
 
 .login-card::before {
@@ -178,12 +163,12 @@
 
 .login-card-header {
     text-align: center;
-    padding: 40px 40px 20px;
-    border-bottom: 1px solid var(--medium-gray);
+    padding: 2.5rem 2.5rem 1.5rem 2.5rem;
+    border-bottom: 1px solid var(--border-gray);
 }
 
 .logo-section {
-    margin-bottom: 30px;
+    margin-bottom: 2rem;
 }
 
 .login-logo {
@@ -248,7 +233,7 @@
 
 /* Form Styles */
 .login-card-body {
-    padding: 40px;
+    padding: 2.5rem;
 }
 
 .welcome-back {

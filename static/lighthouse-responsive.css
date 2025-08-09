@@ -1,0 +1,467 @@
+/* LIGHTHOUSE RESPONSIVE DESIGN FIXES */
+/* Professional layout adjustments for all screen sizes */
+
+/* ========== MOBILE-FIRST RESPONSIVE DESIGN ========== */
+
+/* Base mobile styles (0-575px) */
+@media (max-width: 575.98px) {
+    .lighthouse-sidebar {
+        width: 100%;
+        height: auto;
+        position: relative;
+        min-height: auto;
+    }
+    
+    .lighthouse-main {
+        margin-left: 0;
+        padding: 1rem;
+    }
+    
+    .top-navbar {
+        padding: 0.5rem 1rem;
+    }
+    
+    .login-card {
+        margin: 1rem;
+        padding: 2rem 1.5rem;
+    }
+    
+    .container {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+}
+
+/* Small devices (576px-767px) */
+@media (min-width: 576px) and (max-width: 767.98px) {
+    .lighthouse-sidebar {
+        width: 100%;
+        position: relative;
+        min-height: auto;
+    }
+    
+    .lighthouse-main {
+        margin-left: 0;
+        padding: 1.5rem;
+    }
+}
+
+/* Medium devices (768px-991px) */
+@media (min-width: 768px) and (max-width: 991.98px) {
+    .lighthouse-sidebar {
+        width: 250px;
+        position: fixed;
+        left: 0;
+        top: 0;
+        height: 100vh;
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+        z-index: 1020;
+    }
+    
+    .lighthouse-sidebar.show {
+        transform: translateX(0);
+    }
+    
+    .lighthouse-main {
+        margin-left: 0;
+        padding: 2rem;
+    }
+    
+    .sidebar-toggle {
+        display: block !important;
+    }
+}
+
+/* Large devices (992px and up) */
+@media (min-width: 992px) {
+    .lighthouse-sidebar {
+        width: 280px;
+        position: fixed;
+        left: 0;
+        top: 0;
+        height: 100vh;
+        transform: translateX(0);
+        z-index: 1010;
+    }
+    
+    .lighthouse-main {
+        margin-left: 280px;
+        padding: 2rem;
+    }
+    
+    .sidebar-toggle {
+        display: none !important;
+    }
+}
+
+/* ========== LAYOUT FIXES ========== */
+
+/* Fix navbar alignment */
+.top-navbar {
+    position: sticky;
+    top: 0;
+    z-index: 1030;
+    background: var(--secondary-black);
+    border-bottom: 1px solid var(--border-gray);
+    padding: 1rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* Fix sidebar scrolling */
+.sidebar-content {
+    height: 100vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 1.5rem;
+}
+
+.sidebar-content::-webkit-scrollbar {
+    width: 4px;
+}
+
+.sidebar-content::-webkit-scrollbar-track {
+    background: var(--secondary-black);
+}
+
+.sidebar-content::-webkit-scrollbar-thumb {
+    background: var(--border-gray);
+    border-radius: 2px;
+}
+
+.sidebar-content::-webkit-scrollbar-thumb:hover {
+    background: var(--medium-gray);
+}
+
+/* Fix logo container */
+.logo-container {
+    text-align: center;
+    padding: 1rem 0 2rem 0;
+    border-bottom: 1px solid var(--border-gray);
+    margin-bottom: 2rem;
+}
+
+/* Fix navigation links */
+.nav {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.nav-item {
+    margin-bottom: 0.25rem;
+}
+
+.nav-link {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.nav-link:hover,
+.nav-link.active {
+    background: var(--hover-bg);
+    color: var(--text-primary);
+    transform: translateX(4px);
+}
+
+.nav-link i {
+    width: 1.2rem;
+    text-align: center;
+}
+
+/* Fix main content area */
+.lighthouse-main {
+    background: var(--primary-black);
+    min-height: 100vh;
+    transition: margin-left 0.3s ease;
+}
+
+/* Fix cards and components */
+.card {
+    background: var(--secondary-black);
+    border: 1px solid var(--border-gray);
+    border-radius: 0.75rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    margin-bottom: 1.5rem;
+}
+
+.card-header {
+    background: var(--dark-gray);
+    border-bottom: 1px solid var(--border-gray);
+    border-radius: 0.75rem 0.75rem 0 0;
+    padding: 1rem 1.5rem;
+}
+
+.card-body {
+    padding: 1.5rem;
+}
+
+/* Fix buttons */
+.btn {
+    border-radius: 0.5rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+}
+
+/* Fix form controls */
+.form-control,
+.form-select {
+    background: var(--dark-gray);
+    border: 1px solid var(--border-gray);
+    color: var(--text-primary);
+    border-radius: 0.5rem;
+}
+
+.form-control:focus,
+.form-select:focus {
+    background: var(--dark-gray);
+    border-color: var(--accent-primary);
+    color: var(--text-primary);
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+/* Fix tables */
+.table {
+    background: var(--secondary-black);
+    color: var(--text-primary);
+    border-radius: 0.75rem;
+    overflow: hidden;
+}
+
+.table th {
+    background: var(--dark-gray);
+    border-color: var(--border-gray);
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.875rem;
+    letter-spacing: 0.5px;
+}
+
+.table td {
+    border-color: var(--border-gray);
+    vertical-align: middle;
+}
+
+.table-hover tbody tr:hover {
+    background: var(--hover-bg);
+}
+
+/* Fix dropdowns */
+.dropdown-menu {
+    background: var(--secondary-black);
+    border: 1px solid var(--border-gray);
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    min-width: 200px;
+}
+
+.dropdown-item {
+    color: var(--text-secondary);
+    padding: 0.5rem 1rem;
+    transition: all 0.2s ease;
+}
+
+.dropdown-item:hover {
+    background: var(--hover-bg);
+    color: var(--text-primary);
+}
+
+.dropdown-divider {
+    border-color: var(--border-gray);
+    margin: 0.5rem 0;
+}
+
+/* Fix alerts */
+.alert {
+    border-radius: 0.5rem;
+    border: none;
+    font-weight: 500;
+}
+
+.alert-success {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(16, 185, 129, 0.05));
+    color: var(--accent-success);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.alert-danger {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(239, 68, 68, 0.05));
+    color: var(--accent-danger);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.alert-warning {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(245, 158, 11, 0.05));
+    color: var(--accent-warning);
+    border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.alert-info {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(59, 130, 246, 0.05));
+    color: var(--accent-info);
+    border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+/* ========== UTILITY CLASSES ========== */
+
+/* Spacing utilities */
+.gap-1 { gap: 0.25rem !important; }
+.gap-2 { gap: 0.5rem !important; }
+.gap-3 { gap: 1rem !important; }
+.gap-4 { gap: 1.5rem !important; }
+.gap-5 { gap: 3rem !important; }
+
+/* Display utilities for responsive design */
+.d-mobile-none { display: none !important; }
+.d-desktop-none { display: block !important; }
+
+@media (min-width: 992px) {
+    .d-mobile-none { display: block !important; }
+    .d-desktop-none { display: none !important; }
+}
+
+/* Animation utilities */
+.fade-in {
+    animation: fadeIn 0.3s ease-in;
+}
+
+.slide-in-left {
+    animation: slideInLeft 0.3s ease-out;
+}
+
+.slide-in-right {
+    animation: slideInRight 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideInLeft {
+    from { transform: translateX(-100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slideInRight {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+/* ========== COMPONENT SPECIFIC FIXES ========== */
+
+/* Login page specific */
+.login-page {
+    background: linear-gradient(135deg, var(--primary-black) 0%, var(--secondary-black) 100%);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.login-card {
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+    border: 1px solid var(--border-gray);
+    backdrop-filter: blur(20px);
+}
+
+/* Dashboard specific */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+/* Stats cards */
+.stat-card {
+    background: linear-gradient(145deg, var(--secondary-black), var(--dark-gray));
+    border: 1px solid var(--border-gray);
+    border-radius: 1rem;
+    padding: 1.5rem;
+    text-align: center;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--accent-primary);
+    margin-bottom: 0.5rem;
+}
+
+.stat-label {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* ========== ACCESSIBILITY IMPROVEMENTS ========== */
+
+/* Focus states */
+.btn:focus,
+.form-control:focus,
+.form-select:focus,
+.nav-link:focus {
+    outline: 2px solid var(--accent-primary);
+    outline-offset: 2px;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    :root {
+        --text-primary: #ffffff;
+        --text-secondary: #cccccc;
+        --border-gray: #666666;
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+/* ========== PRINT STYLES ========== */
+@media print {
+    .sidebar,
+    .top-navbar,
+    .btn,
+    .alert {
+        display: none !important;
+    }
+    
+    .lighthouse-main {
+        margin-left: 0 !important;
+    }
+    
+    * {
+        color: black !important;
+        background: white !important;
+    }
+}
