@@ -407,6 +407,30 @@
     min-height: auto;
 }
 
+/* Hide navigation elements on public pages */
+.lighthouse-app.public .top-navbar,
+.lighthouse-app.public .lighthouse-sidebar,
+.lighthouse-app.public .user-profile,
+.lighthouse-app.public .system-status,
+.lighthouse-app.public .dropdown-menu,
+.lighthouse-app.public .user-avatar {
+    display: none !important;
+    visibility: hidden !important;
+}
+
+/* Ensure login page takes full screen */
+.lighthouse-app.public {
+    padding: 0;
+    margin: 0;
+}
+
+.lighthouse-app.public .lighthouse-main {
+    padding: 0;
+    margin: 0;
+    width: 100vw;
+    height: 100vh;
+}
+
 .login-card {
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
     border: 1px solid var(--border-gray);

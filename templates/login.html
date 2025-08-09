@@ -131,6 +131,37 @@
 
 {% block scripts %}
 <style>
+/* Force hide all navigation elements on login page */
+.top-navbar,
+.lighthouse-sidebar,
+.user-profile,
+.system-status,
+.dropdown-menu,
+.user-avatar,
+nav.top-navbar,
+.dropdown,
+.particles-bg {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    height: 0 !important;
+    overflow: hidden !important;
+    position: absolute !important;
+    left: -9999px !important;
+}
+
+/* Ensure clean full-screen login */
+html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow-x: hidden;
+}
+
+body {
+    background: var(--primary-black) !important;
+}
+
 /* Login Card Container */
 .login-card-container {
     width: 100%;
