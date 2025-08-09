@@ -374,111 +374,6 @@
         background: linear-gradient(45deg, #0056b3, #138496);
     }
     
-    /* Specific fixes for credentials modal */
-    #secureCredentialsModal {
-        z-index: 1080 !important;
-    }
-    
-    #secureCredentialsModal .modal-backdrop {
-        backdrop-filter: none !important;
-        -webkit-backdrop-filter: none !important;
-        filter: none !important;
-        background-color: rgba(0, 0, 0, 0.5) !important;
-    }
-    
-    #secureCredentialsModal.modal {
-        backdrop-filter: none !important;
-        -webkit-backdrop-filter: none !important;
-        filter: none !important;
-    }
-    
-    #secureCredentialsModal .modal-dialog {
-        backdrop-filter: none !important;
-        -webkit-backdrop-filter: none !important;
-        filter: none !important;
-        pointer-events: auto !important;
-    }
-    
-    #secureCredentialsModal .modal-content {
-        backdrop-filter: none !important;
-        -webkit-backdrop-filter: none !important;
-        filter: none !important;
-        pointer-events: auto !important;
-        background: var(--secondary-black) !important;
-        border: 1px solid var(--border-gray) !important;
-    }
-    
-    #secureCredentialsModal .modal-content * {
-        backdrop-filter: none !important;
-        -webkit-backdrop-filter: none !important;
-        filter: none !important;
-        pointer-events: auto !important;
-    }
-    
-    #secureCredentialsModal input,
-    #secureCredentialsModal button,
-    #secureCredentialsModal select,
-    #secureCredentialsModal textarea {
-        pointer-events: auto !important;
-        cursor: auto !important;
-        background-color: var(--dark-gray) !important;
-        color: var(--text-primary) !important;
-        border: 1px solid var(--border-gray) !important;
-    }
-    
-    #secureCredentialsModal button {
-        cursor: pointer !important;
-    }
-    
-    /* Force override any backdrop blur when modal is shown */
-    body.modal-open {
-        filter: none !important;
-        backdrop-filter: none !important;
-        -webkit-filter: none !important;
-        -webkit-backdrop-filter: none !important;
-    }
-    
-    .modal-backdrop.show {
-        backdrop-filter: none !important;
-        -webkit-backdrop-filter: none !important;
-        filter: none !important;
-        opacity: 0.5 !important;
-    }
-    
-    /* Ensure modal is always accessible and not blurred */
-    .modal.show {
-        filter: none !important;
-        backdrop-filter: none !important;
-        -webkit-filter: none !important;
-        -webkit-backdrop-filter: none !important;
-        pointer-events: auto !important;
-        z-index: 1080 !important;
-    }
-    
-    /* Fix for any overlapping modals */
-    .modal.show .modal-dialog {
-        transform: none !important;
-        margin: 30px auto !important;
-        pointer-events: auto !important;
-    }
-    
-    /* Ensure Decter credentials modal always takes priority */
-    #secureCredentialsModal.modal.show {
-        z-index: 1080 !important;
-        pointer-events: auto !important;
-        filter: none !important;
-        backdrop-filter: none !important;
-        display: block !important;
-    }
-    
-    #secureCredentialsModal .modal-backdrop {
-        z-index: 1079 !important;
-    }
-    
-    /* Hide any other modal backdrops when our modal is open */
-    body.modal-open #secureCredentialsModal.show ~ .modal-backdrop:not(:last-child) {
-        display: none !important;
-    }
     
     /* Simple Credentials Modal */
     .credentials-modal {
@@ -1021,29 +916,8 @@
 <!-- Scripts -->
 <script>
 let refreshInterval;
-let user2FAEnabled = false; // Will be set from server
 let dataUpdateInterval;
 
-// Enhanced authentication and 2FA handling
-function checkUser2FAStatus() {
-    // Check 2FA status from server API
-    fetch('/api/auth/2fa/status', {
-        method: 'GET',
-        headers: {
-            'Authorization': `Bearer ${getAuthToken()}`
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        user2FAEnabled = data.enabled || false;
-    })
-    .catch(error => {
-        console.error('Error checking 2FA status:', error);
-        user2FAEnabled = false;
-    });
-    
-    return user2FAEnabled;
-}
 
 // Get authentication token from localStorage for API calls
 function getAuthToken() {
@@ -1140,8 +1014,6 @@ document.addEventListener('DOMContentLoaded', function() {
     window.loadMoreTrades = loadMoreTrades;
     window.exportLogs = exportLogs;
     
-    // Initialize 2FA status
-    checkUser2FAStatus();
     
     // Initialize enhanced features
     initializeDataSync();
@@ -1158,48 +1030,6 @@ document.addEventListener('DOMContentLoaded', function() {
         configForm.addEventListener('submit', saveConfiguration);
     }
     
-    // Add global modal event listeners to prevent blur issues
-    document.addEventListener('show.bs.modal', function(event) {
-        console.log('Modal showing, preventing blur effects...');
-        setTimeout(() => {
-            forceRemoveAllBlurEffects();
-        }, 50);
-    });
-    
-    document.addEventListener('shown.bs.modal', function(event) {
-        console.log('Modal shown, force fixing blur effects...');
-        forceRemoveAllBlurEffects();
-        
-        // Ensure modal is fully interactive
-        const modal = event.target;
-        const modalDialog = modal.querySelector('.modal-dialog');
-        const modalContent = modal.querySelector('.modal-content');
-        
-        [modal, modalDialog, modalContent].forEach(element => {
-            if (element) {
-                element.style.pointerEvents = 'auto';
-                element.style.userSelect = 'auto';
-                element.style.webkitUserSelect = 'auto';
-            }
-        });
-    });
-    
-    document.addEventListener('hidden.bs.modal', function(event) {
-        console.log('Modal hidden, cleaning up...');
-        // Clean up any remaining backdrop effects
-        document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
-            backdrop.remove();
-        });
-        forceRemoveAllBlurEffects();
-    });
-    
-    // Custom modal event listeners for Decter Engine
-    document.addEventListener('click', function(e) {
-        // Close modal when clicking overlay
-        if (e.target.classList.contains('custom-modal-overlay') && e.target.id === 'secureCredentialsModal') {
-            hideCredentialsModal();
-        }
-    });
     
     // Close modal with Escape key
     document.addEventListener('keydown', function(e) {
@@ -1800,13 +1630,6 @@ window.addEventListener('beforeunload', function() {
     }
 });
 
-// Global error handler for undefined function errors
-window.addEventListener('error', function(e) {
-    if (e.message && e.message.includes('not defined')) {
-        console.error('[DEBUG] Function not defined error detected:', e.message);
-        showAlert('JavaScript function error detected. Please refresh the page.', 'warning');
-    }
-});
 
 // Fallback function definitions (in case of loading issues)
 window.controlDecter = window.controlDecter || function(action) {
