@@ -862,6 +862,10 @@
                                 <label class="form-label">Group ID</label>
                                 <input type="text" name="telegram_group_id" class="form-control" placeholder="Enter group ID" required>
                             </div>
+                            <div class="mb-3">
+                                <label class="form-label">Topic ID (Optional)</label>
+                                <input type="text" name="telegram_topic_id" class="form-control" placeholder="Enter topic ID for forum groups">
+                            </div>
                         </div>
                     </div>
                     <div class="col-md-6">
@@ -1189,7 +1193,11 @@ async function updateLogs() {
         const container = document.getElementById('logsContainer');
         
         if (data.logs && data.logs.length > 0) {
-            container.innerHTML = data.logs.map(log => `<div>${log}</div>`).join('');
+            container.innerHTML = data.logs.map(log => {
+                // Handle both string and object logs
+                const logText = typeof log === 'object' ? JSON.stringify(log) : log;
+                return `<div>${logText}</div>`;
+            }).join('');
             container.scrollTop = container.scrollHeight;
         } else {
             container.innerHTML = '<div class="text-center">No logs available</div>';
@@ -1559,7 +1567,8 @@ async function saveCredentials(event) {
         // Save Telegram configuration
         const telegramConfig = {
             bot_token: formData.get('telegram_bot_token'),
-            group_id: formData.get('telegram_group_id')
+            group_id: formData.get('telegram_group_id'),
+            topic_id: formData.get('telegram_topic_id') || null
         };
         
         // Save Deriv configuration
@@ -1850,7 +1859,11 @@ function updateLogsFromRealData(logs) {
     const container = document.getElementById('logsContainer');
     if (container) {
         if (logs && logs.length > 0) {
-            container.innerHTML = logs.map(log => `<div class="log-entry">${log}</div>`).join('');
+            container.innerHTML = logs.map(log => {
+                // Handle both string and object logs
+                const logText = typeof log === 'object' ? JSON.stringify(log) : log;
+                return `<div class="log-entry">${logText}</div>`;
+            }).join('');
             container.scrollTop = container.scrollHeight;
         } else {
             container.innerHTML = `
