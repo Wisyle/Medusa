@@ -220,13 +220,12 @@ class DecterController:
                     "status": DecterStatus.ERROR.value
                 }
             
-            # Change to Decter directory
-            old_cwd = os.getcwd()
-            os.chdir(self.decter_path)
-            
             # Start the process
             self.status = DecterStatus.STARTING
             logger.info("🚀 Starting Decter 001 bot...")
+            logger.info(f"Working directory: {os.getcwd()}")
+            logger.info(f"Decter path: {self.decter_path}")
+            logger.info(f"Main script: {self.main_script}")
             
             # Create log file for subprocess output with proper error handling
             log_file = self.data_dir / "subprocess.log"
@@ -240,21 +239,21 @@ class DecterController:
                 
                 with open(log_file, 'w', encoding='utf-8') as f:
                     self.process = subprocess.Popen(
-                        ["python", "main.py"],
+                        ["python", str(self.main_script)],
                         stdout=f,
                         stderr=subprocess.STDOUT,
                         text=True,
-                        cwd=str(self.decter_path)
+                        cwd=os.getcwd()  # Use current working directory
                     )
             except (PermissionError, OSError) as e:
                 logger.error(f"Cannot create subprocess log file: {e}")
                 # Use stdout/stderr directly if we can't create log file
                 self.process = subprocess.Popen(
-                    ["python", "main.py"],
+                    ["python", str(self.main_script)],
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
                     text=True,
-                    cwd=str(self.decter_path)
+                    cwd=os.getcwd()  # Use current working directory
                 )
             
             # Give it a moment to start
@@ -301,8 +300,6 @@ class DecterController:
                 "message": f"Error starting Decter 001: {str(e)}",
                 "status": self.status.value
             }
-        finally:
-            os.chdir(old_cwd)
 
     def stop(self) -> Dict[str, Any]:
         """Stop Decter 001 bot"""

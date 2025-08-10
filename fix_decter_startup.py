@@ -18,12 +18,22 @@ def fix_decter_startup():
     # Determine if we're in production (Render)
     is_production = os.getenv("ENVIRONMENT") == "production"
     
+    logger.info(f"Current working directory: {os.getcwd()}")
+    logger.info(f"ENVIRONMENT variable: {os.getenv('ENVIRONMENT')}")
+    
     if is_production:
         logger.info("🚀 Running in production environment (Render)")
         decter_path = Path("Decter")
     else:
         logger.info("💻 Running in development environment")
         decter_path = Path("/mnt/c/users/rober/downloads/tarc/Decter")
+    
+    logger.info(f"Decter path: {decter_path}")
+    logger.info(f"Decter path exists: {decter_path.exists()}")
+    
+    if decter_path.exists():
+        main_py = decter_path / "main.py"
+        logger.info(f"main.py exists: {main_py.exists()}")
     
     # Create data directory
     data_dir = decter_path / "data"
