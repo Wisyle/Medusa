@@ -13,7 +13,7 @@ services:
     plan: starter
     region: singapore
     buildCommand: "pip install -r requirements.txt"
-    startCommand: "uvicorn main:app --host 0.0.0.0 --port $PORT --timeout-keep-alive 120"
+    startCommand: "python fix_decter_startup.py && uvicorn main:app --host 0.0.0.0 --port $PORT --timeout-keep-alive 120"
     autoDeploy: true
     healthCheckPath: /health
     envVars:
@@ -111,7 +111,7 @@ services:
     plan: starter
     region: singapore
     buildCommand: "pip install -r requirements.txt && pip install -r Decter/requirements.txt"
-    startCommand: "sleep 90 && cd Decter && python main.py"
+    startCommand: "sleep 90 && python fix_decter_startup.py && cd Decter && python main.py"
     envVars:
       - key: DATABASE_URL
         fromDatabase:

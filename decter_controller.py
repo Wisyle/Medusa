@@ -113,6 +113,14 @@ class DecterController:
         # Ensure data directory exists with proper error handling
         try:
             self.data_dir.mkdir(parents=True, exist_ok=True)
+            
+            # Test write permissions by creating and removing a test file
+            test_file = self.data_dir / "test_permissions.tmp"
+            test_file.touch()
+            test_file.unlink()
+            
+            logger.info(f"✅ Data directory ready: {self.data_dir}")
+            
         except (PermissionError, FileNotFoundError, OSError) as e:
             # If we can't create the data directory, use a temporary one
             import tempfile
@@ -122,6 +130,8 @@ class DecterController:
             self.stats_file = self.data_dir / "trading_stats.json"
             self.params_file = self.data_dir / "saved_params.json"
             self.log_file = self.data_dir / "trading_bot.log"
+            self.engine_logs_file = self.data_dir / "engine_logs.json"
+            self.live_logs_file = self.data_dir / "live_logs.json"
         
         # Try to set up internal service (direct imports)
         sys.path.insert(0, str(self.decter_path))
@@ -218,14 +228,31 @@ class DecterController:
             self.status = DecterStatus.STARTING
             logger.info("🚀 Starting Decter 001 bot...")
             
-            # Create log file for subprocess output
+            # Create log file for subprocess output with proper error handling
             log_file = self.data_dir / "subprocess.log"
             
-            with open(log_file, 'w') as f:
+            try:
+                # Ensure the data directory exists
+                self.data_dir.mkdir(parents=True, exist_ok=True)
+                
+                # Create/clear the log file
+                log_file.touch()
+                
+                with open(log_file, 'w', encoding='utf-8') as f:
+                    self.process = subprocess.Popen(
+                        ["python", "main.py"],
+                        stdout=f,
+                        stderr=subprocess.STDOUT,
+                        text=True,
+                        cwd=str(self.decter_path)
+                    )
+            except (PermissionError, OSError) as e:
+                logger.error(f"Cannot create subprocess log file: {e}")
+                # Use stdout/stderr directly if we can't create log file
                 self.process = subprocess.Popen(
                     ["python", "main.py"],
-                    stdout=f,
-                    stderr=subprocess.STDOUT,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
                     text=True,
                     cwd=str(self.decter_path)
                 )
@@ -503,9 +530,13 @@ class DecterController:
                 # Try subprocess log file
                 subprocess_log = self.data_dir / "subprocess.log"
                 if subprocess_log.exists():
-                    with open(subprocess_log, 'r') as f:
-                        all_lines = f.readlines()
-                        return [line.strip() for line in all_lines[-lines:]]
+                    try:
+                        with open(subprocess_log, 'r', encoding='utf-8') as f:
+                            all_lines = f.readlines()
+                            return [line.strip() for line in all_lines[-lines:]]
+                    except (PermissionError, OSError) as e:
+                        logger.error(f"Error reading subprocess log: {e}")
+                        return []
                 return []
             
             with open(self.log_file, 'r') as f:

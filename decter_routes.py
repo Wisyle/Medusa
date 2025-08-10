@@ -157,9 +157,12 @@ async def start_decter(current_user: User = Depends(get_current_active_user)):
             return JSONResponse(content=result)
         else:
             logger.warning(f"⚠️ Failed to start Decter 001: {result['message']}")
-            raise HTTPException(status_code=400, detail=result["message"])
+            # Return 400 with specific error details
+            raise HTTPException(status_code=400, detail=f"Error starting Decter 001: {result['message']}")
+    except HTTPException:
+        raise  # Re-raise HTTPExceptions as-is
     except Exception as e:
-        logger.error(f"❌ Error starting Decter: {e}")
+        logger.error(f"❌ Error starting Decter: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Error starting Decter: {str(e)}")
 
 
