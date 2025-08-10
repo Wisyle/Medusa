@@ -843,6 +843,12 @@
             <button type="button" class="close-btn" onclick="closeCredentialsModal()">×</button>
         </div>
         <div class="credentials-modal-body">
+            <div id="twofaWarning" class="alert alert-warning d-none">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                You must enable Two-Factor Authentication to access credentials management.
+                <a href="/setup-2fa" class="btn btn-sm btn-warning ms-2">Setup 2FA</a>
+            </div>
+            
             <form id="credentialsForm" onsubmit="saveCredentials(event)">
                 <div class="row">
                     <div class="col-md-6">
@@ -1716,49 +1722,59 @@ async function openCredentialsModal() {
             }
         });
 
+        const modal = document.getElementById('credentialsModal');
+        const twofaWarning = document.getElementById('twofaWarning');
+        const credentialsForm = document.getElementById('credentialsForm');
+
+        if (!modal) {
+            console.error('Credentials modal not found');
+            return;
+        }
+
+        // Show the modal first
+        modal.style.display = 'flex';
+
         if (response.ok) {
             const data = await response.json();
-            const modal = document.getElementById('credentialsModal');
-            const twofaWarning = document.getElementById('twofaWarning');
-            const credentialsForm = document.getElementById('credentialsForm');
-
-            if (modal) {
-                modal.style.display = 'flex';
+            
+            if (data.twofa_enabled) {
+                // 2FA is enabled, show credentials form and hide warning
+                if (twofaWarning) twofaWarning.classList.add('d-none');
+                if (credentialsForm) credentialsForm.style.display = 'block';
                 
-                if (data.twofa_enabled) {
-                    // 2FA is enabled, show credentials form and hide warning
-                    twofaWarning.classList.add('d-none');
-                    credentialsForm.style.display = 'block';
-                    
-                    // Focus on first input
-                    setTimeout(() => {
-                        const firstInput = modal.querySelector('input[type="password"]');
-                        if (firstInput) firstInput.focus();
-                    }, 100);
-                } else {
-                    // 2FA is not enabled, show warning and hide form
-                    twofaWarning.classList.remove('d-none');
-                    credentialsForm.style.display = 'none';
-                }
-            }
-        } else {
-            console.error('Failed to check 2FA status');
-            // Default to showing the form if we can't verify
-            const modal = document.getElementById('credentialsModal');
-            if (modal) {
-                modal.style.display = 'flex';
+                // Focus on first input
                 setTimeout(() => {
                     const firstInput = modal.querySelector('input[type="password"]');
                     if (firstInput) firstInput.focus();
                 }, 100);
+            } else {
+                // 2FA is not enabled, show warning and hide form
+                if (twofaWarning) twofaWarning.classList.remove('d-none');
+                if (credentialsForm) credentialsForm.style.display = 'none';
             }
+        } else {
+            console.error('Failed to check 2FA status, response not ok');
+            // If we can't verify 2FA status, show the form anyway
+            if (twofaWarning) twofaWarning.classList.add('d-none');
+            if (credentialsForm) credentialsForm.style.display = 'block';
+            
+            setTimeout(() => {
+                const firstInput = modal.querySelector('input[type="password"]');
+                if (firstInput) firstInput.focus();
+            }, 100);
         }
     } catch (error) {
         console.error('Error checking 2FA status:', error);
-        // Default to showing the form if there's an error
+        // On error, show the form anyway
         const modal = document.getElementById('credentialsModal');
+        const twofaWarning = document.getElementById('twofaWarning');
+        const credentialsForm = document.getElementById('credentialsForm');
+        
         if (modal) {
             modal.style.display = 'flex';
+            if (twofaWarning) twofaWarning.classList.add('d-none');
+            if (credentialsForm) credentialsForm.style.display = 'block';
+            
             setTimeout(() => {
                 const firstInput = modal.querySelector('input[type="password"]');
                 if (firstInput) firstInput.focus();
