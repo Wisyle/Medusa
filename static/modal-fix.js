@@ -127,14 +127,14 @@ const modalManager = new ModalManager();
 // Global functions for compatibility
 window.openCredentialsModal = function() {
     // Check 2FA status first
-    fetch('/api/auth/2fa/status', {
+    fetch('/api/user/2fa/status', {
         headers: {
             'Authorization': `Bearer ${localStorage.getItem('access_token') || ''}`
         }
     })
     .then(response => response.json())
     .then(data => {
-        if (!data.enabled) {
+        if (!data.totp_enabled) {
             // Show 2FA required modal instead
             modalManager.open('twoFARequiredModal');
         } else {

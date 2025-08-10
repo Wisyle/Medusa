@@ -1012,7 +1012,7 @@ document.addEventListener('DOMContentLoaded', function() {
     window.refreshAllData = refreshAllData;
     window.handleCurrencyChange = handleCurrencyChange;
     window.requireAuth = requireAuth;
-    window.openCredentialsModal = openCredentialsModal;
+    window.openCredentialsModal = openCredentialsModalDecter;
     window.closeCredentialsModal = closeCredentialsModal;
     window.saveCredentials = saveCredentials;
     window.refreshMetrics = refreshMetrics;
@@ -1707,7 +1707,7 @@ function requireAuth(functionName, ...args) {
     }
 }
 
-async function openCredentialsModal() {
+async function openCredentialsModalDecter() {
     try {
         // Check 2FA status before opening modal
         const token = localStorage.getItem('access_token');
@@ -1736,9 +1736,11 @@ async function openCredentialsModal() {
 
         if (response.ok) {
             const data = await response.json();
+            console.log('2FA Status Response:', data); // Debug log
             
             if (data.totp_enabled) {
                 // 2FA is enabled, show credentials form and hide warning
+                console.log('2FA is enabled, showing form');
                 if (twofaWarning) twofaWarning.classList.add('d-none');
                 if (credentialsForm) credentialsForm.style.display = 'block';
                 
@@ -1749,6 +1751,7 @@ async function openCredentialsModal() {
                 }, 100);
             } else {
                 // 2FA is not enabled, show warning and hide form
+                console.log('2FA is not enabled, showing warning');
                 if (twofaWarning) twofaWarning.classList.remove('d-none');
                 if (credentialsForm) credentialsForm.style.display = 'none';
             }
@@ -1782,6 +1785,9 @@ async function openCredentialsModal() {
         }
     }
 }
+
+// Override the global function
+window.openCredentialsModal = openCredentialsModalDecter;
 
 function closeCredentialsModal() {
     const modal = document.getElementById('credentialsModal');
