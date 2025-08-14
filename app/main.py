@@ -6,7 +6,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 import os
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from sqlalchemy.orm import Session
 from typing import List, Optional, Dict
 import asyncio
@@ -323,8 +323,51 @@ add_decter_routes(app)
 
 templates = Jinja2Templates(directory="templates")
 
+# Mount static files
 if os.path.exists("static"):
     app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# Serve static site if SERVE_STATIC is enabled
+if os.getenv("SERVE_STATIC") == "true":
+    # Serve static HTML files from root
+    @app.get("/{path:path}")
+    async def serve_static_site(path: str, request: Request):
+        """Serve static site files"""
+        # API routes take precedence
+        if path.startswith("api/") or path.startswith("ws"):
+            raise HTTPException(status_code=404, detail="API endpoint not found")
+        
+        # Handle root path
+        if not path or path == "/":
+            path = "index.html"
+        
+        # Check if file exists in static directory
+        file_path = os.path.join("static", path)
+        if os.path.exists(file_path) and os.path.isfile(file_path):
+            # Determine content type
+            if path.endswith('.html'):
+                content_type = "text/html"
+            elif path.endswith('.css'):
+                content_type = "text/css"
+            elif path.endswith('.js'):
+                content_type = "application/javascript"
+            elif path.endswith('.json'):
+                content_type = "application/json"
+            else:
+                content_type = "application/octet-stream"
+            
+            # Read and return file
+            with open(file_path, 'rb') as f:
+                return Response(content=f.read(), media_type=content_type)
+        
+        # If file not found, serve index.html for SPA routing
+        index_path = os.path.join("static", "index.html")
+        if os.path.exists(index_path):
+            with open(index_path, 'rb') as f:
+                return Response(content=f.read(), media_type="text/html")
+        
+        # Last resort 404
+        raise HTTPException(status_code=404, detail="File not found")
 
 active_processes = {}
 

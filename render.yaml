@@ -2,42 +2,14 @@
 # Updated: 2025-01-03T00:00:00.000000
 
 services:
-  # Static Site Service - Frontend UI
-  - type: static
-    name: tar-strategies-frontend
-    buildCommand: npm install && npm run build
-    publishPath: ./dist
-    headers:
-      - key: X-Frame-Options
-        value: DENY
-      - key: X-Content-Type-Options
-        value: nosniff
-      - key: X-XSS-Protection
-        value: "1; mode=block"
-      - key: Strict-Transport-Security
-        value: "max-age=31536000; includeSubDomains"
-    routes:
-      - type: rewrite
-        source: /api/*
-        destination: https://tar-strategies-api.onrender.com/api/:splat
-      - type: rewrite
-        source: /ws
-        destination: https://tar-strategies-api.onrender.com/ws
-      - type: rewrite
-        source: /*
-        destination: /index.html
-    envVars:
-      - key: NODE_ENV
-        value: production
-
-  # API Backend Service - Data & Logic
+  # Main Web Service - Serves Static Site + API Proxy
   - type: web
-    name: tar-strategies-api
+    name: tar-strategies-web
     env: python
     plan: starter
     region: singapore
     buildCommand: "pip install -r requirements.txt"
-    startCommand: "export PYTHONPATH=/opt/render/project/src && uvicorn app.main-api-only:app --host 0.0.0.0 --port $PORT --timeout-keep-alive 120"
+    startCommand: "export PYTHONPATH=/opt/render/project/src && uvicorn app.main:app --host 0.0.0.0 --port $PORT --timeout-keep-alive 120"
     autoDeploy: true
     healthCheckPath: /api/health
     envVars:
@@ -54,7 +26,7 @@ services:
       - key: ACCESS_TOKEN_EXPIRE_MINUTES
         value: "30"
       - key: APP_NAME
-        value: "TAR Global Strategies API"
+        value: "TAR Global Strategies"
       - key: DEBUG
         value: "false"
       - key: ENVIRONMENT
@@ -67,8 +39,10 @@ services:
         value: "sg"
       - key: PYTHONUNBUFFERED
         value: "1"
-      - key: CORS_ORIGINS
-        value: "https://tar-strategies-frontend.onrender.com"
+      - key: SERVE_STATIC
+        value: "true"
+
+
 
   # Background Worker Service - Polling & Monitoring
   - type: worker
