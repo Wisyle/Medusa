@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import Optional, Dict, Any
 import json
 
-from config import settings
+from app.config import settings
 import os
 
 # Create database engine

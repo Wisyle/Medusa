@@ -8,7 +8,7 @@ import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from migration import migrate_database
-from database import SessionLocal, init_db
+from app.database import SessionLocal, init_db
 import logging
 
 logging.basicConfig(level=logging.INFO)
@@ -28,7 +28,7 @@ def fix_strategy_monitor_schema():
         # Test the StrategyMonitor model
         db = SessionLocal()
         try:
-            from strategy_monitor_model import StrategyMonitor
+            from models.strategy_monitor_model import StrategyMonitor
             
             # Try to query (this will test if the schema is correct)
             count = db.query(StrategyMonitor).count()

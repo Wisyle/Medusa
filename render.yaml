@@ -13,7 +13,7 @@ services:
     plan: starter
     region: singapore
     buildCommand: "pip install -r requirements.txt"
-    startCommand: "export PYTHONPATH=/opt/render/project/src && uvicorn app.main:app --host 0.0.0.0 --port $PORT --timeout-keep-alive 120"
+    startCommand: "export PYTHONPATH=/opt/render/project/src && python utils/deployment_diagnostic.py && uvicorn app.main:app --host 0.0.0.0 --port $PORT --timeout-keep-alive 120"
     autoDeploy: true
     healthCheckPath: /health
     envVars:
@@ -55,7 +55,7 @@ services:
     plan: starter
     region: singapore
     buildCommand: "pip install -r requirements.txt"
-    startCommand: "sleep 45 && export PYTHONPATH=/opt/render/project/src && python services/worker.py"
+    startCommand: "sleep 45 && export PYTHONPATH=/opt/render/project/src && python utils/deployment_diagnostic.py && python services/worker.py"
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -83,7 +83,7 @@ services:
     plan: starter
     region: singapore
     buildCommand: "pip install -r requirements.txt"
-    startCommand: "sleep 60 && export PYTHONPATH=/opt/render/project/src && python utils/init_strategy_monitor.py && python services/strategy_monitor_worker.py"
+    startCommand: "sleep 60 && export PYTHONPATH=/opt/render/project/src && python utils/deployment_diagnostic.py && python utils/init_strategy_monitor.py && python services/strategy_monitor_worker.py"
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -111,7 +111,7 @@ services:
     plan: starter
     region: singapore
     buildCommand: "pip install -r requirements.txt && pip install -r Decter/requirements.txt"
-    startCommand: "sleep 90 && export PYTHONPATH=/opt/render/project/src && cd Decter && python main.py"
+    startCommand: "sleep 90 && export PYTHONPATH=/opt/render/project/src && python utils/deployment_diagnostic.py && cd Decter && python main.py"
     envVars:
       - key: DATABASE_URL
         fromDatabase:

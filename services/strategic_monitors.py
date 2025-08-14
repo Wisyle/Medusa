@@ -95,12 +95,12 @@ class StrategyMonitorAggregator:
         try:
             system_health = "healthy"  # Placeholder - would check actual system metrics
             
-            from api_library_model import ApiCredential
+            from models.api_library_model import ApiCredential
             api_connections = self.db.query(ApiCredential).filter(
                 ApiCredential.is_active == True
             ).count()
             
-            from database import User
+            from app.database import User
             active_users = self.db.query(User).filter(User.is_active == True).count()
             
             trading_summary = self.get_trading_bots_summary()

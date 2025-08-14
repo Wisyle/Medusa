@@ -17,7 +17,7 @@ def render_deployment_check():
     
     # 1. Check strategy_monitor_model
     try:
-        from strategy_monitor_model import StrategyMonitor
+        from models.strategy_monitor_model import StrategyMonitor
         print("✅ 1. StrategyMonitor model imports correctly")
         
         # Check if it has the correct field by inspecting the table columns

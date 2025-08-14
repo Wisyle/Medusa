@@ -184,10 +184,10 @@ async def run_migrations(current_user: User = Depends(get_current_user)):
         # Run migrations
         try:
             # Import all models to ensure they're registered
-            from database import User, Role, Permission, UserRole, RolePermission
-            from dex_arbitrage_model import DEXArbitrageInstance, DEXOpportunity
-            from validator_node_model import ValidatorNode
-            from strategy_monitor_model import StrategyMonitor
+            from app.database import User, Role, Permission, UserRole, RolePermission
+            from models.dex_arbitrage_model import DEXArbitrageInstance, DEXOpportunity
+            from models.validator_node_model import ValidatorNode
+            from models.strategy_monitor_model import StrategyMonitor
             
             logger.info("Creating all tables...")
             # Create all tables

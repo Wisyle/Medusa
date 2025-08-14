@@ -431,11 +431,11 @@ def run_startup_migrations():
                 logger.info("📋 Creating base tables in dependency order...")
                 
                 # Import all models to ensure they're registered
-                from database import Base, User, ActivityLog, ErrorLog, BotInstance, BalanceHistory
-                from api_library_model import ApiCredential
-                from strategy_monitor_model import StrategyMonitor
-                from dex_arbitrage_model import DEXArbitrageInstance, DEXOpportunity
-                from validator_node_model import ValidatorNode
+                from app.database import Base, User, ActivityLog, ErrorLog, BotInstance, BalanceHistory
+                from models.api_library_model import ApiCredential
+                from models.strategy_monitor_model import StrategyMonitor
+                from models.dex_arbitrage_model import DEXArbitrageInstance, DEXOpportunity
+                from models.validator_node_model import ValidatorNode
                 
                 # Create tables without foreign key dependencies first
                 logger.info("📊 Creating independent tables...")

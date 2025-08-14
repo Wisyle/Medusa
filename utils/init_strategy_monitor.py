@@ -36,7 +36,7 @@ def initialize_strategy_monitor_system():
         # Verify strategy_monitors table exists
         db = SessionLocal()
         try:
-            from strategy_monitor_model import StrategyMonitor
+            from models.strategy_monitor_model import StrategyMonitor
             test_query = db.query(StrategyMonitor).count()
             logger.info(f"✅ Strategy monitors table verified - {test_query} monitors configured")
         except Exception as e:

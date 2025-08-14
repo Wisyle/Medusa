@@ -12,8 +12,8 @@ import pyotp
 import qrcode
 from io import BytesIO
 import base64
-from database import get_db, User
-from config import settings
+from app.database import get_db, User
+from app.config import settings
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 

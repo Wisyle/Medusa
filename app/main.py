@@ -132,7 +132,7 @@ async def run_smart_migrations():
             # 2. Create balance_history table if it doesn't exist
             if 'balance_history' not in inspector.get_table_names():
                 logger.info("➕ Creating balance_history table...")
-                from database import BalanceHistory
+                from app.database import BalanceHistory
                 BalanceHistory.__table__.create(engine, checkfirst=True)
                 logger.info("✅ Created balance_history table")
             else:
@@ -141,7 +141,7 @@ async def run_smart_migrations():
             # 3. Ensure users table exists (for user isolation)
             if 'users' not in inspector.get_table_names():
                 logger.info("➕ Creating users table...")
-                from database import User
+                from app.database import User
                 User.__table__.create(engine, checkfirst=True)
                 logger.info("✅ Created users table")
             else:
@@ -149,10 +149,10 @@ async def run_smart_migrations():
             
             # 4. Check other essential tables and create if missing
             essential_tables = [
-                ('api_credentials', 'from api_library_model import ApiCredential; ApiCredential'),
-                ('strategy_monitors', 'from strategy_monitor_model import StrategyMonitor; StrategyMonitor'),
-                ('activity_logs', 'from database import ActivityLog; ActivityLog'),
-                ('error_logs', 'from database import ErrorLog; ErrorLog')
+                ('api_credentials', 'from models.api_library_model import ApiCredential; ApiCredential'),
+                ('strategy_monitors', 'from models.strategy_monitor_model import StrategyMonitor; StrategyMonitor'),
+                ('activity_logs', 'from app.database import ActivityLog; ActivityLog'),
+                ('error_logs', 'from app.database import ErrorLog; ErrorLog')
             ]
             
             for table_name, import_code in essential_tables:
@@ -744,7 +744,7 @@ async def get_trading_bots_data(current_user: dict = Depends(get_current_user), 
 async def get_dex_arbitrage_data(current_user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
     """Get DEX arbitrage monitoring data"""
     try:
-        from dex_arbitrage_model import DEXArbitrageInstance, DEXOpportunity
+        from models.dex_arbitrage_model import DEXArbitrageInstance, DEXOpportunity
         
         # Get all DEX arbitrage instances
         instances = db.query(DEXArbitrageInstance).all()
@@ -826,7 +826,7 @@ async def get_dex_arbitrage_data(current_user: dict = Depends(get_current_user),
 async def get_validator_nodes_data(current_user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
     """Get validator nodes monitoring data"""
     try:
-        from validator_node_model import ValidatorNode, ValidatorReward
+        from models.validator_node_model import ValidatorNode, ValidatorReward
         
         # Get all validator nodes
         validators = db.query(ValidatorNode).all()
@@ -1989,7 +1989,7 @@ async def monitor_instances():
     while True:
         try:
             # Import here to avoid circular imports
-            from database import SessionLocal
+            from app.database import SessionLocal
             
             # Run DB operations in thread pool to avoid blocking
             async def check_instances():
@@ -2313,7 +2313,7 @@ async def get_all_roles(current_user: User = Depends(get_current_active_user), d
     if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Access denied. Superuser privileges required.")
     
-    from database import Role, RolePermission, Permission
+    from app.database import Role, RolePermission, Permission
     
     roles = db.query(Role).all()
     result = []
@@ -2350,7 +2350,7 @@ async def create_user_admin(
     if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Access denied. Superuser privileges required.")
     
-    from database import Role, UserRole
+    from app.database import Role, UserRole
     from auth import get_password_hash
     
     # Check if user already exists
@@ -2396,7 +2396,7 @@ async def update_user_admin(
     if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Access denied. Superuser privileges required.")
     
-    from database import Role, UserRole
+    from app.database import Role, UserRole
     
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
@@ -2435,7 +2435,7 @@ async def delete_user_admin(
     if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Access denied. Superuser privileges required.")
     
-    from database import UserRole
+    from app.database import UserRole
     
     user = db.query(User).filter(User.id == user_id).first()
     if not user:

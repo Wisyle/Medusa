@@ -3,7 +3,7 @@
 Remove trading pair filter to process all symbols
 """
 
-from database import SessionLocal, BotInstance
+from app.database import SessionLocal, BotInstance
 
 def remove_trading_pair_filter():
     """Remove trading pair filter from all instances"""

@@ -71,7 +71,7 @@ def migrate_api_library_schema():
                     logger.info(f"ℹ️  API Library schema migration not needed: {e}")
         
         # Ensure API credentials table exists
-        from database import Base
+        from app.database import Base
         Base.metadata.create_all(bind=engine)
         logger.info("✅ API Library schema migration completed")
         

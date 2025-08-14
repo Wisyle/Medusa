@@ -7,7 +7,7 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from database import SessionLocal, BotInstance
+from app.database import SessionLocal, BotInstance
 
 def main():
     if len(sys.argv) != 4:

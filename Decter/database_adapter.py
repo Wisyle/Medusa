@@ -23,7 +23,7 @@ class DatabaseAdapter:
         try:
             import sys
             sys.path.insert(0, '..')  # Add parent directory to path
-            from database import SessionLocal, engine
+            from app.database import SessionLocal, engine
             from sqlalchemy import text
             
             # Test database connection
