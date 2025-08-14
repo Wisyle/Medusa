@@ -1554,6 +1554,10 @@ async function handleCurrencyChange(newCurrency) {
             // Update UI to reflect new currency
             document.getElementById('netPnL').parentElement.querySelector('.metric-label').textContent = `Net P&L (${newCurrency})`;
             document.querySelector('input[name="stake"]').parentElement.querySelector('.form-label').textContent = `Stake Amount (${newCurrency})`;
+            
+            // Update API key placeholder for new currency
+            await updateApiKeyPlaceholder(newCurrency);
+            
             setTimeout(refreshAllData, 1000);
         } else {
             showAlert(`Failed to switch currency: ${result.message}`, 'danger');
@@ -1568,6 +1572,33 @@ async function handleCurrencyChange(newCurrency) {
         loadCurrentConfig();
     } finally {
         hideLoading();
+    }
+}
+
+async function updateApiKeyPlaceholder(currency) {
+    try {
+        // Get current Deriv config to check if this currency has an API key
+        const derivResponse = await authenticatedFetch('/api/decter/deriv/config');
+        if (derivResponse.ok) {
+            const derivConfig = await derivResponse.json();
+            const currencyTokenKey = `${currency.toLowerCase()}_api_token`;
+            const apiKeyField = document.querySelector('input[name="deriv_api_key"]');
+            
+            if (apiKeyField) {
+                if (derivConfig[currencyTokenKey] && derivConfig[currencyTokenKey] !== 'undefined') {
+                    apiKeyField.placeholder = `${currency} API Key configured (hidden for security)`;
+                    apiKeyField.setAttribute('data-has-value', 'true');
+                } else {
+                    apiKeyField.placeholder = `Enter ${currency} API Key`;
+                    apiKeyField.removeAttribute('data-has-value');
+                }
+                
+                // Clear the field value when currency changes
+                apiKeyField.value = '';
+            }
+        }
+    } catch (error) {
+        console.error('Error updating API key placeholder:', error);
     }
 }
 
@@ -1587,10 +1618,18 @@ async function saveCredentials(event) {
         };
         
         // Save Deriv configuration
+        // Get the currently selected currency to save the API key for that currency
+        const currentCurrency = document.querySelector('#currencySelect')?.value || 'XRP';
+        const apiKey = formData.get('deriv_api_key');
+        
         const derivConfig = {
-            deriv_app_id: formData.get('deriv_app_id'),
-            deriv_api_key: formData.get('deriv_api_key')
+            deriv_app_id: formData.get('deriv_app_id')
         };
+        
+        // Add the API key for the current currency
+        if (apiKey) {
+            derivConfig[`${currentCurrency.toLowerCase()}_api_token`] = apiKey;
+        }
         
         // Save both configurations
         const telegramResponse = await authenticatedFetch('/api/decter/telegram/config', {
@@ -1626,26 +1665,56 @@ async function saveCredentials(event) {
 
 async function loadCredentials() {
     try {
-        // Load Telegram config (but don't populate password fields for security)
+        // Load Telegram config
         const telegramResponse = await authenticatedFetch('/api/decter/telegram/config');
         if (telegramResponse.ok) {
             const telegramConfig = await telegramResponse.json();
+            
+            // Populate non-sensitive fields
             if (telegramConfig.group_id) {
-                document.querySelector('input[name="telegram_group_id"]').value = telegramConfig.group_id;
+                const groupIdField = document.querySelector('input[name="telegram_group_id"]');
+                if (groupIdField) groupIdField.value = telegramConfig.group_id;
             }
             if (telegramConfig.topic_id) {
-                document.querySelector('input[name="telegram_topic_id"]').value = telegramConfig.topic_id;
+                const topicIdField = document.querySelector('input[name="telegram_topic_id"]');
+                if (topicIdField) topicIdField.value = telegramConfig.topic_id;
+            }
+            
+            // Show placeholder for token if it exists (for user feedback)
+            if (telegramConfig.telegram_bot_token) {
+                const tokenField = document.querySelector('input[name="telegram_bot_token"]');
+                if (tokenField) {
+                    tokenField.placeholder = "Token configured (hidden for security)";
+                    tokenField.setAttribute('data-has-value', 'true');
+                }
             }
         }
         
-        // Load Deriv config (but don't populate API tokens for security)
+        // Load Deriv config
         const derivResponse = await authenticatedFetch('/api/decter/deriv/config');
         if (derivResponse.ok) {
             const derivConfig = await derivResponse.json();
+            
+            // Populate App ID
             if (derivConfig.deriv_app_id) {
-                document.querySelector('input[name="deriv_app_id"]').value = derivConfig.deriv_app_id;
+                const appIdField = document.querySelector('input[name="deriv_app_id"]');
+                if (appIdField) appIdField.value = derivConfig.deriv_app_id;
+            }
+            
+            // Show placeholders for configured API tokens based on current currency
+            const currentCurrency = document.querySelector('#currencySelect')?.value || 'XRP';
+            const currencyTokenKey = `${currentCurrency.toLowerCase()}_api_token`;
+            
+            if (derivConfig[currencyTokenKey] && derivConfig[currencyTokenKey] !== 'undefined') {
+                const apiKeyField = document.querySelector('input[name="deriv_api_key"]');
+                if (apiKeyField) {
+                    apiKeyField.placeholder = `${currentCurrency} API Key configured (hidden for security)`;
+                    apiKeyField.setAttribute('data-has-value', 'true');
+                }
             }
         }
+        
+        console.log('✅ Credentials loaded successfully');
         
     } catch (error) {
         console.error('Error loading credentials:', error);
@@ -1768,6 +1837,13 @@ async function openCredentialsModalDecter() {
                 if (twofaWarning) twofaWarning.classList.add('d-none');
                 if (credentialsForm) credentialsForm.style.display = 'block';
                 
+                // Load existing credentials
+                await loadCredentials();
+                
+                // Update API key placeholder for current currency
+                const currentCurrency = document.querySelector('#currencySelect')?.value || 'XRP';
+                await updateApiKeyPlaceholder(currentCurrency);
+                
                 // Focus on first input
                 setTimeout(() => {
                     const firstInput = modal.querySelector('input[type="password"]');
@@ -1785,6 +1861,13 @@ async function openCredentialsModalDecter() {
             if (twofaWarning) twofaWarning.classList.add('d-none');
             if (credentialsForm) credentialsForm.style.display = 'block';
             
+            // Load existing credentials
+            await loadCredentials();
+            
+            // Update API key placeholder for current currency
+            const currentCurrency = document.querySelector('#currencySelect')?.value || 'XRP';
+            await updateApiKeyPlaceholder(currentCurrency);
+            
             setTimeout(() => {
                 const firstInput = modal.querySelector('input[type="password"]');
                 if (firstInput) firstInput.focus();
@@ -1801,6 +1884,13 @@ async function openCredentialsModalDecter() {
             modal.style.display = 'flex';
             if (twofaWarning) twofaWarning.classList.add('d-none');
             if (credentialsForm) credentialsForm.style.display = 'block';
+            
+            // Load existing credentials
+            await loadCredentials();
+            
+            // Update API key placeholder for current currency
+            const currentCurrency = document.querySelector('#currencySelect')?.value || 'XRP';
+            await updateApiKeyPlaceholder(currentCurrency);
             
             setTimeout(() => {
                 const firstInput = modal.querySelector('input[type="password"]');
