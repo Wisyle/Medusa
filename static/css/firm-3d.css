@@ -1,0 +1,410 @@
+/* TAR Global Strategies - Firm 3D Design System */
+
+:root {
+    /* Dark theme colors */
+    --bg-primary: #0a0a0a;
+    --bg-secondary: #1a1a1a;
+    --bg-tertiary: #252525;
+    --bg-panel: #181818;
+    --border-color: #333;
+    --border-light: #444;
+    --text-primary: #ffffff;
+    --text-secondary: #b0b0b0;
+    --text-muted: #808080;
+    --accent-green: #00ff88;
+    --accent-red: #ff4444;
+    --accent-blue: #4488ff;
+    --accent-yellow: #ffaa00;
+    
+    /* Firm shadows for 3D effect */
+    --shadow-inset: inset 0 2px 4px rgba(0,0,0,0.5);
+    --shadow-raised: 0 4px 8px rgba(0,0,0,0.8), 0 0 1px rgba(255,255,255,0.1);
+    --shadow-deep: 0 8px 16px rgba(0,0,0,0.9);
+    
+    /* No rounded corners - firm edges */
+    --radius: 0px;
+    --border-width: 1px;
+}
+
+/* Reset and base styles */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Remove all rounded corners from existing elements */
+.card, .btn, .form-control, .form-select, .modal-content, 
+.alert, .badge, .dropdown-menu, .nav-pills .nav-link,
+.list-group-item, .input-group > * {
+    border-radius: var(--radius) !important;
+}
+
+/* Firm 3D panels */
+.firm-panel {
+    background: var(--bg-panel);
+    border: var(--border-width) solid var(--border-color);
+    box-shadow: var(--shadow-raised);
+    position: relative;
+    padding: 1.5rem;
+}
+
+.firm-panel::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border-light), transparent);
+}
+
+/* Inset panels for inputs/displays */
+.firm-inset {
+    background: var(--bg-primary);
+    border: var(--border-width) solid var(--border-color);
+    box-shadow: var(--shadow-inset);
+    padding: 0.75rem 1rem;
+}
+
+/* Firm buttons with 3D effect */
+.firm-btn {
+    background: var(--bg-tertiary);
+    border: var(--border-width) solid var(--border-light);
+    color: var(--text-primary);
+    padding: 0.75rem 1.5rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    transition: all 0.15s ease;
+    cursor: pointer;
+    position: relative;
+}
+
+.firm-btn:hover {
+    background: var(--bg-secondary);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.7);
+}
+
+.firm-btn:active {
+    transform: translateY(1px);
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.7);
+}
+
+.firm-btn-primary {
+    background: linear-gradient(180deg, #2a2a2a 0%, #1a1a1a 100%);
+    border-color: var(--accent-green);
+    color: var(--accent-green);
+}
+
+.firm-btn-danger {
+    border-color: var(--accent-red);
+    color: var(--accent-red);
+}
+
+/* Form controls with firm 3D style */
+.firm-input,
+.firm-select {
+    background: var(--bg-primary);
+    border: var(--border-width) solid var(--border-color);
+    color: var(--text-primary);
+    padding: 0.75rem 1rem;
+    box-shadow: var(--shadow-inset);
+    transition: all 0.15s ease;
+}
+
+.firm-input:focus,
+.firm-select:focus {
+    outline: none;
+    border-color: var(--border-light);
+    box-shadow: var(--shadow-inset), 0 0 0 1px var(--border-light);
+}
+
+/* Status indicators */
+.status-indicator {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    background: var(--bg-primary);
+    border: var(--border-width) solid var(--border-color);
+    font-size: 0.875rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.status-online {
+    border-color: var(--accent-green);
+    color: var(--accent-green);
+    box-shadow: inset 0 0 10px rgba(0,255,136,0.2);
+}
+
+.status-active {
+    border-color: var(--accent-blue);
+    color: var(--accent-blue);
+    box-shadow: inset 0 0 10px rgba(68,136,255,0.2);
+}
+
+.status-secured {
+    border-color: var(--accent-yellow);
+    color: var(--accent-yellow);
+    box-shadow: inset 0 0 10px rgba(255,170,0,0.2);
+}
+
+/* Grid layout for dashboard */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 1.5rem;
+    padding: 1.5rem;
+}
+
+/* Metric displays */
+.metric-display {
+    background: var(--bg-primary);
+    border: var(--border-width) solid var(--border-color);
+    padding: 1rem;
+    box-shadow: var(--shadow-inset);
+}
+
+.metric-label {
+    color: var(--text-muted);
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 0.5rem;
+}
+
+.metric-value {
+    font-size: 2rem;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', 'Courier New', monospace;
+}
+
+.metric-value.positive {
+    color: var(--accent-green);
+}
+
+.metric-value.negative {
+    color: var(--accent-red);
+}
+
+/* Tables with firm style */
+.firm-table {
+    width: 100%;
+    background: var(--bg-panel);
+    border: var(--border-width) solid var(--border-color);
+    box-shadow: var(--shadow-raised);
+}
+
+.firm-table thead {
+    background: var(--bg-secondary);
+    border-bottom: 2px solid var(--border-color);
+}
+
+.firm-table th {
+    padding: 1rem;
+    text-align: left;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.firm-table td {
+    padding: 1rem;
+    border-bottom: var(--border-width) solid var(--border-color);
+}
+
+.firm-table tbody tr:hover {
+    background: var(--bg-tertiary);
+}
+
+/* Navigation with firm style */
+.firm-nav {
+    background: var(--bg-secondary);
+    border-bottom: 2px solid var(--border-color);
+    box-shadow: var(--shadow-raised);
+}
+
+.firm-nav-item {
+    display: inline-block;
+    padding: 1rem 1.5rem;
+    color: var(--text-secondary);
+    text-decoration: none;
+    border-right: var(--border-width) solid var(--border-color);
+    transition: all 0.15s ease;
+    position: relative;
+}
+
+.firm-nav-item:hover {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+
+.firm-nav-item.active {
+    background: var(--bg-primary);
+    color: var(--accent-green);
+    box-shadow: inset 0 -2px 0 var(--accent-green);
+}
+
+/* Sidebar with firm style */
+.firm-sidebar {
+    background: var(--bg-secondary);
+    border-right: 2px solid var(--border-color);
+    box-shadow: var(--shadow-deep);
+    height: 100vh;
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 280px;
+    z-index: 100;
+}
+
+.firm-main-content {
+    margin-left: 280px;
+    min-height: 100vh;
+    background: var(--bg-primary);
+}
+
+/* Modal with firm style */
+.firm-modal {
+    background: var(--bg-panel);
+    border: 2px solid var(--border-color);
+    box-shadow: var(--shadow-deep);
+}
+
+.firm-modal-header {
+    background: var(--bg-secondary);
+    border-bottom: var(--border-width) solid var(--border-color);
+    padding: 1.5rem;
+}
+
+.firm-modal-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* Charts and graphs container */
+.firm-chart-container {
+    background: var(--bg-primary);
+    border: var(--border-width) solid var(--border-color);
+    box-shadow: var(--shadow-inset);
+    padding: 1rem;
+    position: relative;
+}
+
+/* Override Bootstrap defaults */
+.bg-dark {
+    background-color: var(--bg-secondary) !important;
+}
+
+.bg-secondary {
+    background-color: var(--bg-tertiary) !important;
+}
+
+.text-muted {
+    color: var(--text-muted) !important;
+}
+
+.border {
+    border-color: var(--border-color) !important;
+}
+
+/* Remove soft shadows from Bootstrap components */
+.shadow, .shadow-sm, .shadow-lg {
+    box-shadow: var(--shadow-raised) !important;
+}
+
+/* Loading states */
+.firm-loading {
+    background: var(--bg-panel);
+    border: var(--border-width) solid var(--border-color);
+    padding: 2rem;
+    text-align: center;
+}
+
+.firm-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--border-color);
+    border-top-color: var(--accent-green);
+    animation: firm-spin 1s linear infinite;
+}
+
+@keyframes firm-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .firm-sidebar {
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+    }
+    
+    .firm-sidebar.active {
+        transform: translateX(0);
+    }
+    
+    .firm-main-content {
+        margin-left: 0;
+    }
+    
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Data visualization elements */
+.data-point {
+    background: var(--bg-primary);
+    border: var(--border-width) solid var(--accent-green);
+    padding: 0.25rem 0.5rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.875rem;
+}
+
+/* Section headers */
+.section-header {
+    background: linear-gradient(90deg, var(--bg-secondary) 0%, transparent 100%);
+    border-bottom: 2px solid var(--border-color);
+    padding: 1rem 0;
+    margin-bottom: 1.5rem;
+    font-size: 1.125rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+}
+
+/* Icon styling */
+.firm-icon {
+    color: var(--text-muted);
+    margin-right: 0.5rem;
+}
+
+/* Notification badges */
+.firm-badge {
+    background: var(--bg-primary);
+    border: var(--border-width) solid var(--accent-green);
+    color: var(--accent-green);
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    display: inline-block;
+    min-width: 1.5rem;
+    text-align: center;
+}

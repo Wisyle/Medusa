@@ -1,0 +1,413 @@
+{% extends "base.html" %}
+
+{% block title %}Command Hub - TAR Global Strategies{% endblock %}
+
+{% block extra_head %}
+<!-- Chart.js for data visualization -->
+<script src="https://unpkg.com/chart.js@4.4.0/dist/chart.min.js"></script>
+
+<style>
+/* Override soft styles with firm 3D design */
+.card {
+    background: var(--bg-panel) !important;
+    border: var(--border-width) solid var(--border-color) !important;
+    border-radius: 0 !important;
+    box-shadow: var(--shadow-raised) !important;
+}
+
+.btn {
+    border-radius: 0 !important;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 500;
+}
+
+.btn-primary {
+    background: linear-gradient(180deg, #2a2a2a 0%, #1a1a1a 100%) !important;
+    border-color: var(--accent-green) !important;
+    color: var(--accent-green) !important;
+}
+
+.form-control, .form-select {
+    background: var(--bg-primary) !important;
+    border: var(--border-width) solid var(--border-color) !important;
+    border-radius: 0 !important;
+    color: var(--text-primary) !important;
+    box-shadow: var(--shadow-inset) !important;
+}
+
+/* Remove all animations and transitions for firm feel */
+* {
+    animation: none !important;
+    transition: all 0.15s ease !important;
+}
+
+.metric-card {
+    background: var(--bg-panel);
+    border: 2px solid var(--border-color);
+    padding: 1.5rem;
+    box-shadow: var(--shadow-raised);
+    position: relative;
+}
+
+.metric-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: var(--border-light);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <!-- Command Center Header -->
+    <div class="firm-nav mb-4">
+        <div class="container-fluid py-3">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <h1 class="m-0 text-uppercase" style="font-size: 1.5rem; letter-spacing: 0.1em; font-weight: 700;">
+                        <i class="fas fa-terminal me-2" style="color: var(--accent-green);"></i>
+                        COMMAND CENTER
+                    </h1>
+                </div>
+                <div class="col-md-6 text-end">
+                    <span class="status-indicator status-online me-3">SYSTEM ONLINE</span>
+                    <span class="text-muted">{{ current_user.email }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container-fluid">
+        <!-- System Overview Grid -->
+        <div class="row mb-4">
+            <!-- Total Instances -->
+            <div class="col-xl-3 col-lg-6 mb-3">
+                <div class="metric-card">
+                    <div class="metric-label">TOTAL INSTANCES</div>
+                    <div class="metric-value" id="totalInstances">0</div>
+                    <div class="mt-2">
+                        <small class="text-muted text-uppercase">Active: <span id="activeInstances" class="text-success">0</span></small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Total Balance -->
+            <div class="col-xl-3 col-lg-6 mb-3">
+                <div class="metric-card">
+                    <div class="metric-label">TOTAL BALANCE</div>
+                    <div class="metric-value positive" id="totalBalance">$0.00</div>
+                    <div class="mt-2">
+                        <small class="text-muted text-uppercase">Updated: <span id="balanceUpdate">Never</span></small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 24h P&L -->
+            <div class="col-xl-3 col-lg-6 mb-3">
+                <div class="metric-card">
+                    <div class="metric-label">24H PROFIT/LOSS</div>
+                    <div class="metric-value" id="dailyPnl">$0.00</div>
+                    <div class="mt-2">
+                        <small class="text-muted text-uppercase">Win Rate: <span id="winRate">0%</span></small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- System Health -->
+            <div class="col-xl-3 col-lg-6 mb-3">
+                <div class="metric-card">
+                    <div class="metric-label">SYSTEM HEALTH</div>
+                    <div class="d-flex align-items-center justify-content-between">
+                        <span class="status-indicator status-active">OPERATIONAL</span>
+                        <button class="firm-btn firm-btn-sm" onclick="window.location.href='/system-logs'">
+                            <i class="fas fa-chart-line"></i> METRICS
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions Panel -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="firm-panel">
+                    <div class="section-header mb-3">
+                        <i class="fas fa-bolt firm-icon"></i>QUICK ACTIONS
+                    </div>
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <button class="firm-btn firm-btn-primary w-100" onclick="window.location.href='/instances/new'">
+                                <i class="fas fa-plus me-2"></i>NEW INSTANCE
+                            </button>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <button class="firm-btn w-100" onclick="window.location.href='/api-library'">
+                                <i class="fas fa-key me-2"></i>API LIBRARY
+                            </button>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <button class="firm-btn w-100" onclick="window.location.href='/dex-arbitrage'">
+                                <i class="fas fa-exchange-alt me-2"></i>DEX ARBITRAGE
+                            </button>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <button class="firm-btn w-100" onclick="window.location.href='/decter-engine'">
+                                <i class="fas fa-cog me-2"></i>DECTER ENGINE
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Live Activity Feed -->
+        <div class="row">
+            <div class="col-lg-8 mb-4">
+                <div class="firm-panel">
+                    <div class="section-header mb-3">
+                        <i class="fas fa-stream firm-icon"></i>LIVE ACTIVITY FEED
+                    </div>
+                    <div class="firm-inset" style="height: 400px; overflow-y: auto;">
+                        <table class="firm-table" id="activityTable">
+                            <thead>
+                                <tr>
+                                    <th>TIME</th>
+                                    <th>TYPE</th>
+                                    <th>INSTANCE</th>
+                                    <th>DETAILS</th>
+                                    <th>STATUS</th>
+                                </tr>
+                            </thead>
+                            <tbody id="activityFeed">
+                                <!-- Dynamic content -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- System Modules Status -->
+            <div class="col-lg-4 mb-4">
+                <div class="firm-panel">
+                    <div class="section-header mb-3">
+                        <i class="fas fa-server firm-icon"></i>SYSTEM MODULES
+                    </div>
+                    <div class="module-status-list">
+                        <div class="d-flex justify-content-between align-items-center mb-3 p-2 firm-inset">
+                            <span class="text-uppercase">Trading Engine</span>
+                            <span class="status-indicator status-online">ONLINE</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mb-3 p-2 firm-inset">
+                            <span class="text-uppercase">WebSocket Server</span>
+                            <span class="status-indicator status-online">CONNECTED</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mb-3 p-2 firm-inset">
+                            <span class="text-uppercase">Database</span>
+                            <span class="status-indicator status-online">ACTIVE</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mb-3 p-2 firm-inset">
+                            <span class="text-uppercase">API Gateway</span>
+                            <span class="status-indicator status-online">SECURED</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mb-3 p-2 firm-inset">
+                            <span class="text-uppercase">Worker Services</span>
+                            <span class="status-indicator status-active">4 ACTIVE</span>
+                        </div>
+                    </div>
+                    <button class="firm-btn w-100 mt-3" onclick="window.location.href='/system-logs'">
+                        <i class="fas fa-terminal me-2"></i>VIEW SYSTEM LOGS
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Performance Charts -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="firm-panel">
+                    <div class="section-header mb-3">
+                        <i class="fas fa-chart-area firm-icon"></i>PERFORMANCE METRICS
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="firm-chart-container" style="height: 300px;">
+                                <canvas id="balanceChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="firm-chart-container" style="height: 300px;">
+                                <canvas id="performanceChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- WebSocket Status Indicator -->
+<div class="position-fixed bottom-0 end-0 p-3">
+    <div class="d-flex align-items-center gap-2 firm-inset">
+        <div id="wsIndicator" class="status-indicator status-online" style="font-size: 0.75rem;">
+            WS: CONNECTED
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Initialize dashboard
+document.addEventListener('DOMContentLoaded', function() {
+    initializeDashboard();
+    connectWebSocket();
+    loadDashboardData();
+    initializeCharts();
+    
+    // Refresh data every 30 seconds
+    setInterval(loadDashboardData, 30000);
+});
+
+// Load dashboard data
+async function loadDashboardData() {
+    try {
+        const response = await authenticatedFetch('/api/dashboard/stats');
+        if (response.ok) {
+            const data = await response.json();
+            updateDashboardMetrics(data);
+        }
+    } catch (error) {
+        console.error('Error loading dashboard data:', error);
+    }
+}
+
+// Update dashboard metrics
+function updateDashboardMetrics(data) {
+    document.getElementById('totalInstances').textContent = data.total_instances || 0;
+    document.getElementById('activeInstances').textContent = data.active_instances || 0;
+    document.getElementById('totalBalance').textContent = formatCurrency(data.total_balance || 0);
+    document.getElementById('dailyPnl').textContent = formatCurrency(data.daily_pnl || 0);
+    document.getElementById('winRate').textContent = `${(data.win_rate || 0).toFixed(1)}%`;
+    document.getElementById('balanceUpdate').textContent = new Date().toLocaleTimeString();
+    
+    // Update P&L color
+    const pnlElement = document.getElementById('dailyPnl');
+    pnlElement.className = data.daily_pnl >= 0 ? 'metric-value positive' : 'metric-value negative';
+}
+
+// Initialize charts with firm styling
+function initializeCharts() {
+    const chartOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                display: false
+            }
+        },
+        scales: {
+            x: {
+                grid: {
+                    color: 'rgba(255, 255, 255, 0.1)',
+                    borderColor: 'rgba(255, 255, 255, 0.2)'
+                },
+                ticks: {
+                    color: '#808080'
+                }
+            },
+            y: {
+                grid: {
+                    color: 'rgba(255, 255, 255, 0.1)',
+                    borderColor: 'rgba(255, 255, 255, 0.2)'
+                },
+                ticks: {
+                    color: '#808080'
+                }
+            }
+        }
+    };
+    
+    // Balance Chart
+    const balanceCtx = document.getElementById('balanceChart').getContext('2d');
+    new Chart(balanceCtx, {
+        type: 'line',
+        data: {
+            labels: generateTimeLabels(24),
+            datasets: [{
+                data: generateMockData(24, 10000, 15000),
+                borderColor: '#00ff88',
+                borderWidth: 2,
+                fill: false,
+                tension: 0
+            }]
+        },
+        options: chartOptions
+    });
+    
+    // Performance Chart
+    const performanceCtx = document.getElementById('performanceChart').getContext('2d');
+    new Chart(performanceCtx, {
+        type: 'bar',
+        data: {
+            labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+            datasets: [{
+                data: [120, 150, 180, 220, 190, 240, 210],
+                backgroundColor: '#00ff88',
+                borderColor: '#00ff88',
+                borderWidth: 1
+            }]
+        },
+        options: chartOptions
+    });
+}
+
+// Utility functions
+function formatCurrency(amount) {
+    return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD'
+    }).format(amount);
+}
+
+function generateTimeLabels(hours) {
+    const labels = [];
+    for (let i = hours; i >= 0; i--) {
+        labels.push(`${i}h`);
+    }
+    return labels.reverse();
+}
+
+function generateMockData(points, min, max) {
+    const data = [];
+    for (let i = 0; i < points; i++) {
+        data.push(Math.random() * (max - min) + min);
+    }
+    return data;
+}
+
+// Add activity to feed
+function addActivityToFeed(activity) {
+    const feed = document.getElementById('activityFeed');
+    const row = document.createElement('tr');
+    row.innerHTML = `
+        <td style="font-family: 'JetBrains Mono', monospace;">${new Date().toLocaleTimeString()}</td>
+        <td><span class="data-point">${activity.type}</span></td>
+        <td>${activity.instance || '-'}</td>
+        <td>${activity.details}</td>
+        <td><span class="status-indicator status-${activity.status}">${activity.status.toUpperCase()}</span></td>
+    `;
+    feed.insertBefore(row, feed.firstChild);
+    
+    // Keep only last 50 activities
+    while (feed.children.length > 50) {
+        feed.removeChild(feed.lastChild);
+    }
+}
+</script>
+{% endblock %}

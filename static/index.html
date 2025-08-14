@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TAR Global Strategies - Command Hub</title>
+    <meta name="description" content="Professional trading bot management platform with firm 3D design">
+    
+    <!-- Preload critical resources -->
+    <link rel="preload" href="/css/firm-3d.css" as="style">
+    <link rel="preload" href="/js/api-client.js" as="script">
+    
+    <!-- Stylesheets -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link href="/css/firm-3d.css" rel="stylesheet">
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#000000">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/static/lighthouse1.svg">
+    
+    <!-- Security Headers (served by render.yaml) -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="X-Frame-Options" content="DENY">
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background: var(--bg-primary); z-index: 9999;">
+        <div class="text-center">
+            <div class="firm-spinner mx-auto mb-3"></div>
+            <div class="text-muted text-uppercase">INITIALIZING SYSTEM</div>
+        </div>
+    </div>
+
+    <!-- Main Layout -->
+    <div id="app" class="d-none">
+        <!-- Sidebar -->
+        <div class="firm-sidebar">
+            <div class="firm-panel" style="margin: 1rem; padding: 1rem;">
+                <h2 style="font-size: 1.25rem; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 2rem;">
+                    <i class="fas fa-th firm-icon"></i>TAR GLOBAL
+                </h2>
+                
+                <nav id="main-nav">
+                    <a href="#dashboard" class="firm-nav-item active" style="display: block; border: none; margin-bottom: 0.5rem;" data-page="dashboard">
+                        <i class="fas fa-tachometer-alt firm-icon"></i>Dashboard
+                    </a>
+                    <a href="#instances" class="firm-nav-item" style="display: block; border: none; margin-bottom: 0.5rem;" data-page="instances">
+                        <i class="fas fa-robot firm-icon"></i>Bot Management
+                    </a>
+                    <a href="#dex-arbitrage" class="firm-nav-item" style="display: block; border: none; margin-bottom: 0.5rem;" data-page="dex-arbitrage">
+                        <i class="fas fa-chart-line firm-icon"></i>DEX Arbitrage
+                    </a>
+                    <a href="#validators" class="firm-nav-item" style="display: block; border: none; margin-bottom: 0.5rem;" data-page="validators">
+                        <i class="fas fa-server firm-icon"></i>Validator Nodes
+                    </a>
+                    <a href="#decter" class="firm-nav-item" style="display: block; border: none; margin-bottom: 0.5rem;" data-page="decter">
+                        <i class="fas fa-cog firm-icon"></i>Decter Engine
+                    </a>
+                    <a href="#api-library" class="firm-nav-item" style="display: block; border: none; margin-bottom: 0.5rem;" data-page="api-library">
+                        <i class="fas fa-key firm-icon"></i>API Library
+                    </a>
+                </nav>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="firm-main-content">
+            <!-- Top Bar -->
+            <div class="firm-nav">
+                <div style="display: flex; align-items: center; justify-content: space-between; padding: 0 2rem;">
+                    <h1 id="page-title" style="font-size: 1.5rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">
+                        COMMAND HUB
+                    </h1>
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <span id="system-status" class="status-indicator status-online">SYSTEM ONLINE</span>
+                        <button class="firm-btn" onclick="toggleUserMenu()">
+                            <i class="fas fa-user firm-icon"></i><span id="user-email">ADMIN</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dynamic Content Area -->
+            <div id="content-area" class="p-4">
+                <!-- Content will be loaded here dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <!-- WebSocket Status Indicator -->
+    <div class="position-fixed bottom-0 end-0 p-3">
+        <div class="d-flex align-items-center gap-2 firm-inset">
+            <div id="ws-indicator" class="status-indicator status-online" style="font-size: 0.75rem;">
+                WS: CONNECTED
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="/js/api-client.js"></script>
+    <script src="/js/app.js"></script>
+    
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js')
+                .then(registration => console.log('SW registered:', registration))
+                .catch(error => console.log('SW registration failed:', error));
+        }
+    </script>
+</body>
+</html>

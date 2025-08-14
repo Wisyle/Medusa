@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TAR Global Strategies - Command Hub</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link href="/static/firm-3d.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Main Layout -->
+    <div class="firm-sidebar">
+        <div class="firm-panel" style="margin: 1rem; padding: 1rem;">
+            <h2 style="font-size: 1.25rem; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 2rem;">
+                <i class="fas fa-th firm-icon"></i>TAR GLOBAL
+            </h2>
+            
+            <nav>
+                <a href="#" class="firm-nav-item active" style="display: block; border: none; margin-bottom: 0.5rem;">
+                    <i class="fas fa-tachometer-alt firm-icon"></i>Dashboard
+                </a>
+                <a href="#" class="firm-nav-item" style="display: block; border: none; margin-bottom: 0.5rem;">
+                    <i class="fas fa-robot firm-icon"></i>Bot Management
+                </a>
+                <a href="#" class="firm-nav-item" style="display: block; border: none; margin-bottom: 0.5rem;">
+                    <i class="fas fa-chart-line firm-icon"></i>DEX Arbitrage
+                </a>
+                <a href="#" class="firm-nav-item" style="display: block; border: none; margin-bottom: 0.5rem;">
+                    <i class="fas fa-server firm-icon"></i>Validator Nodes
+                </a>
+                <a href="#" class="firm-nav-item" style="display: block; border: none; margin-bottom: 0.5rem;">
+                    <i class="fas fa-cog firm-icon"></i>Decter Engine
+                </a>
+                <a href="#" class="firm-nav-item" style="display: block; border: none; margin-bottom: 0.5rem;">
+                    <i class="fas fa-key firm-icon"></i>API Library
+                </a>
+            </nav>
+        </div>
+    </div>
+
+    <div class="firm-main-content">
+        <!-- Top Bar -->
+        <div class="firm-nav">
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 0 2rem;">
+                <h1 style="font-size: 1.5rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">
+                    Command Hub
+                </h1>
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <span class="status-indicator status-online">SYSTEM ONLINE</span>
+                    <button class="firm-btn" onclick="toggleProfile()">
+                        <i class="fas fa-user firm-icon"></i>ADMIN
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard Grid -->
+        <div class="dashboard-grid">
+            <!-- Access Control Panel -->
+            <div class="firm-panel">
+                <div class="section-header">
+                    <i class="fas fa-shield-alt firm-icon"></i>Access Control
+                </div>
+                
+                <div style="margin-bottom: 1.5rem;">
+                    <div class="metric-label">EMAIL ADDRESS</div>
+                    <div class="firm-inset">
+                        <input type="email" class="firm-input" value="admin@tglmedusa.com" readonly style="background: transparent; border: none; width: 100%;">
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 1.5rem;">
+                    <div class="metric-label">SECURITY KEY</div>
+                    <div class="firm-inset">
+                        <input type="password" class="firm-input" value="••••••••••••" readonly style="background: transparent; border: none; width: 100%;">
+                    </div>
+                </div>
+                
+                <button class="firm-btn firm-btn-primary" style="width: 100%;">
+                    ACCESS SYSTEM
+                </button>
+            </div>
+
+            <!-- Bot Management Panel -->
+            <div class="firm-panel">
+                <div class="section-header">
+                    <i class="fas fa-chart-line firm-icon"></i>Bot Management
+                </div>
+                
+                <div class="metric-display" style="margin-bottom: 1rem;">
+                    <div class="metric-label">Active Bots</div>
+                    <div class="metric-value">24</div>
+                </div>
+                
+                <div class="metric-display" style="margin-bottom: 1rem;">
+                    <div class="metric-label">Total Balance</div>
+                    <div class="metric-value positive">$245,892.50</div>
+                </div>
+                
+                <div class="metric-display" style="margin-bottom: 1.5rem;">
+                    <div class="metric-label">Profit 24h</div>
+                    <div class="metric-value positive">+$2,341.20</div>
+                </div>
+                
+                <button class="firm-btn" style="width: 100%;">
+                    <i class="fas fa-cog firm-icon"></i>MANAGE INSTANCES
+                </button>
+            </div>
+
+            <!-- System Status Panel -->
+            <div class="firm-panel">
+                <div class="section-header">
+                    <i class="fas fa-database firm-icon"></i>System Status
+                </div>
+                
+                <div style="display: grid; gap: 1rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span class="metric-label">API Status</span>
+                        <span class="status-indicator status-online">ONLINE</span>
+                    </div>
+                    
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span class="metric-label">Trading Engine</span>
+                        <span class="status-indicator status-active">ACTIVE</span>
+                    </div>
+                    
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span class="metric-label">Database</span>
+                        <span class="status-indicator status-online">CONNECTED</span>
+                    </div>
+                    
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span class="metric-label">Security</span>
+                        <span class="status-indicator status-secured">SECURED</span>
+                    </div>
+                </div>
+                
+                <button class="firm-btn" style="width: 100%; margin-top: 1.5rem;">
+                    <i class="fas fa-file-alt firm-icon"></i>VIEW SYSTEM LOGS
+                </button>
+            </div>
+        </div>
+
+        <!-- Live Data Table -->
+        <div style="padding: 1.5rem;">
+            <div class="firm-panel">
+                <div class="section-header">
+                    <i class="fas fa-stream firm-icon"></i>Live Trading Activity
+                </div>
+                
+                <table class="firm-table">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Bot</th>
+                            <th>Pair</th>
+                            <th>Action</th>
+                            <th>Amount</th>
+                            <th>P&L</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="live-trades">
+                        <!-- Dynamic content will be inserted here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript for Static Site Functionality -->
+    <script>
+        // API Base URL
+        const API_BASE = '/api';
+        
+        // Authentication token management
+        let authToken = localStorage.getItem('access_token');
+        
+        // Utility function for authenticated fetch
+        async function authenticatedFetch(url, options = {}) {
+            const headers = {
+                'Content-Type': 'application/json',
+                ...options.headers
+            };
+            
+            if (authToken) {
+                headers['Authorization'] = `Bearer ${authToken}`;
+            }
+            
+            const response = await fetch(url, {
+                ...options,
+                headers
+            });
+            
+            if (response.status === 401) {
+                // Token expired, redirect to login
+                window.location.href = '/login';
+                return;
+            }
+            
+            return response;
+        }
+        
+        // Load dashboard data
+        async function loadDashboardData() {
+            try {
+                // Load bot instances
+                const instancesResponse = await authenticatedFetch(`${API_BASE}/instances`);
+                if (instancesResponse.ok) {
+                    const instances = await instancesResponse.json();
+                    updateBotStats(instances);
+                }
+                
+                // Load system status
+                const statusResponse = await authenticatedFetch(`${API_BASE}/health`);
+                if (statusResponse.ok) {
+                    const status = await statusResponse.json();
+                    updateSystemStatus(status);
+                }
+                
+                // Load live trades
+                loadLiveTrades();
+                
+            } catch (error) {
+                console.error('Error loading dashboard data:', error);
+            }
+        }
+        
+        // Update bot statistics
+        function updateBotStats(instances) {
+            const activeCount = instances.filter(i => i.is_active).length;
+            const totalBalance = instances.reduce((sum, i) => sum + (i.balance || 0), 0);
+            
+            // Update UI
+            document.querySelector('.metric-value').textContent = activeCount;
+            // Update other metrics...
+        }
+        
+        // Load live trades
+        async function loadLiveTrades() {
+            const tradesBody = document.getElementById('live-trades');
+            
+            // Simulate live data for static demo
+            const mockTrades = [
+                {
+                    time: new Date().toLocaleTimeString(),
+                    bot: 'BOT-001',
+                    pair: 'BTC/USDT',
+                    action: 'BUY',
+                    amount: '$1,250.00',
+                    pnl: '+$12.50',
+                    status: 'COMPLETED'
+                },
+                {
+                    time: new Date().toLocaleTimeString(),
+                    bot: 'BOT-002',
+                    pair: 'ETH/USDT',
+                    action: 'SELL',
+                    amount: '$850.00',
+                    pnl: '+$8.25',
+                    status: 'COMPLETED'
+                }
+            ];
+            
+            tradesBody.innerHTML = mockTrades.map(trade => `
+                <tr>
+                    <td style="font-family: 'JetBrains Mono', monospace;">${trade.time}</td>
+                    <td><span class="data-point">${trade.bot}</span></td>
+                    <td>${trade.pair}</td>
+                    <td class="${trade.action === 'BUY' ? 'positive' : 'negative'}">${trade.action}</td>
+                    <td>${trade.amount}</td>
+                    <td class="${trade.pnl.startsWith('+') ? 'positive' : 'negative'}">${trade.pnl}</td>
+                    <td><span class="status-indicator status-online" style="font-size: 0.75rem;">${trade.status}</span></td>
+                </tr>
+            `).join('');
+        }
+        
+        // WebSocket for real-time updates
+        function connectWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
+            
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                handleRealtimeUpdate(data);
+            };
+            
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+            };
+            
+            ws.onclose = () => {
+                // Reconnect after 5 seconds
+                setTimeout(connectWebSocket, 5000);
+            };
+        }
+        
+        // Handle real-time updates
+        function handleRealtimeUpdate(data) {
+            if (data.type === 'trade') {
+                // Update live trades table
+                addLiveTrade(data.trade);
+            } else if (data.type === 'status') {
+                // Update system status
+                updateSystemStatus(data.status);
+            }
+        }
+        
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            if (authToken) {
+                loadDashboardData();
+                connectWebSocket();
+                
+                // Refresh data periodically
+                setInterval(loadDashboardData, 30000); // 30 seconds
+            } else {
+                window.location.href = '/login';
+            }
+        });
+        
+        // Toggle profile menu
+        function toggleProfile() {
+            // Implementation for profile dropdown
+        }
+    </script>
+</body>
+</html>

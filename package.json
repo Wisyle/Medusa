@@ -1,0 +1,32 @@
+{
+  "name": "tar-global-strategies-static",
+  "version": "2.0.0",
+  "description": "TAR Global Strategies - Static Site Frontend",
+  "main": "static/js/app.js",
+  "scripts": {
+    "build": "node build.js",
+    "dev": "python -m http.server 8080 --directory static",
+    "watch": "chokidar 'static/**/*' -c 'npm run build'",
+    "deploy": "npm run build && echo 'Ready for deployment'",
+    "serve": "npx http-server dist -p 8080 --cors"
+  },
+  "devDependencies": {
+    "chokidar-cli": "^3.0.0",
+    "uglify-js": "^3.17.4",
+    "clean-css": "^5.3.2",
+    "htmlmin": "^0.0.7"
+  },
+  "keywords": [
+    "trading",
+    "bot",
+    "dashboard",
+    "static-site",
+    "firm-design"
+  ],
+  "author": "TAR Global Strategies",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tar-global/strategies.git"
+  }
+}
