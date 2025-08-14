@@ -40,10 +40,6 @@ services:
     runtime: static
     buildCommand: npm install && npm run build
     staticPublishPath: ./dist
-    redirects:
-      - source: "/*"
-        destination: "/index.html"
-        type: "rewrite"
     headers:
       - path: /*
         name: X-Frame-Options

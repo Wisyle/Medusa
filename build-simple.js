@@ -43,6 +43,14 @@ function copyDir(src, dest) {
 console.log('📁 Copying files...');
 copyDir(sourceDir, distDir);
 
+// Copy 404.html as a fallback for SPA routing
+const source404 = path.join(sourceDir, '404.html');
+const dest404 = path.join(distDir, '404.html');
+if (fs.existsSync(source404)) {
+    fs.copyFileSync(source404, dest404);
+    console.log('✅ Copied 404.html for SPA fallback');
+}
+
 // Update API URLs in JS files for production
 const apiClientPath = path.join(distDir, 'js', 'api-client.js');
 if (fs.existsSync(apiClientPath)) {
