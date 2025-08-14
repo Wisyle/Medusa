@@ -51,7 +51,7 @@ if (fs.existsSync(apiClientPath)) {
     
     // Replace the API URL logic with environment variable
     content = content.replace(
-        /const apiBase = import\.meta\.env\?\.VITE_API_URL.*$/m,
+        /const apiBase = window\.VITE_API_URL.*$/m,
         'const apiBase = "https://tar-strategies-api.onrender.com";'
     );
     
