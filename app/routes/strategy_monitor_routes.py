@@ -3,7 +3,7 @@
 Strategy Monitor Management API - Web interface for managing strategy monitors
 """
 
-from fastapi import HTTPException, Depends, Form
+from fastapi import APIRouter, HTTPException, Depends, Form
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 from datetime import datetime
@@ -12,9 +12,10 @@ from typing import List, Optional
 from app.database import get_db, BotInstance
 from models.strategy_monitor_model import StrategyMonitor
 
-# Add these routes to main.py
+# Create router for strategy monitor endpoints
+router = APIRouter(prefix="/api/strategy-monitors", tags=["Strategy Monitors"])
 
-@app.get("/strategy-monitors", response_class=HTMLResponse)
+@router.get("/", response_class=HTMLResponse)
 async def strategy_monitors_page(db: Session = Depends(get_db)):
     """Strategy monitors management page"""
     monitors = db.query(StrategyMonitor).order_by(StrategyMonitor.strategy_name).all()
@@ -32,7 +33,7 @@ async def strategy_monitors_page(db: Session = Depends(get_db)):
         "available_strategies": sorted(all_strategies)
     })
 
-@app.post("/strategy-monitors")
+@router.post("/")
 async def create_strategy_monitor(
     strategy_name: str = Form(...),
     telegram_bot_token: str = Form(...),
@@ -105,7 +106,7 @@ async def create_strategy_monitor(
             "error": f"Failed to create monitor: {str(e)}"
         })
 
-@app.put("/strategy-monitors/{monitor_id}")
+@router.put("/{monitor_id}")
 async def update_strategy_monitor(
     monitor_id: int,
     telegram_bot_token: Optional[str] = Form(None),
@@ -153,7 +154,7 @@ async def update_strategy_monitor(
     
     return {"message": f"Strategy monitor updated for '{monitor.strategy_name}'"}
 
-@app.delete("/strategy-monitors/{monitor_id}")
+@router.delete("/{monitor_id}")
 async def delete_strategy_monitor(monitor_id: int, db: Session = Depends(get_db)):
     """Delete strategy monitor"""
     
@@ -167,7 +168,7 @@ async def delete_strategy_monitor(monitor_id: int, db: Session = Depends(get_db)
     
     return {"message": f"Strategy monitor deleted for '{strategy_name}'"}
 
-@app.post("/strategy-monitors/{monitor_id}/toggle")
+@router.post("/{monitor_id}/toggle")
 async def toggle_strategy_monitor(monitor_id: int, db: Session = Depends(get_db)):
     """Toggle strategy monitor active status"""
     
@@ -182,7 +183,7 @@ async def toggle_strategy_monitor(monitor_id: int, db: Session = Depends(get_db)
     status = "activated" if monitor.is_active else "deactivated"
     return {"message": f"Strategy monitor {status} for '{monitor.strategy_name}'"}
 
-@app.post("/strategy-monitors/{monitor_id}/test-report")
+@router.post("/{monitor_id}/test-report")
 async def send_test_report(monitor_id: int, db: Session = Depends(get_db)):
     """Send a test report for strategy monitor"""
     from strategy_monitor import StrategyMonitorService
@@ -203,7 +204,7 @@ async def send_test_report(monitor_id: int, db: Session = Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to send test report: {str(e)}")
 
-@app.get("/api/strategy-monitors")
+@router.get("/list")
 async def get_strategy_monitors(db: Session = Depends(get_db)):
     """Get all strategy monitors"""
     monitors = db.query(StrategyMonitor).order_by(StrategyMonitor.strategy_name).all()

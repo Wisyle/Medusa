@@ -2,17 +2,11 @@
   "name": "tar-global-strategies-frontend",
   "version": "2.0.0",
   "description": "TAR Global Strategies - Static Site Frontend with Firm 3D Design",
-  "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview",
-    "serve": "vite preview --port 8080"
-  },
-  "devDependencies": {
-    "vite": "^5.0.0",
-    "@vitejs/plugin-legacy": "^5.0.0",
-    "terser": "^5.24.0"
+    "dev": "python -m http.server 8080 --directory static",
+    "build": "node build-simple.js",
+    "preview": "python -m http.server 8080 --directory dist",
+    "serve": "python -m http.server 8080 --directory dist"
   },
   "dependencies": {
     "chart.js": "^4.4.0"

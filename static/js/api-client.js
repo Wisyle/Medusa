@@ -6,7 +6,7 @@
 class TARApiClient {
     constructor(config = {}) {
         // Use environment variable for API URL, fallback to relative path
-        const apiBase = import.meta.env?.VITE_API_URL || window.__API_URL__ || '';
+        const apiBase = window.VITE_API_URL || window.__API_URL__ || '';
         this.baseURL = config.baseURL || (apiBase ? `${apiBase}/api` : '/api');
         this.wsURL = config.wsURL || this._getWebSocketURL();
         this.token = localStorage.getItem('access_token');
@@ -18,7 +18,7 @@ class TARApiClient {
 
     // Utility method to get WebSocket URL
     _getWebSocketURL() {
-        const apiBase = import.meta.env?.VITE_API_URL || window.__API_URL__ || '';
+        const apiBase = window.VITE_API_URL || window.__API_URL__ || '';
         if (apiBase) {
             const protocol = apiBase.startsWith('https:') ? 'wss:' : 'ws:';
             const host = apiBase.replace(/^https?:\/\//, '');
