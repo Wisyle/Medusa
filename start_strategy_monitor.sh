@@ -8,12 +8,15 @@ set -e
 
 echo "🚀 Starting TGL MEDUSA Strategy Monitor Worker..."
 
+# Set Python path
+export PYTHONPATH=/app
+
 # Run database migrations and initialization
 echo "📊 Running database migrations..."
-python migration.py
+python migrations/migration.py
 
 echo "🎯 Initializing Strategy Monitor System..."
-python init_strategy_monitor.py
+python utils/init_strategy_monitor.py
 
 echo "▶️ Starting Strategy Monitor Worker..."
-exec python strategy_monitor_worker.py
+exec python services/strategy_monitor_worker.py
