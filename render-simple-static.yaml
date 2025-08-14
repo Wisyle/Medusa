@@ -1,0 +1,62 @@
+# TAR Global Strategies - Simplified Static Site Configuration
+# Updated: 2025-01-03
+
+services:
+  # API Backend Service - Pure API only
+  - type: web
+    name: tar-api-backend
+    env: python
+    plan: starter
+    region: singapore
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "export PYTHONPATH=/opt/render/project/src && uvicorn app.main-api-only:app --host 0.0.0.0 --port $PORT --timeout-keep-alive 120"
+    autoDeploy: true
+    healthCheckPath: /api/health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: tar-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ALGORITHM
+        value: "HS256"
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "30"
+      - key: APP_NAME
+        value: "TAR API Backend"
+      - key: DEBUG
+        value: "false"
+      - key: ENVIRONMENT
+        value: "production"
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: CORS_ORIGINS
+        value: "*"
+
+  # Essential Worker Service - Core Background Tasks
+  - type: worker
+    name: tar-worker-essential
+    env: python
+    plan: starter
+    region: singapore
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "sleep 30 && export PYTHONPATH=/opt/render/project/src && python services/worker.py"
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: tar-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ENVIRONMENT
+        value: "production"
+
+# Database
+databases:
+  - name: tar-db
+    databaseName: tar_db
+    user: tar_user
+    region: singapore

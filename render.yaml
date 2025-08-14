@@ -2,16 +2,14 @@
 # Updated: 2025-01-03T00:00:00.000000
 
 services:
-  # Main Web Service - Serves Static Site + API Proxy
+  # API Backend Service
   - type: web
-    name: tar-strategies-web
-    env: python
+    name: tar-strategies-api
+    runtime: python
     plan: starter
     region: singapore
     buildCommand: "pip install -r requirements.txt"
-    startCommand: "export PYTHONPATH=/opt/render/project/src && uvicorn app.main:app --host 0.0.0.0 --port $PORT --timeout-keep-alive 120"
-    autoDeploy: true
-    healthCheckPath: /api/health
+    startCommand: "export PYTHONPATH=/opt/render/project/src && uvicorn app.main-api-only:app --host 0.0.0.0 --port $PORT --timeout-keep-alive 120"
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -26,21 +24,40 @@ services:
       - key: ACCESS_TOKEN_EXPIRE_MINUTES
         value: "30"
       - key: APP_NAME
-        value: "TAR Global Strategies"
+        value: "TAR Global Strategies API"
       - key: DEBUG
         value: "false"
       - key: ENVIRONMENT
         value: "production"
-      - key: HOST
-        value: "0.0.0.0"
-      - key: SERVER_REGION
-        value: "singapore"
-      - key: CLOUDFRONT_BYPASS_REGION
-        value: "sg"
       - key: PYTHONUNBUFFERED
         value: "1"
-      - key: SERVE_STATIC
-        value: "true"
+      - key: CORS_ORIGINS
+        value: "*"
+
+  # Static Frontend Application
+  - type: web
+    name: tar-strategies-frontend
+    runtime: static
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    headers:
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: X-XSS-Protection
+        value: "1; mode=block"
+      - path: /*
+        name: Strict-Transport-Security
+        value: "max-age=31536000; includeSubDomains"
+    envVars:
+      - key: VITE_API_URL
+        value: https://tar-strategies-api.onrender.com
+      - key: NODE_ENV
+        value: production
 
 
 
