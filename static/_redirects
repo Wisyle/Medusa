@@ -1,0 +1,11 @@
+# Redirect all requests to index.html for SPA routing
+/*    /index.html   200
+
+# Specific static asset rules
+/css/*  /css/:splat  200
+/js/*   /js/:splat   200
+/images/*  /images/:splat  200
+*.svg   /:splat     200
+*.png   /:splat     200  
+*.jpg   /:splat     200
+*.ico   /:splat     200
