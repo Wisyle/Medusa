@@ -327,52 +327,7 @@ templates = Jinja2Templates(directory="templates")
 if os.path.exists("static"):
     app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# Serve static site if SERVE_STATIC is enabled
-if os.getenv("SERVE_STATIC") == "true":
-    # Serve static HTML files from root
-    @app.get("/{path:path}")
-    async def serve_static_site(path: str, request: Request):
-        """Serve static site files"""
-        # Backend routes take precedence
-        backend_routes = ["api/", "ws", "login", "logout", "auth/", "security-setup", "setup-2fa", 
-                         "dashboard", "instances", "api-library", "dex-arbitrage", "validators", 
-                         "decter", "strategy-monitors", "migrations"]
-        
-        for route in backend_routes:
-            if path.startswith(route):
-                raise HTTPException(status_code=404, detail="Backend route - not handled by static server")
-        
-        # Handle root path
-        if not path or path == "/":
-            path = "index.html"
-        
-        # Check if file exists in static directory
-        file_path = os.path.join("static", path)
-        if os.path.exists(file_path) and os.path.isfile(file_path):
-            # Determine content type
-            if path.endswith('.html'):
-                content_type = "text/html"
-            elif path.endswith('.css'):
-                content_type = "text/css"
-            elif path.endswith('.js'):
-                content_type = "application/javascript"
-            elif path.endswith('.json'):
-                content_type = "application/json"
-            else:
-                content_type = "application/octet-stream"
-            
-            # Read and return file
-            with open(file_path, 'rb') as f:
-                return Response(content=f.read(), media_type=content_type)
-        
-        # If file not found, serve index.html for SPA routing
-        index_path = os.path.join("static", "index.html")
-        if os.path.exists(index_path):
-            with open(index_path, 'rb') as f:
-                return Response(content=f.read(), media_type="text/html")
-        
-        # Last resort 404
-        raise HTTPException(status_code=404, detail="File not found")
+# Static site serving moved to end of file to ensure backend routes take precedence
 
 active_processes = {}
 
@@ -2498,6 +2453,53 @@ async def delete_user_admin(
     db.commit()
     
     return {"message": "User deleted successfully"}
+
+# Serve static site if SERVE_STATIC is enabled - MUST BE LAST ROUTE
+if os.getenv("SERVE_STATIC") == "true":
+    # Serve static HTML files from root
+    @app.get("/{path:path}")
+    async def serve_static_site(path: str, request: Request):
+        """Serve static site files"""
+        # Backend routes take precedence
+        backend_routes = ["api/", "ws", "login", "logout", "auth/", "security-setup", "setup-2fa", 
+                         "dashboard", "instances", "api-library", "dex-arbitrage", "validators", 
+                         "decter", "strategy-monitors", "migrations"]
+        
+        for route in backend_routes:
+            if path.startswith(route):
+                raise HTTPException(status_code=404, detail="Backend route - not handled by static server")
+        
+        # Handle root path
+        if not path or path == "/":
+            path = "index.html"
+        
+        # Check if file exists in static directory
+        file_path = os.path.join("static", path)
+        if os.path.exists(file_path) and os.path.isfile(file_path):
+            # Determine content type
+            if path.endswith('.html'):
+                content_type = "text/html"
+            elif path.endswith('.css'):
+                content_type = "text/css"
+            elif path.endswith('.js'):
+                content_type = "application/javascript"
+            elif path.endswith('.json'):
+                content_type = "application/json"
+            else:
+                content_type = "application/octet-stream"
+            
+            # Read and return file
+            with open(file_path, 'rb') as f:
+                return Response(content=f.read(), media_type=content_type)
+        
+        # If file not found, serve index.html for SPA routing
+        index_path = os.path.join("static", "index.html")
+        if os.path.exists(index_path):
+            with open(index_path, 'rb') as f:
+                return Response(content=f.read(), media_type="text/html")
+        
+        # Last resort 404
+        raise HTTPException(status_code=404, detail="File not found")
 
 if __name__ == "__main__":
     uvicorn.run(
