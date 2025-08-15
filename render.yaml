@@ -1,10 +1,11 @@
 services:
   # Static Site Service - Fast CDN-enabled frontend
-  - type: static
+  - type: web
     name: tar-lighthouse-static
+    env: static
     staticPublishPath: ./static
     pullRequestPreviewsEnabled: true
-    buildCommand: "echo 'Static files ready'"
+    buildCommand: ""
     routes:
       - type: rewrite
         source: /api/*
