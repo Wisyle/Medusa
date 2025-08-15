@@ -1,15 +1,144 @@
 services:
+  # Main Web Service - Combined API + Static Site
   - type: web
-    name: tar-strategies-api
+    name: tar-lighthouse
     env: python
+    plan: starter
+    region: singapore
     buildCommand: "pip install -r requirements.txt"
     startCommand: "export PYTHONPATH=/opt/render/project/src && uvicorn app.main:app --host 0.0.0.0 --port $PORT --timeout-keep-alive 120"
+    autoDeploy: true
+    healthCheckPath: /api/health
     envVars:
-      - key: SERVE_STATIC
-        value: "true"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: tar-lighthouse-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ALGORITHM
+        value: "HS256"
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "30"
+      - key: APP_NAME
+        value: "TAR Global Lighthouse"
+      - key: DEBUG
+        value: "false"
       - key: ENVIRONMENT
         value: "production"
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /*
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: HOST
+        value: "0.0.0.0"
+      - key: SERVE_STATIC
+        value: "true"
+      - key: SERVER_REGION
+        value: "singapore"
+      - key: CLOUDFRONT_BYPASS_REGION
+        value: "sg"
+      - key: CORS_ORIGINS
+        value: "*"
+
+  # Consolidated Background Worker - Handles all background tasks
+  - type: worker
+    name: tar-lighthouse-worker
+    env: python
+    plan: starter
+    region: singapore
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "sleep 45 && export PYTHONPATH=/opt/render/project/src && python services/worker.py"
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: tar-lighthouse-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ALGORITHM
+        value: "HS256"
+      - key: APP_NAME
+        value: "TAR Lighthouse Worker"
+      - key: DEBUG
+        value: "false"
+      - key: ENVIRONMENT
+        value: "production"
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: SERVER_REGION
+        value: "singapore"
+      - key: CLOUDFRONT_BYPASS_REGION
+        value: "sg"
+      # Worker will handle:
+      # - Bot instance monitoring
+      # - Strategy monitoring
+      # - Balance history tracking
+      # - Trade monitoring
+      # - All console logs routing
+
+  # Decter Engine Service - Trading Bot Engine
+  - type: worker
+    name: tar-decter-engine
+    env: python
+    plan: starter
+    region: singapore
+    buildCommand: |
+      pip install -r requirements.txt
+      # Ensure Decter directory exists
+      if [ ! -d "Decter" ]; then
+        echo "Decter directory not found, creating placeholder"
+        mkdir -p Decter/data
+        echo "# Decter Engine Placeholder" > Decter/README.md
+      fi
+    startCommand: "sleep 60 && export PYTHONPATH=/opt/render/project/src && python services/decter_service.py"
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: tar-lighthouse-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: APP_NAME
+        value: "TAR Decter Engine"
+      - key: DEBUG
+        value: "false"
+      - key: ENVIRONMENT
+        value: "production"
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: DECTER_PATH
+        value: "Decter"
+      - key: SERVER_REGION
+        value: "singapore"
+      - key: CLOUDFRONT_BYPASS_REGION
+        value: "sg"
+
+# Database Configuration
+databases:
+  - name: tar-lighthouse-db
+    plan: starter
+    region: singapore
+    databaseName: tar_lighthouse_db
+    user: tar_lighthouse_user
+    postgresMajorVersion: 15
+
+# Automatic Health Checks
+healthChecks:
+  - name: web-health
+    type: web
+    url: https://tar-lighthouse.onrender.com/api/health
+    schedule: "*/5 * * * *"  # Every 5 minutes
+
+# Environment Groups (for shared environment variables)
+envVarGroups:
+  - name: shared-secrets
+    envVars:
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false  # Set manually for security
+      - key: TELEGRAM_GROUP_ID
+        sync: false
+      - key: DISCORD_WEBHOOK_URL
+        sync: false
+      - key: SLACK_WEBHOOK_URL
+        sync: false
