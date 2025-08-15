@@ -400,7 +400,7 @@ class TARApp {
     }
 
     redirectToLogin() {
-        window.location.href = '/login.html';
+        window.location.href = '/login';
     }
 
     showError(message) {
