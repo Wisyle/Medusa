@@ -125,7 +125,7 @@ class TARApiClient {
         if (this.ws) {
             this.ws.close();
         }
-        window.location.href = '/login.html';
+        window.location.href = '/login';
     }
 
     // Dashboard API
