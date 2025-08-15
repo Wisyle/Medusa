@@ -29,9 +29,19 @@ class TARApp {
                 // Initialize authenticated app
                 await this.initializeApp();
             } else {
-                // Redirect to login
-                this.redirectToLogin();
-                return;
+                // Only redirect to login if we're not already on a login-related page
+                const currentPath = window.location.pathname;
+                const authPages = ['/login', '/auth/login', '/security-setup', '/setup-2fa'];
+                
+                if (!authPages.some(page => currentPath.startsWith(page))) {
+                    // Redirect to login
+                    this.redirectToLogin();
+                    return;
+                } else {
+                    // We're on a login page, don't initialize the app
+                    console.log('On authentication page, skipping app initialization');
+                    return;
+                }
             }
             
             // Set up navigation
@@ -64,8 +74,19 @@ class TARApp {
 
         try {
             // Test token validity with a simple API call
-            const response = await this.api.authenticatedFetch('/api/health');
+            const response = await fetch('/api/health', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
             this.isAuthenticated = response && response.ok;
+            
+            // If not authenticated but we have a token, it might be expired
+            if (!this.isAuthenticated && token) {
+                console.log('Token appears to be invalid or expired');
+                localStorage.removeItem('access_token');
+                localStorage.removeItem('refresh_token');
+            }
         } catch (error) {
             console.error('Authentication check failed:', error);
             this.isAuthenticated = false;

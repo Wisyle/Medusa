@@ -103,7 +103,22 @@
 
     <!-- Scripts -->
     <script src="./js/api-client.js"></script>
-    <script src="./js/app.js"></script>
+    <script>
+        // Only initialize the app if we're not being served on a backend route
+        const backendRoutes = ['/login', '/logout', '/auth/', '/security-setup', '/setup-2fa'];
+        const currentPath = window.location.pathname;
+        
+        if (!backendRoutes.some(route => currentPath.startsWith(route))) {
+            // Load and initialize the app
+            const script = document.createElement('script');
+            script.src = './js/app.js';
+            document.body.appendChild(script);
+        } else {
+            // Redirect to the proper backend route
+            console.log('Static index.html loaded on backend route, redirecting...');
+            window.location.href = currentPath;
+        }
+    </script>
     
     <!-- Service Worker Registration -->
     <script>
