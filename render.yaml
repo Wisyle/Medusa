@@ -122,23 +122,3 @@ databases:
     databaseName: tar_lighthouse_db
     user: tar_lighthouse_user
     postgresMajorVersion: 15
-
-# Automatic Health Checks
-healthChecks:
-  - name: web-health
-    type: web
-    url: https://tar-lighthouse.onrender.com/api/health
-    schedule: "*/5 * * * *"  # Every 5 minutes
-
-# Environment Groups (for shared environment variables)
-envVarGroups:
-  - name: shared-secrets
-    envVars:
-      - key: TELEGRAM_BOT_TOKEN
-        sync: false  # Set manually for security
-      - key: TELEGRAM_GROUP_ID
-        sync: false
-      - key: DISCORD_WEBHOOK_URL
-        sync: false
-      - key: SLACK_WEBHOOK_URL
-        sync: false
