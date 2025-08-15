@@ -139,7 +139,7 @@ services:
 # Database Configuration
 databases:
   - name: tar-lighthouse-db
-    plan: free
+    plan: basic
     region: singapore
     databaseName: tar_lighthouse_db
     user: tar_lighthouse_user
