@@ -117,7 +117,7 @@ services:
 # Database Configuration
 databases:
   - name: tar-lighthouse-db
-    plan: starter
+    plan: free
     region: singapore
     databaseName: tar_lighthouse_db
     user: tar_lighthouse_user
