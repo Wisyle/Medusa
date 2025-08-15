@@ -323,7 +323,7 @@ add_decter_routes(app)
 
 templates = Jinja2Templates(directory="templates")
 
-# Mount static files
+# Mount static files - always mount for backend routes that need them
 if os.path.exists("static"):
     app.mount("/static", StaticFiles(directory="static"), name="static")
 

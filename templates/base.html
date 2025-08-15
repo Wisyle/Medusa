@@ -6,9 +6,9 @@
     <title>{% block title %}Lighthouse - TAR Global Strategies{% endblock %}</title>
     
     <!-- Lighthouse Favicon -->
-    <link rel="icon" type="image/svg+xml" href="https://tar-lighthouse-static.onrender.com/lighthouse1.svg">
-    <link rel="alternate icon" href="https://tar-lighthouse-static.onrender.com/lighthouse1.svg">
-    <link rel="apple-touch-icon" href="https://tar-lighthouse-static.onrender.com/lighthouse1.svg">
+    <link rel="icon" type="image/svg+xml" href="/static/lighthouse1.svg">
+    <link rel="alternate icon" href="/static/lighthouse1.svg">
+    <link rel="apple-touch-icon" href="/static/lighthouse1.svg">
     
     <!-- Lighthouse CSS Framework -->
     <link href="/static/lighthouse-framework.css" rel="stylesheet">
@@ -537,7 +537,7 @@
                 <div class="logo-container">
                     <div class="lighthouse-logo-container">
                         <lottie-player 
-                            src="https://tar-lighthouse-static.onrender.com/lighthouse1.json" 
+                            src="/static/lighthouse1.json" 
                             background="transparent" 
                             speed="1" 
                             style="width: 80px; height: 80px; filter: drop-shadow(0 0 15px var(--glow-blue));" 
@@ -545,10 +545,10 @@
                             autoplay
                             class="lighthouse-logo"
                             onload="handleLottieLoad(this)"
-                            onerror="handleLottieError(this, 'https://tar-lighthouse-static.onrender.com/lighthouse-login.gif')">
+                            onerror="handleLottieError(this, '/static/lighthouse-login.gif')">
                         </lottie-player>
                         <img 
-                            src="https://tar-lighthouse-static.onrender.com/lighthouse-login.gif" 
+                            src="/static/lighthouse-login.gif" 
                             alt="Lighthouse Logo Fallback" 
                             style="width: 60px; height: 60px; filter: drop-shadow(0 0 10px var(--glow-blue)); display: none;" 
                             class="lighthouse-logo gif-fallback">

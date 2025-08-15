@@ -1,49 +1,7 @@
 services:
-  # Static Site Service - Fast CDN-enabled frontend
+  # Main Web Service - Combined for simplicity
   - type: web
-    name: tar-lighthouse-static
-    env: static
-    staticPublishPath: ./static
-    pullRequestPreviewsEnabled: true
-    buildCommand: ""
-    routes:
-      - type: rewrite
-        source: /api/*
-        destination: https://tar-lighthouse-api.onrender.com/api/*
-      - type: rewrite
-        source: /auth/*
-        destination: https://tar-lighthouse-api.onrender.com/auth/*
-      - type: rewrite
-        source: /login
-        destination: https://tar-lighthouse-api.onrender.com/login
-      - type: rewrite
-        source: /logout
-        destination: https://tar-lighthouse-api.onrender.com/logout
-      - type: rewrite
-        source: /security-setup
-        destination: https://tar-lighthouse-api.onrender.com/security-setup
-      - type: rewrite
-        source: /setup-2fa
-        destination: https://tar-lighthouse-api.onrender.com/setup-2fa
-      - type: rewrite
-        source: /register
-        destination: https://tar-lighthouse-api.onrender.com/register
-      - type: rewrite
-        source: /dashboard
-        destination: https://tar-lighthouse-api.onrender.com/dashboard
-      - type: rewrite
-        source: /instances/*
-        destination: https://tar-lighthouse-api.onrender.com/instances/*
-      - type: rewrite
-        source: /ws
-        destination: https://tar-lighthouse-api.onrender.com/ws
-      - type: rewrite
-        source: /*
-        destination: /index.html
-
-  # API Backend Service - API only, no static files
-  - type: web
-    name: tar-lighthouse-api
+    name: tar-lighthouse
     env: python
     plan: starter
     region: singapore
@@ -79,9 +37,9 @@ services:
       - key: CLOUDFRONT_BYPASS_REGION
         value: "sg"
       - key: CORS_ORIGINS
-        value: "https://tar-lighthouse-static.onrender.com,https://tarlight.com,http://localhost:3000"
+        value: "*"
       - key: SERVE_STATIC
-        value: "false"
+        value: "true"
 
   # Consolidated Background Worker - Handles all background tasks
   - type: worker
