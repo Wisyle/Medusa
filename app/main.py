@@ -333,9 +333,14 @@ if os.getenv("SERVE_STATIC") == "true":
     @app.get("/{path:path}")
     async def serve_static_site(path: str, request: Request):
         """Serve static site files"""
-        # API routes take precedence
-        if path.startswith("api/") or path.startswith("ws"):
-            raise HTTPException(status_code=404, detail="API endpoint not found")
+        # Backend routes take precedence
+        backend_routes = ["api/", "ws", "login", "logout", "auth/", "security-setup", "setup-2fa", 
+                         "dashboard", "instances", "api-library", "dex-arbitrage", "validators", 
+                         "decter", "strategy-monitors", "migrations"]
+        
+        for route in backend_routes:
+            if path.startswith(route):
+                raise HTTPException(status_code=404, detail="Backend route - not handled by static server")
         
         # Handle root path
         if not path or path == "/":
