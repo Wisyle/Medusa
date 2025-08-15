@@ -5,9 +5,9 @@
 
 class TARApiClient {
     constructor(config = {}) {
-        // Use environment variable for API URL, fallback to relative path
-        const apiBase = window.VITE_API_URL || window.__API_URL__ || '';
-        this.baseURL = config.baseURL || (apiBase ? `${apiBase}/api` : '/api');
+        // Use environment variable for API URL, fallback to API subdomain
+        const apiBase = window.VITE_API_URL || window.__API_URL__ || 'https://tar-lighthouse-api.onrender.com';
+        this.baseURL = config.baseURL || `${apiBase}/api`;
         this.wsURL = config.wsURL || this._getWebSocketURL();
         this.token = localStorage.getItem('access_token');
         this.refreshToken = localStorage.getItem('refresh_token');
@@ -18,15 +18,10 @@ class TARApiClient {
 
     // Utility method to get WebSocket URL
     _getWebSocketURL() {
-        const apiBase = window.VITE_API_URL || window.__API_URL__ || '';
-        if (apiBase) {
-            const protocol = apiBase.startsWith('https:') ? 'wss:' : 'ws:';
-            const host = apiBase.replace(/^https?:\/\//, '');
-            return `${protocol}//${host}/ws`;
-        } else {
-            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            return `${protocol}//${window.location.host}/ws`;
-        }
+        const apiBase = window.VITE_API_URL || window.__API_URL__ || 'https://tar-lighthouse-api.onrender.com';
+        const protocol = apiBase.startsWith('https:') ? 'wss:' : 'ws:';
+        const host = apiBase.replace(/^https?:\/\//, '');
+        return `${protocol}//${host}/ws`;
     }
 
     // Main fetch method with authentication
