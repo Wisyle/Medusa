@@ -17,6 +17,24 @@ services:
         source: /login
         destination: https://tar-lighthouse-api.onrender.com/login
       - type: rewrite
+        source: /logout
+        destination: https://tar-lighthouse-api.onrender.com/logout
+      - type: rewrite
+        source: /security-setup
+        destination: https://tar-lighthouse-api.onrender.com/security-setup
+      - type: rewrite
+        source: /setup-2fa
+        destination: https://tar-lighthouse-api.onrender.com/setup-2fa
+      - type: rewrite
+        source: /register
+        destination: https://tar-lighthouse-api.onrender.com/register
+      - type: rewrite
+        source: /dashboard
+        destination: https://tar-lighthouse-api.onrender.com/dashboard
+      - type: rewrite
+        source: /instances/*
+        destination: https://tar-lighthouse-api.onrender.com/instances/*
+      - type: rewrite
         source: /ws
         destination: https://tar-lighthouse-api.onrender.com/ws
       - type: rewrite
@@ -30,7 +48,7 @@ services:
     plan: starter
     region: singapore
     buildCommand: "pip install -r requirements.txt"
-    startCommand: "export PYTHONPATH=/opt/render/project/src && uvicorn app.main-api-only:app --host 0.0.0.0 --port $PORT --timeout-keep-alive 120"
+    startCommand: "export PYTHONPATH=/opt/render/project/src && uvicorn app.main:app --host 0.0.0.0 --port $PORT --timeout-keep-alive 120"
     autoDeploy: true
     healthCheckPath: /api/health
     envVars:
@@ -62,6 +80,8 @@ services:
         value: "sg"
       - key: CORS_ORIGINS
         value: "https://tar-lighthouse-static.onrender.com,https://tarlight.com,http://localhost:3000"
+      - key: SERVE_STATIC
+        value: "false"
 
   # Consolidated Background Worker - Handles all background tasks
   - type: worker
