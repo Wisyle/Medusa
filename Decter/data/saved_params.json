@@ -1,9 +1,0 @@
-{
-    "stake": 0.5,
-    "growth_rate": 5.0,
-    "take_profit": 25.0,
-    "index": "1HZ10V",
-    "currency": "XRP",
-    "max_loss_amount": 0.5,
-    "max_win_amount": 1.0
-}
